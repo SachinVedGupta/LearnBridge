@@ -1,4 +1,27 @@
-LearnBridge (AI for Learning and Google Classroom)
+LearnBridge (AI for Students, Learning, and Google Classroom)
+
+• Google Agent Development Kit, GCP, Python, Google Classroom & Calender API
+
+• Architected ReAct-based multi-agent workflows with memory, sequential/parallel execution, tool integration
+(Google Classroom & Calender), and prompt tuning for intelligent, context-aware task handling in a Streamlit UI
+
+• Enabled faster assignment starts by extracting key concepts from assignments/announcements/slides, returning formatted
+outputs (graphs, tables, bolded summaries) (80% faster content access), and auto-adding deadlines to Google Calendar
+
+<img width="392" height="573" alt="image" src="https://github.com/user-attachments/assets/9149d8d3-61a8-4da5-988d-6b301369c69e" />
+
+https://youtu.be/wRsyMHja9rw  
+https://devpost.com/software/learnbridge-gzsi3f 
+https://devpost.com/software/learnbridge 
+https://github.com/SachinVedGupta/TheClassroomChatBot 
+
+
+
+
+
+
+
+
 
 # Google Classroom & Calendar API Setup Guide
 
