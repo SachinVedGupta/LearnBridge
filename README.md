@@ -1,4 +1,4 @@
-LearnBridge (AI for Students, Learning, and Google Classroom)
+**LearnBridge (AI for Students, Learning, and Google Classroom)**
 
 • Google Agent Development Kit, GCP, Python, Google Classroom & Calender API
 
