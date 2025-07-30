@@ -10,7 +10,9 @@ outputs (graphs, tables, bolded summaries) (80% faster content access), and auto
 
 <img width="392" height="573" alt="image" src="https://github.com/user-attachments/assets/9149d8d3-61a8-4da5-988d-6b301369c69e" />
 
-https://youtu.be/wRsyMHja9rw  
+DEMO: https://youtu.be/wRsyMHja9rw 
+
+OTHER LINKS:
 https://devpost.com/software/learnbridge-gzsi3f 
 https://devpost.com/software/learnbridge 
 https://github.com/SachinVedGupta/TheClassroomChatBot 
