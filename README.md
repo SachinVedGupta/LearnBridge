@@ -1,5 +1,7 @@
 **LearnBridge (AI for Students, Learning, and Google Classroom)**
 
+SEE LEARNBRIDGE V2: https://github.com/SachinVedGupta/LearnBridge
+
 • Google Agent Development Kit, GCP, Python, Google Classroom & Calender API
 
 • Architected ReAct-based multi-agent workflows with memory, sequential/parallel execution, tool integration
