@@ -87,16 +87,16 @@ def get_user_id():
 def handle_oauth_callback_from_url():
     """Handle OAuth callback from URL parameters."""
     # Check if we have OAuth callback parameters
-    query_params = st.experimental_get_query_params()
-    code = query_params.get('code', [None])[0]
-    state = query_params.get('state', [None])[0]
+    query_params = st.query_params
+    code = query_params.get('code')
+    state = query_params.get('state')
     
     if code and state:
         # Handle the OAuth callback
         if handle_oauth_callback(code, state):
             st.success("✅ Authentication successful! You can now use the chatbot.")
             # Clear the URL parameters
-            st.experimental_set_query_params()
+            st.query_params.clear()
             st.rerun()
         else:
             st.error("❌ Authentication failed. Please try again.")
@@ -169,15 +169,20 @@ if "session_id" not in st.session_state:
         "last_coursework_check": None,
     }
     
-    new_session = st.session_state.session_service.create_session(
-        app_name="Classroom ChatBot",
-        user_id=get_user_id(),
-        state=initial_state,
+    new_session = asyncio.run(
+        st.session_state.session_service.create_session(
+            app_name="Classroom ChatBot",
+            user_id=get_user_id(),
+            state=initial_state,
+        )
     )
     st.session_state.session_id = new_session.id
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+if "interaction_history" not in st.session_state:
+    st.session_state.interaction_history = []
 
 # Handle OAuth callback
 handle_oauth_callback_from_url()
@@ -191,34 +196,9 @@ if not is_user_authenticated(user_id):
 def update_interaction_history(entry):
     """Add an entry to the interaction history in state."""
     try:
-        # Get current session
-        session = st.session_state.session_service.get_session(
-            app_name="Classroom ChatBot",
-            user_id=st.session_state.user_id,
-            session_id=st.session_state.session_id
-        )
-
-        # Get current interaction history
-        interaction_history = session.state.get("interaction_history", [])
-
-        # Add timestamp if not already present
         if "timestamp" not in entry:
             entry["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # Add the entry to interaction history
-        interaction_history.append(entry)
-
-        # Create updated state
-        updated_state = session.state.copy()
-        updated_state["interaction_history"] = interaction_history
-
-        # Create a new session with updated state
-        st.session_state.session_service.create_session(
-            app_name="Classroom ChatBot",
-            user_id=st.session_state.user_id,
-            session_id=st.session_state.session_id,
-            state=updated_state,
-        )
+        st.session_state.interaction_history.append(entry)
     except Exception as e:
         st.error(f"Error updating interaction history: {e}")
 
@@ -240,22 +220,25 @@ def add_agent_response_to_history(agent_name, response):
 def display_current_state():
     """Display the current session state."""
     try:
-        session = st.session_state.session_service.get_session(
-            app_name="Classroom ChatBot",
-            user_id=st.session_state.user_id,
-            session_id=st.session_state.session_id
+        session = asyncio.run(
+            st.session_state.session_service.get_session(
+                app_name="Classroom ChatBot",
+                user_id=st.session_state.user_id,
+                session_id=st.session_state.session_id,
+            )
         )
+        session_state = session.state if session else {}
 
         with st.expander("🔍 Current Session State", expanded=False):
-            st.json(session.state)
+            st.json({**session_state, "interaction_history": st.session_state.interaction_history})
             
             # Show interaction count
-            interaction_history = session.state.get("interaction_history", [])
+            interaction_history = st.session_state.interaction_history
             st.info(f"Total interactions: {len(interaction_history)}")
             
             # Show last checks
-            last_announcement = session.state.get("last_announcement_check")
-            last_coursework = session.state.get("last_coursework_check")
+            last_announcement = session_state.get("last_announcement_check")
+            last_coursework = session_state.get("last_coursework_check")
             
             if last_announcement:
                 st.write(f"📢 Last announcement check: {last_announcement}")
@@ -357,13 +340,16 @@ def main():
                 "last_coursework_check": None,
             }
             
-            new_session = st.session_state.session_service.create_session(
-                app_name="Classroom ChatBot",
-                user_id=st.session_state.user_id,
-                state=initial_state,
+            new_session = asyncio.run(
+                st.session_state.session_service.create_session(
+                    app_name="Classroom ChatBot",
+                    user_id=st.session_state.user_id,
+                    state=initial_state,
+                )
             )
             st.session_state.session_id = new_session.id
             st.session_state.messages = []
+            st.session_state.interaction_history = []
             st.rerun()
         
         st.header("🔧 Session Info")
@@ -398,4 +384,4 @@ def main():
                 st.session_state.messages.append({"role": "assistant", "content": response})
 
 if __name__ == "__main__":
-    main() 
+    main()

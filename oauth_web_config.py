@@ -7,6 +7,7 @@ This module handles OAuth 2.0 web flow for multiple users in a deployed environm
 import os
 import json
 import base64
+import uuid
 from typing import Optional, Dict, Any
 from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request
@@ -22,6 +23,13 @@ SCOPES = [
     'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
     'https://www.googleapis.com/auth/calendar.events'
 ]
+
+
+def get_user_id() -> str:
+    """Return a stable per-browser-session identifier for OAuth and agent tools."""
+    if 'user_id' not in st.session_state:
+        st.session_state.user_id = str(uuid.uuid4())
+    return st.session_state.user_id
 
 def get_oauth_flow() -> Flow:
     """Create OAuth flow for web application."""
@@ -129,4 +137,4 @@ def handle_oauth_callback(code: str, state: str) -> bool:
         return True
     except Exception as e:
         st.error(f"Error handling OAuth callback: {e}")
-        return False 
+        return False
