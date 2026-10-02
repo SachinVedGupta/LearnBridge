@@ -9,7 +9,12 @@ LearnBridge is a web app for students that brings together AI tutoring, course p
 - Student sign-in and private, account-isolated task and draft storage.
 - AI tutor and reviewed writing suggestions, subject to the deployed service configuration and usage limits.
 - Student-owned connections for Gmail, Google Calendar/Tasks/Drive/Docs/Sheets/Slides, Microsoft Teams/OneDrive/Excel, Notion, Discord, GitHub, Linear, Slack, Reddit, LinkedIn, and Instagram. Each student grants access through the provider. Available reads vary; some accounts can link but still need source selection before the tutor can use their content. X awaits owner OAuth setup.
-- Limited, read-only data access for configured integrations. Several newer services can link an account but still need document selection and tutor-sharing flows.
+- The tutor can search and read student-selected Gmail, Calendar, Tasks, Drive, Docs, Sheets, Slides, Teams, OneDrive, Excel, Notion, GitHub, Linear, Slack, and Reddit connections. Students choose the accounts for each question; nothing is shared with the tutor by default. These integrations are read-only in the tutor.
+- Discord, X, Instagram, and LinkedIn can connect where configured, but their content-reading tools are not enabled in the tutor yet. Linking an account does not imply that LearnBridge can search its content.
+
+### Connected-source controls
+
+The tutor creates a short-lived Composio session for the signed-in student and the accounts explicitly selected for a question. Its tool allowlist contains only content-search/read operations. The app does not expose message sending, document editing, calendar/task writes, or account-management tools to the model. Tutor chat history is held in the browser and sent only with the follow-up request; OpenAI Responses are sent with storage disabled.
 
 LearnBridge is under active development. D2L/Brightspace still needs an institution-approved integration. Check the live Connections page and the [hosting and verification notes](docs/HOSTING.md) for current provider limitations and release status.
 

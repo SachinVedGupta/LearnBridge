@@ -11,6 +11,7 @@ import type { MappedSuggestion } from '@assignment-ai/shared';
 import { templates } from '@/lib/templates';
 import { analyzeText, type WritingStats } from '@/lib/analytics';
 import Analytics from './Analytics';
+import ConnectedSourcesPicker, {type SelectedSource} from './ConnectedSourcesPicker';
 export type Mode = 'ask' | 'agent';
 interface SidebarProps {
     response: string | null;
@@ -29,6 +30,8 @@ export default function Sidebar({ response, loading, editor, onAskResponse, onLo
     const [showCourseCtx, setShowCourseCtx] = useState(false);
     const [showTemplates, setShowTemplates] = useState(false);
     const [showAnalytics, setShowAnalytics] = useState(false);
+    const [showSources, setShowSources] = useState(false);
+    const [selectedSources, setSelectedSources] = useState<SelectedSource[]>([]);
     const [agentSuggestions, setAgentSuggestions] = useState<MappedSuggestion[]>([]);
     const [confirmModal, setConfirmModal] = useState<{
         show: boolean;
@@ -149,6 +152,7 @@ export default function Sidebar({ response, loading, editor, onAskResponse, onLo
                 docSlice: docText,
                 instructions: instructions,
                 courseCtx: courseCtx || undefined,
+                selectedSources,
             });
             onAskResponse(result.assistant_text);
         }
@@ -454,6 +458,13 @@ export default function Sidebar({ response, loading, editor, onAskResponse, onLo
                   </div>
                 </div>
               </div>
+
+              {mode==='ask'&&<div>
+                <button type="button" aria-expanded={showSources} onClick={()=>setShowSources(v=>!v)} className="w-full rounded-xl border border-slate-700 bg-slate-950/50 px-3 py-2 text-left text-sm text-gray-200 hover:border-teal-500/60">
+                  {selectedSources.length?`Connected sources · ${selectedSources.length} selected`: 'Choose connected sources (optional)'}
+                </button>
+                {showSources&&<div className="mt-2"><ConnectedSourcesPicker value={selectedSources} onChange={setSelectedSources}/></div>}
+              </div>}
 
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                 <input type="text" value={instructions} onChange={(e) => setInstructions(e.target.value)} onKeyDown={handleKeyPress} onFocus={handleInputFocus} placeholder={mode === 'ask' ? 'Ask the assistant…' : 'Describe the changes you need…'} className="flex-1 rounded-xl border border-transparent bg-gray-950/40 px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60" disabled={loading}/>

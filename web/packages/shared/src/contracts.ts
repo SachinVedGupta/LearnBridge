@@ -13,6 +13,7 @@ export const AskInSchema = z.object({
   docSlice: z.string(),
   instructions: z.string(),
   courseCtx: z.string().optional(),
+  selectedSources: z.array(z.object({provider:z.string(),accountId:z.string()})).max(5).optional(),
 });
 
 export type AskIn = z.infer<typeof AskInSchema>;
@@ -61,4 +62,3 @@ export const EditOutSchema = z.object({
 });
 
 export type EditOut = z.infer<typeof EditOutSchema>;
-
