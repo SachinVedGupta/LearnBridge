@@ -1,0 +1,10 @@
+export const metadata={title:'Terms of Service · LearnBridge'};
+
+export default function TermsPage(){return <main className="mx-auto max-w-3xl px-6 py-12 leading-7 text-slate-300">
+ <p className="text-sm text-teal-300">LearnBridge</p><h1 className="my-3 text-4xl font-semibold text-white">Terms of Service</h1><p className="mb-8 text-sm text-slate-400">Last updated October 2, 2026</p>
+ <p className="mb-5">LearnBridge is a student learning and productivity workspace operated by Sachin Gupta. By creating an account or using the service, you agree to these terms.</p>
+ <h2 className="mb-2 mt-8 text-2xl font-semibold text-white">Use of the service</h2><p>Use LearnBridge only with accounts and information you are authorized to access. Keep your sign-in details private. You are responsible for reviewing the content you save, share, or act on and for complying with the terms of any connected service.</p>
+ <h2 className="mb-2 mt-8 text-2xl font-semibold text-white">Learning and AI features</h2><p>AI responses and writing suggestions may be incomplete or wrong. Treat them as study support, verify important information against course materials, and follow your school’s academic-integrity rules. LearnBridge is designed to explain concepts and suggest improvements; you remain responsible for your own coursework and submissions.</p>
+ <h2 className="mb-2 mt-8 text-2xl font-semibold text-white">Connected services and availability</h2><p>Third-party integrations require your separate authorization and may change or become unavailable. LearnBridge’s available features vary by provider and account permissions. LearnBridge does not promise uninterrupted service or that every integration will work with every school or account.</p>
+ <h2 className="mb-2 mt-8 text-2xl font-semibold text-white">Changes and contact</h2><p>LearnBridge is under active development. Features and these terms may change; material updates will be posted here. For questions or account requests, contact <a className="underline text-teal-300" href="mailto:sachinvgupta9@gmail.com">sachinvgupta9@gmail.com</a>.</p>
+ </main>;}
