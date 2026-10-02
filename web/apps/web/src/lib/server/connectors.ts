@@ -36,7 +36,7 @@ export async function connections(userId:string){
  for(let page=0;page<10;page++){
   const result=await client.connectedAccounts.list({userIds:[userId],limit:100,cursor});items.push(...result.items);cursor=result.nextCursor||undefined;if(!cursor)break;
  }
- return catalog.map(p=>({...p,tool:p.tools[0],canRead:p.tools.length>0,configured:!!authConfig(p.id),accounts:items.filter(a=>a.toolkit.slug===p.id&&a.experimental?.accountType!=='SHARED').map(a=>({id:a.id,label:a.alias||a.wordId||p.name,status:a.status}))}));
+ return catalog.map(p=>{const owned=items.filter(a=>a.toolkit.slug===p.id&&a.experimental?.accountType!=='SHARED');return {...p,tool:p.tools[0],canRead:p.tools.length>0,configured:!!authConfig(p.id),accounts:owned.map((a,index)=>({id:a.id,label:owned.length>1?`${p.name} account ${index+1}`:`${p.name} account`,status:a.status}))};});
 }
 async function session(userId:string,id:string,account?:string){
  const p=provider(id) as unknown as ReadProvider,config=authConfig(id);if(!p.tools.length||!config)throw new AppError('This connection needs site-owner setup.',503);

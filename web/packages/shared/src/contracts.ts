@@ -20,6 +20,7 @@ export type AskIn = z.infer<typeof AskInSchema>;
 
 export const AskOutSchema = z.object({
   assistant_text: z.string(),
+  suggested_tasks: z.array(z.object({title:z.string(),course:z.string(),due:z.string()})).optional(),
 });
 
 export type AskOut = z.infer<typeof AskOutSchema>;

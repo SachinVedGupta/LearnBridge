@@ -10,6 +10,7 @@ LearnBridge is a web app for students that brings together AI tutoring, course p
 - AI tutor and reviewed writing suggestions, subject to the deployed service configuration and usage limits.
 - Student-owned connections for Gmail, Google Calendar/Tasks/Drive/Docs/Sheets/Slides, Microsoft Teams/OneDrive/Excel, Notion, Discord, GitHub, Linear, Slack, Reddit, LinkedIn, and Instagram. Each student grants access through the provider. Available reads vary; some accounts can link but still need source selection before the tutor can use their content. X awaits owner OAuth setup.
 - The tutor can search and read student-selected Gmail, Calendar, Tasks, Drive, Docs, Sheets, Slides, Teams, OneDrive, Excel, Notion, GitHub, Linear, Slack, and Reddit connections. Students choose the accounts for each question; nothing is shared with the tutor by default. These integrations are read-only in the tutor.
+- The tutor keeps a short follow-up conversation in the browser and can propose up to three study tasks. A student must choose “Add to next steps” before a proposal is saved to LearnBridge.
 - Discord, X, Instagram, and LinkedIn can connect where configured, but their content-reading tools are not enabled in the tutor yet. Linking an account does not imply that LearnBridge can search its content.
 
 ### Connected-source controls
