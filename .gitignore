@@ -6,7 +6,25 @@ credentials.json
 token.json
 .history
 add_event.py
-*.json
+# Application manifests must remain trackable; ignore only secrets.
+**/service-account*.json
+**/client_secret*.json
+drive_config.json
+.env.*
+!.env.example
+**/node_modules/
+**/.next/
+**/dist/
+**/*.tsbuildinfo
+**/__pycache__/
+*.pyc
 extract_drive_test.py
 patch*
 client_secret.json
+
+# Hosting links and local developer project metadata
+**/.vercel/
+.composio/
+.vercel
+.env*
+!.env.example
