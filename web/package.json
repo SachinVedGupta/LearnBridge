@@ -1,0 +1,22 @@
+{
+  "name": "assignment-ai",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm -w @assignment-ai/api run dev",
+    "dev:web": "npm -w @assignment-ai/web run dev",
+    "build": "npm -w @assignment-ai/shared run build && npm -w @assignment-ai/api run build && npm -w @assignment-ai/web run build",
+    "dev": "npm -w @assignment-ai/shared run build && npm -w @assignment-ai/web run dev -- --hostname 127.0.0.1 --port 3200",
+    "start": "npm -w @assignment-ai/web run start -- --hostname 127.0.0.1 --port 3200",
+    "test": "node --test scripts/*.test.mjs",
+    "build:website": "npm -w @assignment-ai/shared run build && npm -w @assignment-ai/web run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/node": "^20.10.5"
+  }
+}

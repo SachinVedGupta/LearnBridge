@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-black text-gray-100 antialiased;
+  }
+}
+
+@layer components {
+  .tiptap {
+    @apply prose prose-invert prose-sm max-w-none;
+    outline: none;
+    min-height: 100%;
+  }
+
+  .tiptap p.is-editor-empty:first-child::before {
+    color: #6b7280;
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+
+  /* Smooth animations */
+  .tiptap p,
+  .tiptap h1,
+  .tiptap h2,
+  .tiptap h3 {
+    @apply transition-colors duration-150;
+  }
+
+  /* Custom scrollbar - Dark mode */
+  .tiptap::-webkit-scrollbar,
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .tiptap::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-track {
+    @apply bg-gray-900 rounded;
+  }
+
+  .tiptap::-webkit-scrollbar-thumb,
+  *::-webkit-scrollbar-thumb {
+    @apply bg-gray-700 rounded hover:bg-gray-600;
+  }
+
+  /* Inline Suggestions */
+  .suggestion-highlight {
+    background-color: rgba(239, 68, 68, 0.2); /* red-500 with opacity */
+    border-bottom: 2px solid rgb(239, 68, 68);
+    cursor: pointer;
+  }
+
+  /* Inline Suggestion Widgets */
+  .inline-suggestion-widget-container {
+    @apply inline-block relative ml-2;
+    vertical-align: top;
+  }
+
+  .inline-suggestion-widget {
+    @apply inline-flex flex-col gap-1;
+  }
+
+  .inline-suggestion-original {
+    @apply line-through;
+    background-color: rgba(239, 68, 68, 0.3);
+    padding: 2px 4px;
+    border-radius: 3px;
+  }
+
+  .inline-suggestion-replacement-wrapper {
+    @apply inline-flex flex-col items-start gap-1 ml-2;
+    vertical-align: top;
+  }
+
+  .inline-suggestion-replacement {
+    @apply inline-block;
+    background-color: rgba(34, 197, 94, 0.3); /* green-500 */
+    padding: 2px 4px;
+    border-radius: 3px;
+    border: 1px solid rgba(34, 197, 94, 0.5);
+  }
+
+  .inline-suggestion-controls {
+    @apply inline-flex gap-1;
+  }
+
+  .inline-suggestion-btn {
+    @apply text-xs px-2 py-1 rounded font-medium transition-colors;
+    cursor: pointer;
+  }
+
+  .inline-suggestion-accept {
+    @apply bg-green-700 text-white;
+  }
+
+  .inline-suggestion-accept:hover {
+    @apply bg-green-600;
+  }
+
+  .inline-suggestion-reject {
+    @apply bg-red-700 text-white;
+  }
+
+  .inline-suggestion-reject:hover {
+    @apply bg-red-600;
+  }
+}
+
