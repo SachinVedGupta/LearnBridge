@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import Database from 'better-sqlite3';
-import { LocalStore, STORAGE_LIMITS } from '../packages/local-storage/src/index.mjs';
+import { LocalStore, STORAGE_LIMITS, STORAGE_SCHEMA_VERSION } from '../packages/local-storage/src/index.mjs';
 
 const moduleUrl = new URL('../packages/local-storage/src/index.mjs', import.meta.url).href;
 const childEnv = Object.fromEntries(['PATH', 'TMPDIR', 'TEMP', 'TMP', 'SystemRoot', 'WINDIR'].filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]]));
@@ -154,7 +154,7 @@ test('LS12 SIGKILL during SQL migration transaction rolls back schema, version a
   const { root, store } = fixture(t); const task = store.createTask({ title: 'Stable committed record' }); store.close();
   const result = child(`import {LocalStore} from ${JSON.stringify(moduleUrl)}; import Database from 'better-sqlite3'; const s=LocalStore.open({root:${JSON.stringify(root)}}); const d=new Database(${JSON.stringify(join(root, 'learnbridge.sqlite'))}); d.exec("BEGIN IMMEDIATE; CREATE TABLE partial_upgrade(id INTEGER); UPDATE records SET revision=999; PRAGMA user_version=2;"); process.kill(process.pid,'SIGKILL');`);
   assert.equal(result.signal, 'SIGKILL'); const reopened = LocalStore.open({ root });
-  try { assert.deepEqual(reopened.getTask(task.id), task); assert.equal(reopened.integrity().schema_version, 2); } finally { reopened.close(); }
+  try { assert.deepEqual(reopened.getTask(task.id), task); assert.equal(reopened.integrity().schema_version, STORAGE_SCHEMA_VERSION); } finally { reopened.close(); }
   const db = new Database(join(root, 'learnbridge.sqlite'), { readonly: true });
   try { assert.equal(db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name='partial_upgrade'").get().n, 0); } finally { db.close(); }
 });

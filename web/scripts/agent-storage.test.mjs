@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import Database from 'better-sqlite3';
-import { LocalStore } from '../packages/local-storage/src/index.mjs';
+import { LocalStore, STORAGE_SCHEMA_VERSION } from '../packages/local-storage/src/index.mjs';
 import { createInstallation, createTask } from '../packages/core/src/index.mjs';
 
 const sha = value => createHash('sha256').update(value).digest('hex');
@@ -52,7 +52,7 @@ test('AS01 exact reviewed selections pin versions and exclude other titles and r
   assert.equal(context.source_entries[0].trust, 'untrusted_source_content');
   for (const excluded of ['UNSELECTED_PRIVATE_TITLE', 'PRIVATE_OTHER_NOTE', 'OTHER_PRIVATE_TEXT', 'DO_NOT_EXPOSE', 'selected.md']) assert.equal(serialized.includes(excluded), false);
   assert.equal(context.serialized_bytes, Buffer.byteLength(serialized, 'utf8')); assert.equal(context.used_bytes, context.serialized_bytes);
-  assert.equal(permission.review_receipt.reviewer, store.identity.student_id); assert.equal(store.integrity().schema_version, 2);
+  assert.equal(permission.review_receipt.reviewer, store.identity.student_id); assert.equal(store.integrity().schema_version, STORAGE_SCHEMA_VERSION);
 });
 
 test('AS02 forged destinations, IDs, receipt claims and scope expansion fail without disclosure', t => {
@@ -164,10 +164,10 @@ test('AS17 persisted source ancestry, discovery accounting and calendar timestam
 
 test('AS10 additive v1 migration preserves identity, tasks and the original migration checksum', t => {
   const { root, installation, task } = fixture(t, { legacy: true }); const store = LocalStore.open({ root });
-  try { assert.deepEqual(store.identity, installation); assert.deepEqual(store.getTask(task.id), task); assert.equal(store.integrity().schema_version, 2); }
+  try { assert.deepEqual(store.identity, installation); assert.deepEqual(store.getTask(task.id), task); assert.equal(store.integrity().schema_version, STORAGE_SCHEMA_VERSION); }
   finally { store.close(); }
   const db = new Database(join(root, 'learnbridge.sqlite'), { readonly: true });
-  try { const rows = db.prepare('SELECT version,checksum FROM schema_migrations ORDER BY version').all(); assert.equal(rows.length, 2); assert.equal(rows[0].checksum, sha(v1Sql)); } finally { db.close(); }
+  try { const rows = db.prepare('SELECT version,checksum FROM schema_migrations ORDER BY version').all(); assert.equal(rows.length, STORAGE_SCHEMA_VERSION); assert.equal(rows[0].checksum, sha(v1Sql)); } finally { db.close(); }
 });
 
 test('AS11 failed v2 migration rolls back schema/version/ledger and remains retryable', t => {
@@ -176,7 +176,7 @@ test('AS11 failed v2 migration rolls back schema/version/ledger and remains retr
   try { assert.throws(() => LocalStore.open({ root }), /Synthetic migration failure/); } finally { Database.prototype.prepare = originalPrepare; }
   const db = new Database(join(root, 'learnbridge.sqlite'), { readonly: true });
   try { assert.equal(db.pragma('user_version', { simple: true }), 1); assert.equal(db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name='agent_grants'").get().n, 0); assert.equal(db.prepare('SELECT count(*) AS n FROM schema_migrations').get().n, 1); } finally { db.close(); }
-  const reopened = LocalStore.open({ root }); try { assert.deepEqual(reopened.getTask(task.id), task); assert.equal(reopened.integrity().schema_version, 2); } finally { reopened.close(); }
+  const reopened = LocalStore.open({ root }); try { assert.deepEqual(reopened.getTask(task.id), task); assert.equal(reopened.integrity().schema_version, STORAGE_SCHEMA_VERSION); } finally { reopened.close(); }
 });
 
 test('AS12 SIGKILL during actual v2 migration rolls back and stale writer recovery upgrades safely', t => {
@@ -185,7 +185,7 @@ test('AS12 SIGKILL during actual v2 migration rolls back and stale writer recove
   const result = spawnSync(process.execPath, ['--input-type=module', '-e', code], { cwd: new URL('..', import.meta.url), env, encoding: 'utf8', timeout: 5000 }); assert.ifError(result.error); assert.equal(result.signal, 'SIGKILL');
   const db = new Database(join(root, 'learnbridge.sqlite'), { readonly: true });
   try { assert.equal(db.pragma('user_version', { simple: true }), 1); assert.equal(db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name='agent_grants'").get().n, 0); } finally { db.close(); }
-  const reopened = LocalStore.open({ root }); try { assert.deepEqual(reopened.getTask(task.id), task); assert.equal(reopened.integrity().schema_version, 2); } finally { reopened.close(); }
+  const reopened = LocalStore.open({ root }); try { assert.deepEqual(reopened.getTask(task.id), task); assert.equal(reopened.integrity().schema_version, STORAGE_SCHEMA_VERSION); } finally { reopened.close(); }
 });
 
 test('AS13 legacy v1 backup restores fresh and migrates only the restored root', async t => {
@@ -193,14 +193,14 @@ test('AS13 legacy v1 backup restores fresh and migrates only the restored root',
   const bytes = readFileSync(join(root, 'learnbridge.sqlite')); writeFileSync(join(backupRoot, 'learnbridge.sqlite'), bytes, { mode: 0o600 });
   writeFileSync(join(backupRoot, 'manifest.json'), JSON.stringify({ format: 'learnbridge-local-backup', schema_version: 1, created_at: new Date().toISOString(), installation_id: installation.id, student_id: installation.student_id, database: { name: 'learnbridge.sqlite', bytes: bytes.length, sha256: sha(bytes) } }), { mode: 0o600 });
   const restored = join(base, 'restored'); const report = await LocalStore.restore({ root: restored, backupRoot }); assert.equal(report.schema_version, 1);
-  const copy = LocalStore.open({ root: restored }); try { assert.deepEqual(copy.getTask(task.id), task); assert.equal(copy.integrity().schema_version, 2); } finally { copy.close(); }
+  const copy = LocalStore.open({ root: restored }); try { assert.deepEqual(copy.getTask(task.id), task); assert.equal(copy.integrity().schema_version, STORAGE_SCHEMA_VERSION); } finally { copy.close(); }
   assert.equal(sha(readFileSync(join(root, 'learnbridge.sqlite'))), sha(bytes)); assert.equal(sha(readFileSync(join(backupRoot, 'learnbridge.sqlite'))), sha(bytes));
 });
 
 test('AS14 v2 backup/restore retains grants, charged budgets, proposals and source snapshots', async t => {
   const { base, store } = fixture(t); const source = sourceFixture(store); const permission = grant(store, { source_entry_ids: [source.imported.id] }); const context = store.agentContext({ destination: 'codex', grant_id: permission.id });
   const proposal = store.proposeTask({ destination: 'codex', grant_id: permission.id, title: 'Backed-up proposal', idempotency_key: 'synthetic-backed-up-001' });
-  const accepted = store.acceptTaskProposal(proposal.id, { expected_revision: 1, payload_hash: proposal.payload_hash }); const backupRoot = join(base, 'v2-backup'); const manifest = await store.backup(backupRoot); assert.equal(manifest.schema_version, 2);
+  const accepted = store.acceptTaskProposal(proposal.id, { expected_revision: 1, payload_hash: proposal.payload_hash }); const backupRoot = join(base, 'v2-backup'); const manifest = await store.backup(backupRoot); assert.equal(manifest.schema_version, STORAGE_SCHEMA_VERSION);
   const restored = join(base, 'restored'); await LocalStore.restore({ root: restored, backupRoot }); const copy = LocalStore.open({ root: restored });
   try { assert.equal(copy.getAgentGrant(permission.id).used_bytes, context.serialized_bytes); assert.deepEqual(copy.getSourceEntry(source.imported.id), source.imported); assert.deepEqual(copy.acceptTaskProposal(proposal.id, { expected_revision: 1, payload_hash: proposal.payload_hash }), accepted); assert.equal(copy.integrity().integrity, 'ok'); } finally { copy.close(); }
 });

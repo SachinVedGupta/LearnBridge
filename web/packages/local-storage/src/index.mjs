@@ -11,7 +11,7 @@ import {
   assertRevision, LearnBridgeError, invalidInput, migrateHostedTasks,
 } from '@learnbridge/core';
 
-export const STORAGE_SCHEMA_VERSION = 2;
+export const STORAGE_SCHEMA_VERSION = 3;
 export const STORAGE_LIMITS = Object.freeze({ documentBytes: 1_000_000, importBytes: 1_000_000, backupBytes: 512_000_000 });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const INTERNAL = Symbol('local-storage-internal');
@@ -22,6 +22,11 @@ const canonicalJson = value => Array.isArray(value) ? `[${value.map(canonicalJso
   : value !== null && typeof value === 'object' ? `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}` : JSON.stringify(value);
 const now = () => new Date().toISOString();
 const failure = (code = 'INVALID_INPUT') => { throw new LearnBridgeError(code); };
+const WORKSPACE_KINDS = ['course', 'academic_item', 'profile_fact', 'plan', 'artifact', 'career_item', 'calendar_event', 'tutoring_session', 'learning_checkpoint', 'research_item', 'inbox_item', 'project', 'pantry_item', 'meal_plan', 'routine', 'expense', 'administration_item', 'schedule'];
+const RUN_STATES = ['created', 'validating', 'ready', 'running', 'awaiting_student', 'verifying', 'failed', 'cancelling', 'interrupted', 'cancelled', 'expired', 'completed', 'partial', 'unknown_outcome'];
+const RUN_EDGES = { created: ['validating', 'cancelled'], validating: ['ready', 'awaiting_student', 'failed', 'cancelled'], ready: ['running', 'awaiting_student', 'cancelled', 'expired'], running: ['awaiting_student', 'verifying', 'failed', 'cancelling', 'interrupted', 'partial', 'unknown_outcome', 'cancelled'], awaiting_student: ['ready', 'cancelled', 'expired'], verifying: ['completed', 'partial', 'failed', 'unknown_outcome', 'cancelling', 'interrupted'], cancelling: ['cancelled', 'partial', 'unknown_outcome', 'interrupted'], failed: ['ready'], partial: ['ready'], interrupted: ['ready', 'cancelled'], unknown_outcome: ['ready'], completed: [], cancelled: [], expired: [] };
+const ACTIVE_RUN_STATES = ['running', 'verifying', 'cancelling'];
+const WORKFLOW_LIMITS = Object.freeze({ inputBytes: 32000, resultBytes: 64000, eventBytes: 8000, steps: 100, actions: 100, events: 10000 });
 
 function checkedObject(value, keys) {
   if (!value || typeof value !== 'object' || Array.isArray(value)
@@ -151,6 +156,75 @@ function privateJson(value, maxBytes = 1_000_000) {
     seen.delete(input); return result;
   }
   const parsed = visit(value, 0); if (Buffer.byteLength(JSON.stringify(parsed)) > maxBytes) invalidInput(); return parsed;
+}
+function workflowName(value) { if (typeof value !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$/.test(value)) invalidInput(); return value; }
+function retryKey(value) { if (typeof value !== 'string' || !/^[a-zA-Z0-9_-]{8,100}$/.test(value)) invalidInput(); return value; }
+function sourcePins(value = []) {
+  const pins = privateJson(value, 16000); if (!Array.isArray(pins) || pins.length > 100) invalidInput(); const ids = new Set();
+  for (const pin of pins) { checkedObject(pin, ['kind', 'id', 'revision', 'version_hash']); if (!['task', 'document', 'source_entry', 'workspace_record'].includes(pin.kind)) invalidInput(); checkedId(pin.id); integer(pin.revision, 1, Number.MAX_SAFE_INTEGER); sha256(pin.version_hash); const key = `${pin.kind}:${pin.id}`; if (ids.has(key)) invalidInput(); ids.add(key); }
+  return pins;
+}
+function grantRefs(value = []) {
+  const refs = privateJson(value, 16000); if (!Array.isArray(refs) || refs.length > 100) invalidInput(); const ids = new Set();
+  for (const ref of refs) { checkedObject(ref, ['id', 'revision', 'destination']); checkedId(ref.id); integer(ref.revision, 1, Number.MAX_SAFE_INTEGER); if (ref.destination !== undefined) destination(ref.destination); if (ids.has(ref.id)) invalidInput(); ids.add(ref.id); }
+  return refs;
+}
+function runBudget(value) {
+  checkedObject(value, ['tool_calls', 'model_calls', 'bytes', 'max_duration_ms']);
+  return { tool_calls: integer(value.tool_calls, 0, 1000), model_calls: integer(value.model_calls, 0, 100), bytes: integer(value.bytes, 0, 10_000_000), max_duration_ms: integer(value.max_duration_ms, 1000, 3_600_000) };
+}
+function verification(value) {
+  const parsed = privateJson(value, 8000); checkedObject(parsed, ['status', 'method', 'expected_hash', 'observed_hash', 'evidence_ref']);
+  if (!['passed', 'failed', 'unavailable'].includes(parsed.status)) invalidInput(); workflowName(parsed.method); shortText(parsed.evidence_ref, 500);
+  for (const key of ['expected_hash', 'observed_hash']) if (parsed[key] !== null) sha256(parsed[key]);
+  if (parsed.status === 'passed' && (parsed.expected_hash === null || parsed.observed_hash !== parsed.expected_hash)) failure('VERSION_MISMATCH');
+  return parsed;
+}
+function workflowError(value) {
+  if (value === null || value === undefined) return null;
+  const parsed = privateJson(value, 2000); checkedObject(parsed, ['code', 'next_action']);
+  new LearnBridgeError(parsed.code); if (parsed.next_action !== undefined && parsed.next_action !== null) shortText(parsed.next_action, 200);
+  return parsed;
+}
+function validateRun(value, studentId) {
+  const run = privateJson(value, 160000); checkedObject(run, ['id', 'schema_version', 'student_id', 'revision', 'created_at', 'updated_at', 'recipe_id', 'recipe_version', 'state', 'input', 'budget', 'used', 'grant_refs', 'source_pins', 'checkpoint', 'error', 'evidence_refs', 'cancel_requested', 'lease', 'lease_epoch', 'started_at']);
+  checkedId(run.id); if (run.schema_version !== 1 || run.student_id !== studentId) failure('SCOPE_DENIED'); integer(run.revision, 1, Number.MAX_SAFE_INTEGER); utc(run.created_at); utc(run.updated_at);
+  workflowName(run.recipe_id); shortText(run.recipe_version, 100); if (!RUN_STATES.includes(run.state)) invalidInput(); privateJson(run.input, WORKFLOW_LIMITS.inputBytes); runBudget(run.budget);
+  checkedObject(run.used, ['tool_calls', 'model_calls', 'bytes']); for (const key of ['tool_calls', 'model_calls', 'bytes']) integer(run.used[key], 0, run.budget[key]);
+  grantRefs(run.grant_refs); sourcePins(run.source_pins); if (run.checkpoint !== null) privateJson(run.checkpoint, 16000); workflowError(run.error);
+  if (!Array.isArray(run.evidence_refs) || run.evidence_refs.length > 100 || new Set(run.evidence_refs).size !== run.evidence_refs.length) invalidInput(); run.evidence_refs.forEach(ref => shortText(ref, 500));
+  if (typeof run.cancel_requested !== 'boolean') invalidInput(); integer(run.lease_epoch, 0, Number.MAX_SAFE_INTEGER);
+  if (run.started_at !== null) utc(run.started_at);
+  if (run.lease !== null) { checkedObject(run.lease, ['owner', 'epoch', 'expires_at']); workflowName(run.lease.owner); integer(run.lease.epoch, 1, Number.MAX_SAFE_INTEGER); utc(run.lease.expires_at); if (run.lease.epoch !== run.lease_epoch || !ACTIVE_RUN_STATES.includes(run.state)) failure('VERSION_MISMATCH'); }
+  if (ACTIVE_RUN_STATES.includes(run.state) && run.lease === null) failure('VERSION_MISMATCH');
+  if (Date.parse(run.updated_at) < Date.parse(run.created_at)) failure('VERSION_MISMATCH'); return run;
+}
+function validateStep(value, studentId) {
+  const step = privateJson(value, 100000); checkedObject(step, ['run_id', 'student_id', 'key', 'revision', 'kind', 'state', 'input_hash', 'source_pins', 'result', 'verification', 'created_at', 'updated_at']);
+  checkedId(step.run_id); if (step.student_id !== studentId) failure('SCOPE_DENIED'); workflowName(step.key); integer(step.revision, 1, Number.MAX_SAFE_INTEGER);
+  if (!['read', 'model', 'local_write', 'external_write', 'verify'].includes(step.kind) || !['running', 'verified', 'failed', 'interrupted', 'unknown_outcome', 'invalidated'].includes(step.state)) invalidInput();
+  sha256(step.input_hash); sourcePins(step.source_pins); privateJson(step.result, WORKFLOW_LIMITS.resultBytes); utc(step.created_at); utc(step.updated_at);
+  if (step.verification !== null) verification(step.verification); if (step.state === 'verified' && (step.verification?.status !== 'passed' || step.verification.expected_hash !== hash(canonicalJson(step.result)))) failure('VERSION_MISMATCH'); return step;
+}
+function validateWorkspaceRecord(value, studentId) {
+  const record = privateJson(value, 140000); checkedObject(record, ['id', 'schema_version', 'student_id', 'kind', 'title', 'data', 'revision', 'created_at', 'updated_at', 'deleted_at']);
+  checkedId(record.id); if (record.schema_version !== 1 || record.student_id !== studentId) failure('SCOPE_DENIED'); if (!WORKSPACE_KINDS.includes(record.kind)) invalidInput(); shortText(record.title);
+  integer(record.revision, 1, Number.MAX_SAFE_INTEGER); privateJson(record.data, 128000); utc(record.created_at); utc(record.updated_at); if (record.deleted_at !== null) utc(record.deleted_at);
+  if (Date.parse(record.updated_at) < Date.parse(record.created_at)) failure('VERSION_MISMATCH'); return record;
+}
+function actionFingerprint(proposal) { return hash(canonicalJson(proposal)); }
+function validateAction(value, studentId) {
+  const action = privateJson(value, 100000); checkedObject(action, ['id', 'run_id', 'student_id', 'revision', 'state', 'proposal', 'fingerprint', 'created_at', 'updated_at', 'review_receipt', 'execution', 'provider_receipt', 'verification', 'error']);
+  checkedId(action.id); checkedId(action.run_id); if (action.student_id !== studentId) failure('SCOPE_DENIED'); integer(action.revision, 1, Number.MAX_SAFE_INTEGER); utc(action.created_at); utc(action.updated_at);
+  if (!['awaiting_review', 'authorized', 'rejected', 'needs_changes', 'invalidated', 'executing', 'verified', 'failed', 'unknown_outcome', 'cancelled'].includes(action.state)) invalidInput();
+  const p = action.proposal; checkedObject(p, ['run_id', 'operation', 'account_ref', 'target', 'payload', 'preconditions', 'expires_at']); if (p.run_id !== action.run_id) failure('VERSION_MISMATCH'); workflowName(p.operation); shortText(p.account_ref, 500); privateJson(p.target, 8000); privateJson(p.payload, 32000); privateJson(p.preconditions, 8000); utc(p.expires_at);
+  sha256(action.fingerprint); if (action.fingerprint !== actionFingerprint(p)) failure('VERSION_MISMATCH');
+  if (action.review_receipt !== null) { const r = action.review_receipt; checkedObject(r, ['id', 'action_id', 'fingerprint', 'reviewer', 'decision', 'decided_at', 'expires_at', 'authorization_source']); checkedId(r.id); if (r.action_id !== action.id || r.fingerprint !== action.fingerprint || r.reviewer !== studentId || r.authorization_source !== 'local_ui' || !['approved', 'rejected', 'needs_changes'].includes(r.decision)) failure('SCOPE_DENIED'); utc(r.decided_at); utc(r.expires_at); if (r.expires_at !== p.expires_at) failure('VERSION_MISMATCH'); }
+  if (['authorized', 'executing', 'verified', 'unknown_outcome'].includes(action.state) && action.review_receipt?.decision !== 'approved') failure('CONSENT_REQUIRED');
+  if (action.execution !== null) { checkedObject(action.execution, ['owner', 'epoch', 'started_at']); workflowName(action.execution.owner); integer(action.execution.epoch, 1, Number.MAX_SAFE_INTEGER); utc(action.execution.started_at); }
+  if (['executing', 'verified', 'unknown_outcome'].includes(action.state) && action.execution === null) failure('VERSION_MISMATCH');
+  if (action.provider_receipt !== null) privateJson(action.provider_receipt, 16000); if (action.verification !== null) verification(action.verification); workflowError(action.error);
+  if (action.state === 'verified' && (action.verification?.status !== 'passed' || action.provider_receipt === null)) failure('VERSION_MISMATCH'); return action;
 }
 function decimal(value) { if (typeof value !== 'string' || !/^(0|[1-9]\d{0,29})$/.test(value)) invalidInput(); return value; }
 function relativeSourcePath(value, empty = false) {
@@ -282,6 +356,30 @@ const MIGRATION_V2 = `
   PRAGMA user_version=2;
 `;
 
+const MIGRATION_V3 = `
+  CREATE TABLE workflow_runs (id TEXT PRIMARY KEY, student_id TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>=1), state TEXT NOT NULL, idempotency_key TEXT UNIQUE, request_hash TEXT NOT NULL, request_json TEXT NOT NULL, json TEXT NOT NULL) STRICT;
+  CREATE TRIGGER immutable_workflow_run_input BEFORE UPDATE ON workflow_runs WHEN new.id!=old.id OR new.student_id!=old.student_id OR new.idempotency_key IS NOT old.idempotency_key OR new.request_hash!=old.request_hash OR new.request_json!=old.request_json BEGIN SELECT RAISE(ABORT,'immutable run input'); END;
+  CREATE TABLE workflow_steps (run_id TEXT NOT NULL REFERENCES workflow_runs(id), key TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>=1), json TEXT NOT NULL, PRIMARY KEY(run_id,key)) STRICT;
+  CREATE TABLE workflow_step_revisions (run_id TEXT NOT NULL, key TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>=1), json TEXT NOT NULL, sha256 TEXT NOT NULL, PRIMARY KEY(run_id,key,revision), FOREIGN KEY(run_id,key) REFERENCES workflow_steps(run_id,key)) STRICT;
+  CREATE TRIGGER immutable_workflow_step_update BEFORE UPDATE ON workflow_step_revisions BEGIN SELECT RAISE(ABORT,'immutable step history'); END;
+  CREATE TRIGGER immutable_workflow_step_delete BEFORE DELETE ON workflow_step_revisions BEGIN SELECT RAISE(ABORT,'immutable step history'); END;
+  CREATE TABLE workflow_events (id TEXT PRIMARY KEY, run_id TEXT NOT NULL REFERENCES workflow_runs(id), sequence INTEGER NOT NULL CHECK(sequence>=1), json TEXT NOT NULL, UNIQUE(run_id,sequence)) STRICT;
+  CREATE TRIGGER immutable_workflow_event_update BEFORE UPDATE ON workflow_events BEGIN SELECT RAISE(ABORT,'immutable event'); END;
+  CREATE TRIGGER immutable_workflow_event_delete BEFORE DELETE ON workflow_events BEGIN SELECT RAISE(ABORT,'immutable event'); END;
+  CREATE TABLE workflow_actions (id TEXT PRIMARY KEY, run_id TEXT NOT NULL REFERENCES workflow_runs(id), student_id TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>=1), state TEXT NOT NULL, idempotency_key TEXT NOT NULL, fingerprint TEXT NOT NULL, proposal_json TEXT NOT NULL, json TEXT NOT NULL, UNIQUE(run_id,idempotency_key)) STRICT;
+  CREATE TRIGGER immutable_workflow_action_payload BEFORE UPDATE ON workflow_actions WHEN new.id!=old.id OR new.run_id!=old.run_id OR new.student_id!=old.student_id OR new.idempotency_key!=old.idempotency_key OR new.fingerprint!=old.fingerprint OR new.proposal_json!=old.proposal_json BEGIN SELECT RAISE(ABORT,'immutable action'); END;
+  CREATE TABLE workflow_reviews (id TEXT PRIMARY KEY, action_id TEXT NOT NULL REFERENCES workflow_actions(id), json TEXT NOT NULL) STRICT;
+  CREATE TRIGGER immutable_workflow_review_update BEFORE UPDATE ON workflow_reviews BEGIN SELECT RAISE(ABORT,'immutable review'); END;
+  CREATE TRIGGER immutable_workflow_review_delete BEFORE DELETE ON workflow_reviews BEGIN SELECT RAISE(ABORT,'immutable review'); END;
+  CREATE TABLE workspace_records (id TEXT PRIMARY KEY, student_id TEXT NOT NULL, kind TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>=1), deleted_at TEXT, json TEXT NOT NULL) STRICT;
+  CREATE INDEX workspace_records_owner ON workspace_records(student_id,kind,deleted_at);
+  CREATE TABLE workspace_revisions (record_id TEXT NOT NULL REFERENCES workspace_records(id), revision INTEGER NOT NULL CHECK(revision>=1), json TEXT NOT NULL, sha256 TEXT NOT NULL, PRIMARY KEY(record_id,revision)) STRICT;
+  CREATE TRIGGER immutable_workspace_revision_update BEFORE UPDATE ON workspace_revisions BEGIN SELECT RAISE(ABORT,'immutable workspace revision'); END;
+  CREATE TRIGGER immutable_workspace_revision_delete BEFORE DELETE ON workspace_revisions BEGIN SELECT RAISE(ABORT,'immutable workspace revision'); END;
+  CREATE TABLE workspace_idempotency (key TEXT PRIMARY KEY, request_hash TEXT NOT NULL, record_id TEXT NOT NULL REFERENCES workspace_records(id)) STRICT;
+  PRAGMA user_version=3;
+`;
+
 /** SQLite storage is private to a single OS user and one local runtime writer.
  * It is not an authentication mechanism or an importer of arbitrary laptop files.
  */
@@ -319,7 +417,7 @@ export class LocalStore {
       db = new Database(path, { timeout: 1000 });
       db.pragma('foreign_keys=ON');
       const version = db.pragma('user_version', { simple: true });
-      if (![0, 1, STORAGE_SCHEMA_VERSION].includes(version)) failure('VERSION_MISMATCH');
+      if (![0, 1, 2, STORAGE_SCHEMA_VERSION].includes(version)) failure('VERSION_MISMATCH');
       if (version === 0) {
         if (db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'").get().n !== 0) failure('VERSION_MISMATCH');
         const installation = createInstallation({ student_id: randomUUID(), platform: process.platform,
@@ -329,6 +427,10 @@ export class LocalStore {
       if (db.pragma('user_version', { simple: true }) === 1) {
         validateDatabase(db, { version: 1 });
         db.transaction(() => { db.exec(MIGRATION_V2); db.prepare('INSERT INTO schema_migrations VALUES (2,?)').run(hash(MIGRATION_V2)); }).immediate();
+      }
+      if (db.pragma('user_version', { simple: true }) === 2) {
+        validateDatabase(db, { version: 2 });
+        db.transaction(() => { db.exec(MIGRATION_V3); db.prepare('INSERT INTO schema_migrations VALUES (3,?)').run(hash(MIGRATION_V3)); }).immediate();
       }
       validateDatabase(db);
       db.pragma('journal_mode=WAL'); db.pragma('synchronous=FULL');
@@ -508,6 +610,17 @@ export class LocalStore {
       if (current.revision !== pin.revision || hash(canonicalJson(current.full)) !== pin.version_hash) failure('VERSION_MISMATCH');
     }
     return row;
+  }
+  /** Trusted agent broker precondition. This exposes no content and grants no new access. */
+  assertAgentDocumentSelection(input) {
+    checkedObject(input, ['destination', 'grant_id', 'document_id', 'revision', 'sha256']);
+    checkedId(input.document_id); integer(input.revision, 1, Number.MAX_SAFE_INTEGER); sha256(input.sha256);
+    const grant = this.#currentGrant(input.grant_id, input.destination);
+    if (!JSON.parse(grant.pins_json).documents.some(pin => pin.id === input.document_id)) failure('SCOPE_DENIED');
+    const document = this.getDocument(input.document_id);
+    if (!document || document.document.revision !== input.revision || document.sha256 !== input.sha256) failure('VERSION_MISMATCH');
+    return { grant_id: grant.id, destination: grant.destination, document_id: document.document.id,
+      revision: document.document.revision, sha256: document.sha256, academic_policy: document.document.academic_policy };
   }
   /** Trusted paired-human route only. A native agent surface must never expose this method. */
   createAgentGrant(input) {
@@ -710,6 +823,227 @@ export class LocalStore {
       return { status: 'committed', snapshot_hash: plan.snapshot_hash, imported: plan.pending_count, warnings: plan.warnings };
     });
   }
+  createWorkspaceRecord(input, options = {}) {
+    checkedObject(input, ['kind', 'title', 'data']); checkedObject(options, ['idempotencyKey']);
+    if (!WORKSPACE_KINDS.includes(input.kind)) invalidInput(); shortText(input.title); const data = privateJson(input.data, 128000);
+    const requestHash = hash(canonicalJson({ kind: input.kind, title: input.title, data })); const key = options.idempotencyKey === undefined ? null : retryKey(options.idempotencyKey);
+    return this.#transaction(() => {
+      if (key) { const saved = this.#db.prepare('SELECT * FROM workspace_idempotency WHERE key=?').get(key); if (saved) { if (saved.request_hash !== requestHash) failure('REVISION_CONFLICT'); return validateWorkspaceRecord(JSON.parse(this.#db.prepare('SELECT json FROM workspace_revisions WHERE record_id=? AND revision=1').get(saved.record_id).json), this.identity.student_id); } }
+      const timestamp = now(); const record = validateWorkspaceRecord({ id: randomUUID(), schema_version: 1, student_id: this.identity.student_id, kind: input.kind, title: input.title, data, revision: 1, created_at: timestamp, updated_at: timestamp, deleted_at: null }, this.identity.student_id);
+      const json = JSON.stringify(record); this.#db.prepare('INSERT INTO workspace_records VALUES (?,?,?,?,?,?)').run(record.id, record.student_id, record.kind, 1, null, json);
+      this.#db.prepare('INSERT INTO workspace_revisions VALUES (?,?,?,?)').run(record.id, 1, json, hash(canonicalJson(record)));
+      if (key) this.#db.prepare('INSERT INTO workspace_idempotency VALUES (?,?,?)').run(key, requestHash, record.id); return record;
+    });
+  }
+  getWorkspaceRecord(id) {
+    this.#active(); checkedId(id); const row = this.#db.prepare('SELECT * FROM workspace_records WHERE id=? AND student_id=? AND deleted_at IS NULL').get(id.toLowerCase(), this.identity.student_id);
+    if (!row) return null; const record = validateWorkspaceRecord(JSON.parse(row.json), this.identity.student_id); if (record.id !== row.id || record.kind !== row.kind || record.revision !== row.revision || record.deleted_at !== row.deleted_at) failure('VERSION_MISMATCH'); return record;
+  }
+  listWorkspaceRecords(input = {}) {
+    this.#active(); checkedObject(input, ['kind']); if (input.kind !== undefined && !WORKSPACE_KINDS.includes(input.kind)) invalidInput();
+    return this.#db.prepare('SELECT id FROM workspace_records WHERE student_id=? AND deleted_at IS NULL AND (? IS NULL OR kind=?) ORDER BY id').all(this.identity.student_id, input.kind ?? null, input.kind ?? null).map(row => this.getWorkspaceRecord(row.id));
+  }
+  updateWorkspaceRecord(id, input) {
+    checkedObject(input, ['expected_revision', 'title', 'data']); return this.#transaction(() => {
+      const record = this.getWorkspaceRecord(id); if (!record) failure('REVISION_CONFLICT'); assertRevision(input.expected_revision, record.revision);
+      const next = validateWorkspaceRecord({ ...record, title: input.title === undefined ? record.title : shortText(input.title), data: input.data === undefined ? record.data : privateJson(input.data, 128000), revision: record.revision + 1, updated_at: now() }, this.identity.student_id);
+      this.#saveWorkspaceRecord(next, input.expected_revision); return next;
+    });
+  }
+  deleteWorkspaceRecord(id, expectedRevision) {
+    return this.#transaction(() => { const record = this.getWorkspaceRecord(id); if (!record) failure('REVISION_CONFLICT'); assertRevision(expectedRevision, record.revision); const timestamp = now(); const next = { ...record, revision: record.revision + 1, updated_at: timestamp, deleted_at: timestamp }; this.#saveWorkspaceRecord(next, expectedRevision); return next; });
+  }
+  #saveWorkspaceRecord(record, expectedRevision) {
+    const json = JSON.stringify(record); const result = this.#db.prepare('UPDATE workspace_records SET revision=?,deleted_at=?,json=? WHERE id=? AND student_id=? AND revision=? AND deleted_at IS NULL').run(record.revision, record.deleted_at, json, record.id, this.identity.student_id, expectedRevision);
+    if (result.changes !== 1) failure('REVISION_CONFLICT'); this.#db.prepare('INSERT INTO workspace_revisions VALUES (?,?,?,?)').run(record.id, record.revision, json, hash(canonicalJson(record)));
+  }
+  createRun(input) {
+    checkedObject(input, ['recipe_id', 'recipe_version', 'input', 'budget', 'grant_refs', 'source_pins', 'idempotency_key']); workflowName(input.recipe_id); shortText(input.recipe_version, 100);
+    const normalized = { recipe_id: input.recipe_id, recipe_version: input.recipe_version, input: privateJson(input.input ?? {}, WORKFLOW_LIMITS.inputBytes), budget: runBudget(input.budget), grant_refs: grantRefs(input.grant_refs), source_pins: sourcePins(input.source_pins) };
+    const requestHash = hash(canonicalJson(normalized)); const key = input.idempotency_key === undefined ? null : retryKey(input.idempotency_key);
+    return this.#transaction(() => {
+      if (key) { const saved = this.#db.prepare('SELECT id,request_hash FROM workflow_runs WHERE idempotency_key=?').get(key); if (saved) { if (saved.request_hash !== requestHash) failure('REVISION_CONFLICT'); return this.getRun(saved.id); } }
+      const timestamp = now(); const run = validateRun({ ...normalized, id: randomUUID(), schema_version: 1, student_id: this.identity.student_id, revision: 1, created_at: timestamp, updated_at: timestamp, state: 'created', used: { tool_calls: 0, model_calls: 0, bytes: 0 }, checkpoint: null, error: null, evidence_refs: [], cancel_requested: false, lease: null, lease_epoch: 0, started_at: null }, this.identity.student_id);
+      this.#db.prepare('INSERT INTO workflow_runs VALUES (?,?,?,?,?,?,?,?)').run(run.id, run.student_id, 1, run.state, key, requestHash, canonicalJson(normalized), JSON.stringify(run)); this.#event(run, 'created', {}); return run;
+    });
+  }
+  getRun(id) {
+    this.#active(); checkedId(id); const row = this.#db.prepare('SELECT * FROM workflow_runs WHERE id=? AND student_id=?').get(id.toLowerCase(), this.identity.student_id); if (!row) return null;
+    const run = validateRun(JSON.parse(row.json), this.identity.student_id); if (run.id !== row.id || run.revision !== row.revision || run.state !== row.state) failure('VERSION_MISMATCH'); return run;
+  }
+  listRuns() { this.#active(); return this.#db.prepare('SELECT id FROM workflow_runs WHERE student_id=? ORDER BY id').all(this.identity.student_id).map(row => this.getRun(row.id)); }
+  #requiredRun(id, expectedRevision) { const run = this.getRun(id); if (!run) failure('REVISION_CONFLICT'); assertRevision(expectedRevision, run.revision); return run; }
+  #leasedRun(id, input, { allowStopped = false } = {}) {
+    const run = this.#requiredRun(id, input.expected_revision); workflowName(input.owner); integer(input.epoch, 1, Number.MAX_SAFE_INTEGER);
+    if (!run.lease || run.lease.owner !== input.owner || run.lease.epoch !== input.epoch || Date.parse(run.lease.expires_at) <= Date.now()) failure('REVISION_CONFLICT');
+    if (!allowStopped) { if (run.cancel_requested) failure('CANCELLED'); if (run.started_at && Date.now() - Date.parse(run.started_at) >= run.budget.max_duration_ms) failure('BUDGET_EXCEEDED'); }
+    return run;
+  }
+  #saveRun(run, expectedRevision) {
+    const next = validateRun({ ...run, revision: expectedRevision + 1, updated_at: now() }, this.identity.student_id); const changed = this.#db.prepare('UPDATE workflow_runs SET revision=?,state=?,json=? WHERE id=? AND student_id=? AND revision=?').run(next.revision, next.state, JSON.stringify(next), next.id, this.identity.student_id, expectedRevision);
+    if (changed.changes !== 1) failure('REVISION_CONFLICT');
+    if (next.lease === null) {
+      // Losing the execution lease cannot make a dispatched external effect
+      // safe to retry. Keep its outcome explicit even on budget/interrupt stop.
+      for (const row of this.#db.prepare("SELECT json FROM workflow_actions WHERE run_id=? AND state='executing'").all(next.id)) { const action = validateAction(JSON.parse(row.json), this.identity.student_id); this.#saveAction({ ...action, state: 'unknown_outcome', error: { code: 'UNKNOWN_OUTCOME', next_action: 'check_outcome' } }, action.revision); }
+    }
+    return next;
+  }
+  #event(run, type, payload) {
+    workflowName(type); const data = privateJson(payload, WORKFLOW_LIMITS.eventBytes); const sequence = this.#db.prepare('SELECT COALESCE(MAX(sequence),0)+1 AS n FROM workflow_events WHERE run_id=?').get(run.id).n;
+    // A stopped run stays cancellable even when its bounded event log is full.
+    if (sequence > WORKFLOW_LIMITS.events) return null;
+    const event = { id: randomUUID(), run_id: run.id, student_id: run.student_id, sequence, type, created_at: now(), payload: data };
+    this.#db.prepare('INSERT INTO workflow_events VALUES (?,?,?,?)').run(event.id, run.id, sequence, JSON.stringify(event)); return event;
+  }
+  claimRun(id, input) {
+    checkedObject(input, ['expected_revision', 'owner', 'lease_ms']); workflowName(input.owner); const leaseMs = integer(input.lease_ms ?? 30000, 1000, 300000);
+    return this.#transaction(() => { const run = this.#requiredRun(id, input.expected_revision); if (run.state !== 'ready' || run.lease !== null) failure('REVISION_CONFLICT'); if (run.cancel_requested) failure('CANCELLED');
+      if (run.started_at && Date.now() - Date.parse(run.started_at) >= run.budget.max_duration_ms) failure('BUDGET_EXCEEDED');
+      const next = this.#saveRun({ ...run, state: 'running', started_at: run.started_at ?? now(), lease_epoch: run.lease_epoch + 1, lease: { owner: input.owner, epoch: run.lease_epoch + 1, expires_at: new Date(Date.now() + leaseMs).toISOString() } }, run.revision); this.#event(next, 'started', { lease_epoch: next.lease_epoch }); return next;
+    });
+  }
+  renewRunLease(id, input) {
+    checkedObject(input, ['expected_revision', 'owner', 'epoch', 'lease_ms']); const leaseMs = integer(input.lease_ms ?? 30000, 1000, 300000);
+    return this.#transaction(() => { const run = this.#leasedRun(id, input); return this.#saveRun({ ...run, lease: { ...run.lease, expires_at: new Date(Date.now() + leaseMs).toISOString() } }, run.revision); });
+  }
+  transitionRun(id, input) {
+    checkedObject(input, ['expected_revision', 'owner', 'epoch', 'state', 'checkpoint', 'error', 'evidence_refs', 'grant_refs', 'source_pins']);
+    return this.#transaction(() => {
+      const current = this.#requiredRun(id, input.expected_revision); const run = ACTIVE_RUN_STATES.includes(current.state) ? this.#leasedRun(id, input, { allowStopped: true }) : current;
+      if (input.state !== run.state && (!RUN_EDGES[run.state].includes(input.state) || input.state === 'running')) failure('REVISION_CONFLICT');
+      if ((input.grant_refs !== undefined || input.source_pins !== undefined) && input.state !== 'ready') failure('SCOPE_DENIED');
+      if (run.cancel_requested && !['cancelled', 'partial', 'unknown_outcome', 'interrupted', 'cancelling'].includes(input.state)) failure('CANCELLED');
+      if (input.state === 'ready' && ['failed', 'partial', 'interrupted', 'unknown_outcome'].includes(run.state) && (input.checkpoint ?? run.checkpoint) === null) failure('VERSION_MISMATCH');
+      if (input.state === 'completed') {
+        const steps = this.listRunSteps(id); const actions = this.listRunActions(id); const refs = input.evidence_refs ?? run.evidence_refs;
+        if (!steps.length || steps.some(step => step.state !== 'verified') || !refs.length || refs.some(ref => !steps.some(step => step.verification?.evidence_ref === ref) && !actions.some(action => action.verification?.evidence_ref === ref)) || actions.some(action => !['verified', 'rejected', 'cancelled', 'invalidated', 'needs_changes'].includes(action.state))) failure('VERSION_MISMATCH');
+      }
+      const next = this.#saveRun({ ...run, state: input.state, lease: ACTIVE_RUN_STATES.includes(input.state) ? run.lease : null,
+        checkpoint: input.checkpoint === undefined ? run.checkpoint : privateJson(input.checkpoint, 16000), error: input.error === undefined ? run.error : workflowError(input.error),
+        evidence_refs: input.evidence_refs === undefined ? run.evidence_refs : privateJson(input.evidence_refs, 16000), grant_refs: input.grant_refs === undefined ? run.grant_refs : grantRefs(input.grant_refs), source_pins: input.source_pins === undefined ? run.source_pins : sourcePins(input.source_pins) }, run.revision);
+      this.#event(next, input.state, { error: next.error }); return next;
+    });
+  }
+  requestRunCancel(id, expectedRevision) {
+    return this.#transaction(() => { const run = this.#requiredRun(id, expectedRevision); if (['completed', 'cancelled', 'expired'].includes(run.state)) return run;
+      const state = run.lease ? 'cancelling' : this.listRunActions(id).some(action => action.state === 'unknown_outcome') ? 'unknown_outcome' : 'cancelled'; const next = this.#saveRun({ ...run, cancel_requested: true, state }, run.revision); this.#event(next, 'cancel_requested', {}); return next;
+    });
+  }
+  chargeRunBudget(id, input) {
+    checkedObject(input, ['expected_revision', 'owner', 'epoch', 'tool_calls', 'model_calls', 'bytes']); let exceeded = false;
+    const result = this.#transaction(() => { const run = this.#leasedRun(id, input); const used = { ...run.used }; for (const key of ['tool_calls', 'model_calls', 'bytes']) { const amount = integer(input[key] ?? 0, 0, 10_000_000); if (!Number.isSafeInteger(used[key] + amount) || used[key] + amount > run.budget[key]) exceeded = true; else used[key] += amount; }
+      if (exceeded) { const next = this.#saveRun({ ...run, state: 'partial', lease: null, error: { code: 'BUDGET_EXCEEDED', next_action: 'review_budget' } }, run.revision); this.#event(next, 'budget_exhausted', {}); return next; }
+      return this.#saveRun({ ...run, used }, run.revision);
+    }); if (exceeded) failure('BUDGET_EXCEEDED'); return result;
+  }
+  appendRunEvent(id, input) {
+    checkedObject(input, ['expected_revision', 'owner', 'epoch', 'type', 'payload']);
+    return this.#transaction(() => { const run = this.#leasedRun(id, input, { allowStopped: true }); const event = this.#event(run, input.type, input.payload ?? {}); if (!event) failure('BUDGET_EXCEEDED'); const next = this.#saveRun(run, run.revision); return { run: next, event }; });
+  }
+  listRunEvents(id, input = {}) {
+    this.#active(); checkedId(id); checkedObject(input, ['after_sequence', 'limit']); const after = integer(input.after_sequence ?? 0, 0, Number.MAX_SAFE_INTEGER); const limit = integer(input.limit ?? 100, 1, 500);
+    if (!this.getRun(id)) return []; return this.#db.prepare('SELECT json FROM workflow_events WHERE run_id=? AND sequence>? ORDER BY sequence LIMIT ?').all(id, after, limit).map(row => JSON.parse(row.json));
+  }
+  listRunSteps(id) { this.#active(); checkedId(id); if (!this.getRun(id)) return []; return this.#db.prepare('SELECT json FROM workflow_steps WHERE run_id=? ORDER BY key').all(id).map(row => validateStep(JSON.parse(row.json), this.identity.student_id)); }
+  listRunStepRevisions(id, key) { this.#active(); checkedId(id); workflowName(key); if (!this.getRun(id)) return []; return this.#db.prepare('SELECT json FROM workflow_step_revisions WHERE run_id=? AND key=? ORDER BY revision').all(id, key).map(row => validateStep(JSON.parse(row.json), this.identity.student_id)); }
+  putRunStep(id, input) {
+    checkedObject(input, ['expected_revision', 'owner', 'epoch', 'key', 'expected_step_revision', 'kind', 'state', 'input_hash', 'source_pins', 'result', 'verification']); workflowName(input.key); integer(input.expected_step_revision, 0, Number.MAX_SAFE_INTEGER);
+    return this.#transaction(() => {
+      const run = this.#leasedRun(id, input, { allowStopped: input.state !== 'running' }); const prior = this.#db.prepare('SELECT json FROM workflow_steps WHERE run_id=? AND key=?').get(id, input.key); const previous = prior ? validateStep(JSON.parse(prior.json), this.identity.student_id) : null;
+      if ((previous?.revision ?? 0) !== input.expected_step_revision) failure('REVISION_CONFLICT'); if (!previous && this.listRunSteps(id).length >= WORKFLOW_LIMITS.steps) failure('BUDGET_EXCEEDED');
+      if (previous && previous.kind !== input.kind) failure('VERSION_MISMATCH'); const timestamp = now(); const step = validateStep({ run_id: id, student_id: this.identity.student_id, key: input.key, revision: input.expected_step_revision + 1, kind: input.kind, state: input.state, input_hash: input.input_hash, source_pins: sourcePins(input.source_pins), result: privateJson(input.result ?? null, WORKFLOW_LIMITS.resultBytes), verification: input.verification === undefined || input.verification === null ? null : verification(input.verification), created_at: previous?.created_at ?? timestamp, updated_at: timestamp }, this.identity.student_id);
+      this.#db.prepare('INSERT INTO workflow_steps VALUES (?,?,?,?) ON CONFLICT(run_id,key) DO UPDATE SET revision=excluded.revision,json=excluded.json').run(id, step.key, step.revision, JSON.stringify(step));
+      this.#db.prepare('INSERT INTO workflow_step_revisions VALUES (?,?,?,?,?)').run(id, step.key, step.revision, JSON.stringify(step), hash(canonicalJson(step)));
+      const next = this.#saveRun(run, run.revision); this.#event(next, 'step_saved', { key: step.key, revision: step.revision, state: step.state }); return { run: next, step };
+    });
+  }
+  recoverInterruptedRuns() { return this.#recoverRuns(false); }
+  recoverExpiredRunLeases() { return this.#recoverRuns(true); }
+  #recoverRuns(expiredOnly) {
+    return this.#transaction(() => {
+      const recovered = [];
+      for (const run of this.listRuns()) {
+        if (!ACTIVE_RUN_STATES.includes(run.state) || (expiredOnly && Date.parse(run.lease.expires_at) > Date.now())) continue;
+        // Only call on runtime startup (single writer ownership); do not steal
+        // a running worker lease from a routine request handler.
+        for (const row of this.#db.prepare("SELECT * FROM workflow_actions WHERE run_id=? AND state='executing'").all(run.id)) {
+          const action = validateAction(JSON.parse(row.json), this.identity.student_id); this.#saveAction({ ...action, state: 'unknown_outcome', error: { code: 'UNKNOWN_OUTCOME', next_action: 'check_outcome' } }, action.revision);
+        }
+        for (const row of this.#db.prepare("SELECT key,json FROM workflow_steps WHERE run_id=?").all(run.id)) {
+          const step = validateStep(JSON.parse(row.json), this.identity.student_id); if (step.state !== 'running') continue;
+          const interrupted = validateStep({ ...step, revision: step.revision + 1, state: 'interrupted', updated_at: now() }, this.identity.student_id);
+          this.#db.prepare('UPDATE workflow_steps SET revision=?,json=? WHERE run_id=? AND key=?').run(interrupted.revision, JSON.stringify(interrupted), run.id, step.key);
+          this.#db.prepare('INSERT INTO workflow_step_revisions VALUES (?,?,?,?,?)').run(run.id, step.key, interrupted.revision, JSON.stringify(interrupted), hash(canonicalJson(interrupted)));
+        }
+        const next = this.#saveRun({ ...run, state: 'interrupted', lease: null, error: { code: 'OFFLINE', next_action: 'resume_after_revalidation' } }, run.revision); this.#event(next, 'interrupted', { lease_epoch: run.lease_epoch }); recovered.push(next);
+      } return recovered;
+    });
+  }
+  getRunAction(id) {
+    this.#active(); checkedId(id); const row = this.#db.prepare('SELECT * FROM workflow_actions WHERE id=? AND student_id=?').get(id.toLowerCase(), this.identity.student_id); if (!row) return null;
+    const action = validateAction(JSON.parse(row.json), this.identity.student_id); if (action.id !== row.id || action.run_id !== row.run_id || action.revision !== row.revision || action.state !== row.state || action.fingerprint !== row.fingerprint || canonicalJson(action.proposal) !== row.proposal_json) failure('VERSION_MISMATCH'); return action;
+  }
+  listRunActions(runId) { this.#active(); checkedId(runId); if (!this.getRun(runId)) return []; return this.#db.prepare('SELECT id FROM workflow_actions WHERE run_id=? ORDER BY id').all(runId).map(row => this.getRunAction(row.id)); }
+  #requiredAction(id, expectedRevision) { const action = this.getRunAction(id); if (!action) failure('REVISION_CONFLICT'); assertRevision(expectedRevision, action.revision); return action; }
+  #saveAction(action, expectedRevision) {
+    const next = validateAction({ ...action, revision: expectedRevision + 1, updated_at: now() }, this.identity.student_id);
+    const changed = this.#db.prepare('UPDATE workflow_actions SET revision=?,state=?,json=? WHERE id=? AND student_id=? AND revision=?').run(next.revision, next.state, JSON.stringify(next), next.id, this.identity.student_id, expectedRevision); if (changed.changes !== 1) failure('REVISION_CONFLICT'); return next;
+  }
+  proposeRunAction(runId, input) {
+    checkedObject(input, ['expected_revision', 'owner', 'epoch', 'operation', 'account_ref', 'target', 'payload', 'preconditions', 'expires_in_minutes', 'idempotency_key']); retryKey(input.idempotency_key); workflowName(input.operation); shortText(input.account_ref, 500);
+    const target = privateJson(input.target, 8000); const payload = privateJson(input.payload, 32000); const preconditions = privateJson(input.preconditions ?? {}, 8000); const minutes = integer(input.expires_in_minutes ?? 30, 1, 120);
+    return this.#transaction(() => {
+      const run = this.#leasedRun(runId, input); const previous = this.#db.prepare('SELECT id FROM workflow_actions WHERE run_id=? AND idempotency_key=?').get(runId, input.idempotency_key);
+      if (previous) { const action = this.getRunAction(previous.id); const p = action.proposal; if (canonicalJson({ operation: input.operation, account_ref: input.account_ref, target, payload, preconditions }) !== canonicalJson({ operation: p.operation, account_ref: p.account_ref, target: p.target, payload: p.payload, preconditions: p.preconditions })) failure('REVISION_CONFLICT'); return { run, action }; }
+      if (this.listRunActions(runId).length >= WORKFLOW_LIMITS.actions) failure('BUDGET_EXCEEDED'); const timestamp = now();
+      const proposal = { run_id: runId, operation: input.operation, account_ref: input.account_ref, target, payload, preconditions, expires_at: new Date(Date.now() + minutes * 60000).toISOString() };
+      const action = validateAction({ id: randomUUID(), run_id: runId, student_id: this.identity.student_id, revision: 1, state: 'awaiting_review', proposal, fingerprint: actionFingerprint(proposal), created_at: timestamp, updated_at: timestamp, review_receipt: null, execution: null, provider_receipt: null, verification: null, error: null }, this.identity.student_id);
+      this.#db.prepare('INSERT INTO workflow_actions VALUES (?,?,?,?,?,?,?,?,?)').run(action.id, runId, action.student_id, 1, action.state, input.idempotency_key, action.fingerprint, canonicalJson(proposal), JSON.stringify(action));
+      const next = this.#saveRun(run, run.revision); this.#event(next, 'review_required', { action_id: action.id, fingerprint: action.fingerprint }); return { run: next, action };
+    });
+  }
+  reviewRunAction(id, input) {
+    checkedObject(input, ['expected_revision', 'fingerprint', 'decision']); sha256(input.fingerprint); if (!['approved', 'rejected', 'needs_changes'].includes(input.decision)) invalidInput();
+    // This method is deliberately absent from the agent IPC/MCP surface. The
+    // paired human handler supplies the authority; a receipt object is never input.
+    return this.#transaction(() => {
+      const action = this.#requiredAction(id, input.expected_revision); if (action.state !== 'awaiting_review') failure('REVISION_CONFLICT'); if (action.fingerprint !== input.fingerprint) failure('VERSION_MISMATCH'); if (Date.parse(action.proposal.expires_at) <= Date.now()) failure('CONSENT_REQUIRED');
+      const run = this.getRun(action.run_id); if (run.cancel_requested || ['completed', 'cancelled', 'expired'].includes(run.state)) failure('CANCELLED');
+      const receipt = { id: randomUUID(), action_id: id, fingerprint: action.fingerprint, reviewer: this.identity.student_id, decision: input.decision, decided_at: now(), expires_at: action.proposal.expires_at, authorization_source: 'local_ui' };
+      this.#db.prepare('INSERT INTO workflow_reviews VALUES (?,?,?)').run(receipt.id, id, JSON.stringify(receipt));
+      const next = this.#saveAction({ ...action, state: input.decision === 'approved' ? 'authorized' : input.decision, review_receipt: receipt }, action.revision); this.#event(run, 'review_decided', { action_id: id, decision: input.decision }); return next;
+    });
+  }
+  invalidateRunAction(id, expectedRevision) {
+    return this.#transaction(() => { const action = this.#requiredAction(id, expectedRevision); if (!['awaiting_review', 'authorized'].includes(action.state)) failure('REVISION_CONFLICT'); const next = this.#saveAction({ ...action, state: 'invalidated' }, action.revision); this.#event(this.getRun(action.run_id), 'review_invalidated', { action_id: id }); return next; });
+  }
+  beginRunAction(id, input) {
+    checkedObject(input, ['expected_revision', 'run_expected_revision', 'owner', 'epoch', 'fingerprint']); sha256(input.fingerprint);
+    return this.#transaction(() => {
+      const action = this.#requiredAction(id, input.expected_revision); const run = this.#leasedRun(action.run_id, { ...input, expected_revision: input.run_expected_revision });
+      if (action.state === 'unknown_outcome') failure('UNKNOWN_OUTCOME'); if (action.state !== 'authorized' || action.review_receipt?.decision !== 'approved') failure('CONSENT_REQUIRED');
+      if (input.fingerprint !== action.fingerprint || action.review_receipt.fingerprint !== action.fingerprint) failure('VERSION_MISMATCH'); if (Date.parse(action.proposal.expires_at) <= Date.now()) failure('CONSENT_REQUIRED');
+      if (this.listRunActions(action.run_id).some(other => other.id !== id && ['executing', 'unknown_outcome'].includes(other.state))) failure('UNKNOWN_OUTCOME');
+      const nextAction = this.#saveAction({ ...action, state: 'executing', execution: { owner: input.owner, epoch: input.epoch, started_at: now() } }, action.revision);
+      const nextRun = this.#saveRun(run, run.revision); this.#event(nextRun, 'action_started', { action_id: id, epoch: input.epoch }); return { run: nextRun, action: nextAction };
+    });
+  }
+  finishRunAction(id, input) {
+    checkedObject(input, ['expected_revision', 'run_expected_revision', 'owner', 'epoch', 'state', 'provider_receipt', 'verification', 'error']); if (!['verified', 'failed', 'unknown_outcome'].includes(input.state)) invalidInput();
+    return this.#transaction(() => {
+      const action = this.#requiredAction(id, input.expected_revision); const run = this.#leasedRun(action.run_id, { ...input, expected_revision: input.run_expected_revision }, { allowStopped: true });
+      if (action.state !== 'executing' || action.execution?.owner !== input.owner || action.execution?.epoch !== input.epoch) failure('REVISION_CONFLICT');
+      const nextAction = this.#saveAction({ ...action, state: input.state, provider_receipt: input.provider_receipt === undefined ? null : privateJson(input.provider_receipt, 16000), verification: input.verification === undefined ? null : verification(input.verification), error: workflowError(input.error) }, action.revision);
+      const nextRun = this.#saveRun(run, run.revision); this.#event(nextRun, 'action_finished', { action_id: id, state: nextAction.state }); return { run: nextRun, action: nextAction };
+    });
+  }
+  reconcileRunAction(id, input) {
+    checkedObject(input, ['expected_revision', 'state', 'provider_receipt', 'verification']); if (!['verified', 'failed', 'cancelled'].includes(input.state)) invalidInput();
+    return this.#transaction(() => { const action = this.#requiredAction(id, input.expected_revision); if (action.state !== 'unknown_outcome') failure('REVISION_CONFLICT'); const run = this.getRun(action.run_id); if (run.lease && Date.parse(run.lease.expires_at) > Date.now()) failure('REVISION_CONFLICT');
+      const next = this.#saveAction({ ...action, state: input.state, provider_receipt: input.provider_receipt === undefined ? null : privateJson(input.provider_receipt, 16000), verification: input.verification === undefined ? null : verification(input.verification), error: null }, action.revision); this.#event(run, 'action_reconciled', { action_id: id, state: next.state }); return next;
+    });
+  }
   integrity() {
     this.#active(); return validateDatabase(this.#db);
   }
@@ -747,7 +1081,7 @@ export class LocalStore {
     const manifest = readJsonFile(join(source, 'manifest.json'), 10_000);
     checkedObject(manifest, ['format', 'schema_version', 'created_at', 'installation_id', 'student_id', 'database']);
     checkedObject(manifest.database, ['name', 'bytes', 'sha256']);
-    if (manifest.format !== 'learnbridge-local-backup' || ![1, STORAGE_SCHEMA_VERSION].includes(manifest.schema_version) || manifest.database.name !== 'learnbridge.sqlite'
+    if (manifest.format !== 'learnbridge-local-backup' || ![1, 2, STORAGE_SCHEMA_VERSION].includes(manifest.schema_version) || manifest.database.name !== 'learnbridge.sqlite'
       || !Number.isSafeInteger(manifest.database.bytes) || manifest.database.bytes < 1 || manifest.database.bytes > STORAGE_LIMITS.backupBytes
       || typeof manifest.database.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(manifest.database.sha256)) invalidInput();
     checkedId(manifest.student_id); checkedId(manifest.installation_id);
@@ -780,10 +1114,11 @@ export class LocalStore {
 }
 
 function validateDatabase(db, { version = STORAGE_SCHEMA_VERSION } = {}) {
-  if (![1, STORAGE_SCHEMA_VERSION].includes(version) || db.pragma('user_version', { simple: true }) !== version) failure('VERSION_MISMATCH');
+  if (![1, 2, STORAGE_SCHEMA_VERSION].includes(version) || db.pragma('user_version', { simple: true }) !== version) failure('VERSION_MISMATCH');
   const ledger = db.prepare('SELECT version,checksum FROM schema_migrations ORDER BY version').all();
   if (ledger.length !== version || ledger[0].version !== 1 || ledger[0].checksum !== hash(MIGRATION)
-    || (version === 2 && (ledger[1].version !== 2 || ledger[1].checksum !== hash(MIGRATION_V2)))
+    || (version >= 2 && (ledger[1].version !== 2 || ledger[1].checksum !== hash(MIGRATION_V2)))
+    || (version >= 3 && (ledger[2].version !== 3 || ledger[2].checksum !== hash(MIGRATION_V3)))
     || schemaFingerprint(db) !== expectedSchemaFingerprint(version)) failure('VERSION_MISMATCH');
   if (db.pragma('integrity_check', { simple: true }) !== 'ok' || db.pragma('foreign_key_check').length) failure('PROVIDER_FAILURE');
   const installation = parseInstallation(JSON.parse(db.prepare('SELECT json FROM installation WHERE singleton=1').get()?.json));
@@ -830,7 +1165,8 @@ function validateDatabase(db, { version = STORAGE_SCHEMA_VERSION } = {}) {
   }
   for (const entry of db.prepare('SELECT operation,result_json FROM idempotency').all()) validateCreateResult(entry.operation, JSON.parse(entry.result_json), installation.student_id);
   if (db.prepare('SELECT count(*) AS n FROM document_revisions WHERE document_id NOT IN (SELECT id FROM records WHERE kind=\'document\')').get().n !== 0) failure('VERSION_MISMATCH');
-  const additional = version === 2 ? validateAgentDatabase(db, installation.student_id) : {};
+  const additional = version >= 2 ? validateAgentDatabase(db, installation.student_id) : {};
+  if (version >= 3) Object.assign(additional, validateWorkflowDatabase(db, installation.student_id));
   return { integrity: 'ok', schema_version: version, installation_id: installation.id, student_id: installation.student_id, task_count: tasks.length, document_count: documents, ...additional };
 }
 
@@ -874,13 +1210,50 @@ function validateAgentDatabase(db, studentId) {
 }
 
 const schemaReferences = new Map();
+function validateWorkflowDatabase(db, studentId) {
+  const runs = new Map(); const actions = new Map(); let stepCount = 0; let eventCount = 0; let workspaceCount = 0;
+  for (const row of db.prepare('SELECT * FROM workflow_runs').all()) {
+    const run = validateRun(JSON.parse(row.json), studentId); if (run.id !== row.id || row.student_id !== studentId || run.revision !== row.revision || run.state !== row.state) failure('VERSION_MISMATCH');
+    const request = privateJson(JSON.parse(row.request_json), 100000); checkedObject(request, ['recipe_id', 'recipe_version', 'input', 'budget', 'grant_refs', 'source_pins']); grantRefs(request.grant_refs); sourcePins(request.source_pins);
+    if (row.request_hash !== hash(canonicalJson(request)) || canonicalJson({ recipe_id: run.recipe_id, recipe_version: run.recipe_version, input: run.input, budget: run.budget }) !== canonicalJson({ recipe_id: request.recipe_id, recipe_version: request.recipe_version, input: request.input, budget: request.budget })) failure('VERSION_MISMATCH');
+    if (row.idempotency_key !== null) retryKey(row.idempotency_key); runs.set(row.id, run);
+  }
+  for (const row of db.prepare('SELECT * FROM workflow_steps').all()) {
+    const step = validateStep(JSON.parse(row.json), studentId); if (!runs.has(row.run_id) || step.run_id !== row.run_id || step.key !== row.key || step.revision !== row.revision) failure('VERSION_MISMATCH');
+    const history = db.prepare('SELECT * FROM workflow_step_revisions WHERE run_id=? AND key=? ORDER BY revision').all(row.run_id, row.key); if (history.length !== row.revision) failure('VERSION_MISMATCH');
+    for (const [index, saved] of history.entries()) { const revision = validateStep(JSON.parse(saved.json), studentId); if (saved.revision !== index + 1 || revision.revision !== saved.revision || revision.run_id !== row.run_id || revision.key !== row.key || saved.sha256 !== hash(canonicalJson(revision)) || revision.kind !== step.kind || revision.created_at !== step.created_at) failure('VERSION_MISMATCH'); }
+    if (history.at(-1).json !== row.json) failure('VERSION_MISMATCH'); stepCount++;
+  }
+  for (const run of runs.values()) {
+    const events = db.prepare('SELECT * FROM workflow_events WHERE run_id=? ORDER BY sequence').all(run.id); if (!events.length || events.length > WORKFLOW_LIMITS.events) failure('VERSION_MISMATCH');
+    for (const [index, row] of events.entries()) { const e = privateJson(JSON.parse(row.json), 10000); checkedObject(e, ['id', 'run_id', 'student_id', 'sequence', 'type', 'created_at', 'payload']); checkedId(e.id); workflowName(e.type); utc(e.created_at); privateJson(e.payload, WORKFLOW_LIMITS.eventBytes); if (e.id !== row.id || e.run_id !== run.id || e.student_id !== studentId || row.sequence !== index + 1 || e.sequence !== row.sequence) failure('VERSION_MISMATCH'); } eventCount += events.length;
+    if (db.prepare('SELECT count(*) AS n FROM workflow_steps WHERE run_id=?').get(run.id).n > WORKFLOW_LIMITS.steps || db.prepare('SELECT count(*) AS n FROM workflow_actions WHERE run_id=?').get(run.id).n > WORKFLOW_LIMITS.actions) failure('VERSION_MISMATCH');
+  }
+  for (const row of db.prepare('SELECT * FROM workflow_actions').all()) {
+    const action = validateAction(JSON.parse(row.json), studentId); retryKey(row.idempotency_key); if (!runs.has(action.run_id) || row.student_id !== studentId || action.id !== row.id || action.run_id !== row.run_id || action.revision !== row.revision || action.state !== row.state || action.fingerprint !== row.fingerprint || canonicalJson(action.proposal) !== row.proposal_json) failure('VERSION_MISMATCH');
+    if (action.review_receipt) { const saved = db.prepare('SELECT action_id,json FROM workflow_reviews WHERE id=?').get(action.review_receipt.id); if (!saved || saved.action_id !== action.id || canonicalJson(JSON.parse(saved.json)) !== canonicalJson(action.review_receipt)) failure('VERSION_MISMATCH'); } actions.set(action.id, action);
+  }
+  for (const row of db.prepare('SELECT * FROM workflow_reviews').all()) { const receipt = JSON.parse(row.json); if (receipt.id !== row.id || receipt.action_id !== row.action_id || !actions.has(row.action_id) || actions.get(row.action_id).review_receipt?.id !== row.id) failure('VERSION_MISMATCH'); }
+  for (const run of runs.values()) if (run.state === 'completed') {
+    const steps = db.prepare('SELECT json FROM workflow_steps WHERE run_id=?').all(run.id).map(row => JSON.parse(row.json)); const selected = [...actions.values()].filter(a => a.run_id === run.id);
+    if (!steps.length || steps.some(s => s.state !== 'verified') || !run.evidence_refs.length || run.evidence_refs.some(ref => !steps.some(s => s.verification?.evidence_ref === ref) && !selected.some(a => a.verification?.evidence_ref === ref)) || selected.some(a => !['verified', 'rejected', 'cancelled', 'invalidated', 'needs_changes'].includes(a.state))) failure('VERSION_MISMATCH');
+  }
+  for (const row of db.prepare('SELECT * FROM workspace_records').all()) {
+    const record = validateWorkspaceRecord(JSON.parse(row.json), studentId); if (row.student_id !== studentId || record.id !== row.id || record.kind !== row.kind || record.revision !== row.revision || record.deleted_at !== row.deleted_at) failure('VERSION_MISMATCH');
+    const history = db.prepare('SELECT * FROM workspace_revisions WHERE record_id=? ORDER BY revision').all(record.id); if (history.length !== record.revision) failure('VERSION_MISMATCH');
+    for (const [index, saved] of history.entries()) { const revision = validateWorkspaceRecord(JSON.parse(saved.json), studentId); if (saved.revision !== index + 1 || revision.revision !== saved.revision || revision.id !== record.id || revision.kind !== record.kind || revision.created_at !== record.created_at || saved.sha256 !== hash(canonicalJson(revision))) failure('VERSION_MISMATCH'); }
+    if (history.at(-1).json !== row.json) failure('VERSION_MISMATCH'); workspaceCount++;
+  }
+  for (const row of db.prepare('SELECT * FROM workspace_idempotency').all()) { retryKey(row.key); const original = db.prepare('SELECT json FROM workspace_revisions WHERE record_id=? AND revision=1').get(row.record_id); if (!original) failure('VERSION_MISMATCH'); const record = JSON.parse(original.json); if (row.request_hash !== hash(canonicalJson({ kind: record.kind, title: record.title, data: record.data }))) failure('VERSION_MISMATCH'); }
+  return { run_count: runs.size, workflow_step_count: stepCount, workflow_event_count: eventCount, workflow_action_count: actions.size, workspace_record_count: workspaceCount };
+}
 function schemaFingerprint(db) {
   return hash(JSON.stringify(db.prepare("SELECT type,name,tbl_name,sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name").all()));
 }
 function expectedSchemaFingerprint(version = STORAGE_SCHEMA_VERSION) {
   if (schemaReferences.has(version)) return schemaReferences.get(version);
   const fixture = new Database(':memory:');
-  try { fixture.exec(MIGRATION); if (version === 2) fixture.exec(MIGRATION_V2); const fingerprint = schemaFingerprint(fixture); schemaReferences.set(version, fingerprint); return fingerprint; } finally { fixture.close(); }
+  try { fixture.exec(MIGRATION); if (version >= 2) fixture.exec(MIGRATION_V2); if (version >= 3) fixture.exec(MIGRATION_V3); const fingerprint = schemaFingerprint(fixture); schemaReferences.set(version, fingerprint); return fingerprint; } finally { fixture.close(); }
 }
 
 function validateCreateResult(operation, result, studentId) {
