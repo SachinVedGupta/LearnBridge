@@ -1,0 +1,155 @@
+{
+  "format": "learnbridge_selected_office_verification",
+  "date": "2026-10-03",
+  "status": "PASS_FOR_MEASURED_SLICE",
+  "base_commit": "cd2c78bb97461c8d6b6998a68d2965571d57ba54",
+  "synthetic_only": true,
+  "platform": {
+    "os": "macOS",
+    "architecture": "arm64",
+    "node": "22.23.2",
+    "python": "3.12.14"
+  },
+  "commands": {
+    "full_suite": "npm test",
+    "office_sources": "node --test web/scripts/source-office.test.mjs",
+    "office_storage": "node --test web/scripts/local-office-storage.test.mjs",
+    "office_runtime": "node --test web/scripts/source-office-runtime.test.mjs",
+    "clean_install": "node web/scripts/verify-local-install.mjs",
+    "hosted_build": "npm --prefix web run build:website"
+  },
+  "measured_checks": {
+    "full_suite": {
+      "passed": 491,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "duration_ms": 48146.804375
+    },
+    "office_acquisition": {
+      "passed": 18,
+      "actual_anchored_reads": true,
+      "actual_fixed_parser": true,
+      "included_in_full_suite": true,
+      "real_cancel_timeout_exit_checks": true,
+      "original_text_section_hashes": true,
+      "exact_unicode_byte_ranges": true,
+      "zip_xml_refusal_and_budgets": true,
+      "no_network_or_disk_extraction": true
+    },
+    "office_storage": {
+      "passed": 12,
+      "included_in_full_suite": true,
+      "schema_version": 5,
+      "atomic_throw_and_SIGKILL_rollback": true,
+      "historical_v1_to_v4_checksums_preserved": true,
+      "unchanged_v4_pdf_backup_restore": true,
+      "mixed_pdf_office_backup_restore": true,
+      "rehashed_corruption_refused": true
+    },
+    "office_http_mcp": {
+      "passed": 5,
+      "included_in_full_suite": true,
+      "actual_paired_http": true,
+      "actual_stdio_sdk_selected_context": true,
+      "paragraph_and_presentation_order": true,
+      "metadata_lists_omit_bodies": true,
+      "capability_denial_no_text_fallback": true,
+      "unavailable_zero_snapshots": true,
+      "late_revoke_logout_withhold_text": true,
+      "restart_fresh_backup_restore": true
+    },
+    "clean_install": {
+      "passed_phases": 9,
+      "source_files": 65,
+      "source_digest": "4885bc00cfceda8610ff79b11f0f1eab6d1bc9675748b36ce5d21e9b8bd8a477",
+      "lock_sha256": "c5976bc94f4b80dee27d86f80f1520145594ed6880f539874015f9bccd4a1c74",
+      "static_assets": 9,
+      "mcp_tools": 4,
+      "fixture_cleanup": true,
+      "offline_cache": true
+    },
+    "hosted_build": {
+      "status": "PASS",
+      "setup_route": "dynamic",
+      "new_office_capability_copy_compiled": true,
+      "deployment_for_this_snapshot": "NOT_YET_PERFORMED"
+    },
+    "python_syntax": {
+      "files": 2,
+      "status": "PASS"
+    },
+    "browser_fresh_restore": {
+      "schema_version": 5,
+      "restored_snapshots": 2,
+      "exact_full_record_comparison": true,
+      "content_snapshot_sha256": "9b58302f17855deab00e38559f2290957faf72a7ca2e71a75e2b53d17ea4dd84"
+    }
+  },
+  "browser": {
+    "passed_flows": [
+      "metadata-only selected folder inventory",
+      "DOCX exact two Unicode paragraphs",
+      "PPTX presentation-order slide2 then slide1",
+      "saved partial coverage and original source hashes",
+      "blank DOCX unavailable with no third snapshot"
+    ],
+    "console_errors": 0,
+    "desktop_client_width": 1280,
+    "desktop_scroll_width": 1280,
+    "mobile_client_width": 390,
+    "mobile_scroll_width": 390,
+    "horizontal_overflow": false,
+    "screenshots": [
+      {
+        "path": "artifacts/local-office-import-desktop.jpg",
+        "media_type": "image/jpeg",
+        "sha256": "0ddad158958feea8dfb7034e7f1498fed9736d3678d0611c2792a6a0b9585638"
+      },
+      {
+        "path": "artifacts/local-office-import-mobile.jpg",
+        "media_type": "image/jpeg",
+        "sha256": "65af2f2beb666be693386cbfec1d9fa47a2ba5eef124746ad8db2014813cd2ea"
+      }
+    ]
+  },
+  "limits": {
+    "original_bytes": 4000000,
+    "zip_entries": 1000,
+    "expanded_total_bytes": 8000000,
+    "xml_part_bytes": 2000000,
+    "sections": 1000,
+    "dashboard_text_bytes": 48000,
+    "metadata_bytes": 96000,
+    "parser_result_bytes": 128000,
+    "parser_deadline_ms": 5000,
+    "available_coverage": "always_partial"
+  },
+  "limitations": [
+    "Synthetic OOXML fixtures do not establish interoperability with genuine Word/PowerPoint/LibreOffice-authored course files.",
+    "Supported transitional OOXML text only; visual layout, images, unsupported markup and recorded omissions require original review.",
+    "No Linux run, Windows support, OCR, macro execution, external relationship fetch or password handling.",
+    "Actual MCP tool context is not a Codex/Claude model inference result; official host authorization remains separate.",
+    "Clean offline-cache install on this Mac is not a fresh-computer or online-download test; it copies no Python environment.",
+    "No personal files, university credentials, new dependencies or production configuration were used.",
+    "The historical public setup deployment is recorded separately; this source snapshot has not yet been deployed."
+  ],
+  "source_hashes": {
+    "web/packages/local-sources/src/index.mjs": "205d10b71b5f659aa0f08b1dcea355263355b69dbddcbef1e1d3724fe1769897",
+    "web/packages/local-sources/src/office-native.mjs": "23bc24b8265a988e81e4cb47f337599d6e4c7cb51096c110eeef5fa8bb904d83",
+    "web/packages/local-sources/src/office-text.py": "5cf147a22676891054de93a6c6807900d4173f3506210a59620c5bb56ac170f5",
+    "web/packages/local-storage/src/index.mjs": "ba506641bda697a3c524d413ec81dc44e9aad0e88f3d8bc7bf0bdd90092dbc98",
+    "web/packages/local-storage/src/office-provenance.mjs": "8303e7dafea4b51b43b115f9631187bf0ebe61fdab480d4c5f4d61d244444b5e",
+    "web/apps/local-runtime/src/server.mjs": "992bcd54ec675b47db2f298a11ca2bfadd835bbc417dfe6bf508e71167f15542",
+    "web/apps/local-runtime/src/mcp.mjs": "9502adc327640d83499695c46f0f9ffc13682ef3ce9a9be6e8735db048742a80",
+    "web/apps/local/public/app.js": "bbe01f759d8b685d27026e4e53eeb67ab2955e3f229dcda9228ad1c8c4d5ee8a",
+    "web/apps/local/public/index.html": "c5dc405a2b754bf4b763070c0f2a0bff0a29411087fc7c1c4d665621cf6e8b5a",
+    "web/scripts/fixtures/office-source-fixture.py": "b749e8a9257a89ad91fb01a55db848d3dccd648a2811656b59cd23be6b071684",
+    "web/scripts/source-office.test.mjs": "60bd44cc5e4790e7caaed7fde130abc076d1936282bd0ee295b9fa78a81da059",
+    "web/scripts/local-office-storage.test.mjs": "ac535edee632b4884ada07521ee6424f5c0f75674d36d92a11f90e8920d301e3",
+    "web/scripts/source-office-runtime.test.mjs": "43f5d1500494456eeb6f4bab82a45697c3159c580cf763b6b96aeff2e6a024d4",
+    "web/scripts/local-pdf-storage.test.mjs": "d9763bdde14094f1ab856fc8e4bbd4d15ce0478a28f46c28190d2acda9f01bdb",
+    "web/scripts/verify-local-install.mjs": "cb503ae2949c0aad71f558bd8fa0a04053407687f7da7259ae6a68be33264bb1",
+    "web/apps/web/src/app/setup/page.tsx": "90b3766c3f5b0d48939c2d3eaf56fea189def19c16d8f9ed1c48fe18969d68e7"
+  }
+}

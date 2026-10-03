@@ -7,8 +7,10 @@ import { fileURLToPath } from 'node:url';
 import { StringDecoder } from 'node:string_decoder';
 import { LearnBridgeError, invalidInput } from '@learnbridge/core';
 import { PDF_LIMITS, PDF_PARSER_VERSION, nativePdfPrerequisites, runNativePdf } from './pdf-native.mjs';
+import { OFFICE_LIMITS, OFFICE_PARSER_VERSION, officePrerequisites, runOfficeParser } from './office-native.mjs';
 
 export { PDF_LIMITS, PDF_PARSER_VERSION } from './pdf-native.mjs';
+export { OFFICE_LIMITS, OFFICE_PARSER_VERSION } from './office-native.mjs';
 
 export const SOURCE_ADAPTER_VERSION = '0.1.0';
 export const SOURCE_LIMITS = Object.freeze({ maxEntries: 500, maxFiles: 100, maxDepth: 8, maxBytes: 256_000, maxDurationMs: 5000 });
@@ -120,7 +122,8 @@ function stableEntryId(sourceVersion, path, identity) {
 function entry(value, source) {
   object(value, ['id', 'relativePath', 'kind', 'title', 'snapshot', 'directories']);
   const path = relativePath(value.relativePath);
-  const expectedKind = /\.md$/i.test(path) ? 'markdown' : /\.txt$/i.test(path) ? 'text' : /\.pdf$/i.test(path) ? 'pdf' : null;
+  const expectedKind = /\.md$/i.test(path) ? 'markdown' : /\.txt$/i.test(path) ? 'text' : /\.pdf$/i.test(path) ? 'pdf'
+    : /\.docx$/i.test(path) ? 'docx' : /\.pptx$/i.test(path) ? 'pptx' : null;
   if (!expectedKind || value.kind !== expectedKind || value.title !== basename(path)) invalidInput();
   const file = snapshot(value.snapshot);
   const dirs = array(value.directories, 9).map(item => { object(item, ['relativePath', 'identity']); return { relativePath: relativePath(item.relativePath, { directory: true }), identity: directoryIdentity(item.identity) }; });
@@ -295,11 +298,11 @@ def inventory(source, limits):
                 finally: os.close(child)
                 continue
             if not stat.S_ISREG(st.st_mode): exclude('special'); continue
-            if not re.search(r'\.(txt|md|pdf)$',name,re.I): exclude('unsupportedType'); continue
+            if not re.search(r'\.(txt|md|pdf|docx|pptx)$',name,re.I): exclude('unsupportedType'); continue
             if st.st_nlink!=1: exclude('hardlink'); continue
             if st.st_size<0 or st.st_size>1000000000000: exclude('unsupportedType'); continue
-            kind='markdown' if name.lower().endswith('.md') else 'pdf' if name.lower().endswith('.pdf') else 'text'
-            if kind=='pdf' and st.st_size>4000000: exclude('unsupportedType'); continue
+            kind='markdown' if name.lower().endswith('.md') else name.lower().rsplit('.',1)[-1] if name.lower().endswith(('.pdf','.docx','.pptx')) else 'text'
+            if kind in ('pdf','docx','pptx') and st.st_size>4000000: exclude('unsupportedType'); continue
             chosen={'relativePath':relative,'kind':kind,'title':name,'snapshot':snapshot(st),'directories':chain}
             entries.append(chosen); counts['eligibleFiles']+=1; counts['totalBytes']+=st.st_size; progress(chosen)
     fd=root_fd(source)
@@ -370,7 +373,7 @@ try:
         finally: os.close(fd)
     elif operation=='inventory': result=inventory(request['descriptor'],request['budget'])
     elif operation=='read': result=read_entry(request['descriptor'],request['entry'],request['maxBytes'])
-    elif operation=='read_pdf': result=read_entry(request['descriptor'],request['entry'],request['maxBytes'],True)
+    elif operation in ('read_pdf','read_office'): result=read_entry(request['descriptor'],request['entry'],request['maxBytes'],True)
     elif operation=='verify':
         validate_chain(request['descriptor'],request['entry'])
         result={'version':request['entry']['snapshot']['version']}
@@ -415,7 +418,7 @@ function runWorker(request, { signal, hooks = {} } = {}) {
     child.on('error', () => finish(new LearnBridgeError('UNSUPPORTED')));
     child.stdout.on('data', chunk => {
       total += chunk.length;
-      if (total > (request.operation === 'read_pdf' ? 6_000_000 : 2_000_000)) { stop('worker_failure'); return; }
+      if (total > (['read_pdf', 'read_office'].includes(request.operation) ? 6_000_000 : 2_000_000)) { stop('worker_failure'); return; }
       output += decoder.write(chunk);
       let boundary;
       while ((boundary = output.indexOf('\n')) >= 0) {
@@ -484,6 +487,35 @@ function nativePdfResult(value, acquired, selected, maxBytes) {
   if (Buffer.byteLength(JSON.stringify(result)) > PDF_LIMITS.maxResultBytes) fail('BUDGET_EXCEEDED');
   return result;
 }
+function officeResult(value, acquired, selected, maxBytes) {
+  object(value, ['status', 'parser_version', 'document_type', 'section_count', 'sections', 'reasons']);
+  if (!['available', 'text_unavailable', 'encrypted', 'malformed', 'unsupported'].includes(value.status)
+    || value.parser_version !== OFFICE_PARSER_VERSION || value.document_type !== selected.kind) fail('VERSION_MISMATCH');
+  const count = integer(value.section_count, OFFICE_LIMITS.maxSections);
+  const sections = array(value.sections, OFFICE_LIMITS.maxSections);
+  const reasons = array(value.reasons, 20).map(reason => { if (typeof reason !== 'string' || !/^[a-z_]{1,80}$/.test(reason)) fail('VERSION_MISMATCH'); return reason; });
+  if (new Set(reasons).size !== reasons.length || !reasons.length
+    || (value.status === 'available' && (count < 1 || sections.length !== count || !reasons.includes('layout_not_preserved')))
+    || (value.status !== 'available' && sections.length)) fail('VERSION_MISMATCH');
+  const unit = selected.kind === 'docx' ? 'paragraph' : 'slide';
+  let text = '', cursor = 0;
+  const records = sections.map((content, index) => {
+    if (typeof content !== 'string' || content.includes('\0') || /[\ud800-\udfff]/u.test(content)) fail('VERSION_MISMATCH');
+    const header = `${index ? '\n\n' : ''}[${selected.kind.toUpperCase()} ${unit} ${index + 1}]\n`;
+    const start = cursor + Buffer.byteLength(header), end = start + Buffer.byteLength(content);
+    text += header + content; cursor = end;
+    if (cursor > maxBytes) fail('BUDGET_EXCEEDED');
+    return { position: index + 1, unit, text: content, sha256: createHash('sha256').update(content).digest('hex'), byte_range: { start, end } };
+  });
+  if ((value.status === 'available') !== records.some(section => section.text.trim())) fail('VERSION_MISMATCH');
+  const office = { schema_version: 1, format: 'office_text', parser_version: OFFICE_PARSER_VERSION, document_type: selected.kind,
+    source_sha256: acquired.source_sha256, source_bytes: acquired.source_bytes, section_count: count, sections: records,
+    extraction_status: value.status, coverage: { state: value.status === 'available' ? 'partial' : 'unavailable', reasons } };
+  if (Buffer.byteLength(JSON.stringify(office)) > OFFICE_LIMITS.maxMetadataBytes) fail('BUDGET_EXCEEDED');
+  const result = { text, sha256: createHash('sha256').update(text).digest('hex'), version: selected.snapshot.version, title: selected.title, office };
+  if (Buffer.byteLength(JSON.stringify(result)) > OFFICE_LIMITS.maxResultBytes) fail('BUDGET_EXCEEDED');
+  return result;
+}
 function assembleInventory(source, limits, raw, interruption) {
   const entries = raw.entries.map(value => ({ id: stableEntryId(source.version, value.relativePath, { dev: value.snapshot.dev, ino: value.snapshot.ino }), ...value }));
   const value = { schema_version: 1, id: randomUUID(), source_version: source.version, entries,
@@ -520,6 +552,13 @@ function createAdapter(hooks = {}) {
           verification: options.verify === true ? 'native_probe_passed' : 'prerequisites_only', limits: PDF_LIMITS });
       } catch (value) { if (value?.code === 'CANCELLED') throw value; return freeze({ state: 'unsupported', parser_version: PDF_PARSER_VERSION, reason: 'native_pdf_runtime_unavailable' }); }
     },
+    async probeOfficeCapability(options = {}) {
+      object(options, [], []);
+      const available = await officePrerequisites();
+      return freeze(available ? { state: 'available', parser_version: OFFICE_PARSER_VERSION, platform: process.platform,
+        processing: 'local_text_only', rendering: false, verification: 'prerequisites_only', limits: OFFICE_LIMITS }
+        : { state: 'unsupported', parser_version: OFFICE_PARSER_VERSION, reason: 'office_text_runtime_unavailable' });
+    },
     async describeRoot(path, options = {}) {
       object(options, ['label'], []);
       const root = await approvedRootPath(path);
@@ -548,6 +587,7 @@ function createAdapter(hooks = {}) {
       const selected = inventory.entries.find(item => item.id === uuid(entryId));
       if (!selected) fail('SCOPE_DENIED', 'review_scope');
       if (selected.kind === 'pdf') fail('UNSUPPORTED', 'use_pdf_import');
+      if (['docx', 'pptx'].includes(selected.kind)) fail('UNSUPPORTED', 'use_office_import');
       const maxBytes = integer(options.maxBytes ?? SOURCE_LIMITS.maxBytes, SOURCE_LIMITS.maxBytes, 1);
       const signal = signalOption(options.signal);
       const result = await runWorker({ operation: 'read', descriptor: source, entry: selected, maxBytes }, { signal, hooks });
@@ -594,21 +634,55 @@ function createAdapter(hooks = {}) {
       if (checked.value.version !== selected.snapshot.version || signal?.aborted) fail(signal?.aborted ? 'CANCELLED' : 'VERSION_MISMATCH', 'refresh');
       return freeze(nativePdfResult(parsed, original, selected, maxBytes));
     },
+    async readSelectedOffice(value, suppliedInventory, entryId, options = {}) {
+      object(options, ['maxBytes', 'signal'], []);
+      if (!['darwin', 'linux'].includes(process.platform)) fail('UNSUPPORTED', 'office_text_runtime_unavailable');
+      const source = { ...descriptor(value), version: value.version };
+      if (await approvedRootPath(source.root) !== source.root) fail('VERSION_MISMATCH', 'refresh');
+      const inventory = validateInventory(suppliedInventory, source);
+      if (inventory.coverage.state === 'cancelled' || inventory.coverage.state === 'blocked') fail('CONSENT_REQUIRED', 'review_scope');
+      const selected = inventory.entries.find(item => item.id === uuid(entryId));
+      if (!selected || !['docx', 'pptx'].includes(selected.kind)) fail('SCOPE_DENIED', 'review_scope');
+      const maxBytes = integer(options.maxBytes ?? 48_000, OFFICE_LIMITS.maxTextBytes, 1), signal = signalOption(options.signal);
+      const acquired = await runWorker({ operation: 'read_office', descriptor: source, entry: selected, maxBytes: OFFICE_LIMITS.maxOfficeBytes }, { signal, hooks });
+      if (acquired.interrupted) fail(acquired.interrupted === 'cancelled' ? 'CANCELLED' : 'BUDGET_EXCEEDED');
+      object(acquired.value, ['base64', 'source_sha256', 'source_bytes', 'version', 'title']);
+      const original = acquired.value;
+      if (typeof original.base64 !== 'string' || original.base64.length > Math.ceil(OFFICE_LIMITS.maxOfficeBytes / 3) * 4
+        || integer(original.source_bytes, OFFICE_LIMITS.maxOfficeBytes) !== selected.snapshot.size
+        || original.version !== selected.snapshot.version || original.title !== selected.title) fail('VERSION_MISMATCH', 'refresh');
+      const bytes = Buffer.from(original.base64, 'base64');
+      if (bytes.length !== original.source_bytes || bytes.toString('base64') !== original.base64
+        || sha(original.source_sha256) !== createHash('sha256').update(bytes).digest('hex')) fail('VERSION_MISMATCH', 'refresh');
+      if (signal?.aborted) fail('CANCELLED');
+      if (hooks.onPhase) await hooks.onPhase({ phase: 'before_office_parse', source_bytes: bytes.length });
+      const parsed = await runOfficeParser(bytes, { documentType: selected.kind, signal, maxTextBytes: maxBytes,
+        ...(hooks.officeTimeoutMs === undefined ? {} : { timeoutMs: hooks.officeTimeoutMs }), onSpawn: hooks.onPhase });
+      if (signal?.aborted) fail('CANCELLED');
+      if (hooks.onPhase) await hooks.onPhase({ phase: 'after_office_parse', source_bytes: bytes.length });
+      const checked = await runWorker({ operation: 'verify', descriptor: source, entry: selected }, { signal });
+      if (checked.interrupted) fail(checked.interrupted === 'cancelled' ? 'CANCELLED' : 'BUDGET_EXCEEDED');
+      object(checked.value, ['version']);
+      if (checked.value.version !== selected.snapshot.version || signal?.aborted) fail(signal?.aborted ? 'CANCELLED' : 'VERSION_MISMATCH', 'refresh');
+      return freeze(officeResult(parsed, original, selected, maxBytes));
+    },
   };
 }
 
 const adapter = createAdapter();
 export const probeSourceCapability = (...args) => adapter.probeSourceCapability(...args);
 export const probePdfCapability = (...args) => adapter.probePdfCapability(...args);
+export const probeOfficeCapability = (...args) => adapter.probeOfficeCapability(...args);
 export const describeRoot = (...args) => adapter.describeRoot(...args);
 export const inventorySource = (...args) => adapter.inventorySource(...args);
 export const readSelectedEntry = (...args) => adapter.readSelectedEntry(...args);
 export const readSelectedPdf = (...args) => adapter.readSelectedPdf(...args);
+export const readSelectedOffice = (...args) => adapter.readSelectedOffice(...args);
 
 /** Test construction only. Runtime API inputs cannot install callbacks, change
  * the worker executable, or replace any native filesystem operation. */
 export function createSourceAdapterForTests(hooks) {
-  object(hooks, ['onPhase', 'onBodyRead', 'pdfTimeoutMs'], []);
-  for (const [key, value] of Object.entries(hooks)) if (key === 'pdfTimeoutMs') integer(value, PDF_LIMITS.maxDurationMs, 100); else if (typeof value !== 'function') invalidInput();
+  object(hooks, ['onPhase', 'onBodyRead', 'pdfTimeoutMs', 'officeTimeoutMs'], []);
+  for (const [key, value] of Object.entries(hooks)) if (key === 'pdfTimeoutMs') integer(value, PDF_LIMITS.maxDurationMs, 100); else if (key === 'officeTimeoutMs') integer(value, OFFICE_LIMITS.maxDurationMs, 100); else if (typeof value !== 'function') invalidInput();
   return Object.freeze(createAdapter(hooks));
 }

@@ -549,9 +549,13 @@ async function loadSources() {
   const data = await request('/sources');
   state.sources = data.items; state.sourceEntries = data.entries;
   state.pdfCapability = data.pdf_capability;
+  state.officeCapability = data.office_capability;
   $('pdf-capability').textContent = data.pdf_capability?.state === 'available'
     ? 'PDF text imports are supported on this Mac. Each import checks extraction and preserves page numbers. Up to 4 MB and 200 pages; extracted text is capped at 48 KB. Scans need a text export; no OCR or passwords are used.'
     : 'PDF text extraction is unavailable on this computer. Export the selected handout to text or Markdown to import it.';
+  $('office-capability').textContent = data.office_capability?.state === 'available'
+    ? 'Word and PowerPoint text imports preserve paragraph or slide order. Up to 4 MB and 1,000 sections; extracted text is capped at 48 KB. Layout, images and other omitted content require review of the original. No macros, external links or passwords are used.'
+    : 'Word and PowerPoint text extraction needs the project Python environment. Export the selected document to text or Markdown, or follow the local setup guide.';
   $('source-list').replaceChildren(); $('source-entry-list').replaceChildren();
   for (const source of state.sources) {
     const row = element('article', 'review-row');
@@ -572,10 +576,15 @@ async function loadSources() {
     row.append(element('h3', '', entry.title), element('p', 'hash-text', `SHA-256 ${entry.sha256}`));
     row.append(taskAction(entry, 'Read saved snapshot', async () => {
       const result = await request(`/source-entries/${entry.id}`);
-      row.querySelector('pre')?.remove(); row.querySelector('[data-pdf-details]')?.remove();
+      row.querySelector('pre')?.remove(); row.querySelector('[data-source-details]')?.remove();
       if (result.entry.pdf) {
         const pdf = result.entry.pdf, details = element('p', 'field-help', `${pdf.page_count} physical pages · ${pdf.coverage.state === 'partial' ? 'Some pages have no extractable text. Do not treat this as the complete handout.' : 'Text available on all pages.'}\nOriginal PDF SHA-256 ${pdf.source_sha256}`);
-        details.dataset.pdfDetails = ''; row.append(details);
+        details.dataset.sourceDetails = ''; row.append(details);
+      } else if (result.entry.office) {
+        const office = result.entry.office;
+        const units = office.document_type === 'docx' ? 'paragraphs' : 'slides in presentation order';
+        const details = element('p', 'field-help', `${office.section_count} ${units} · Partial text extraction. Review the original for layout, visuals and missing content.\nCoverage limits: ${office.coverage.reasons.map(reason => reason.replaceAll('_', ' ')).join('; ')}.\nOriginal ${office.document_type.toUpperCase()} SHA-256 ${office.source_sha256}`);
+        details.dataset.sourceDetails = ''; row.append(details);
       }
       row.append(element('pre', 'source-text', result.entry.text));
     }, 'secondary compact'));
@@ -588,7 +597,7 @@ function renderInventory() {
   $('inventory-list').replaceChildren();
   if (!saved) return;
   const inventory = saved.inventory;
-  $('inventory-list').append(element('h3', '', 'Review these files'), element('p', 'field-help', 'Only explicit Import reads a file body. Saved text is capped at 48,000 bytes per file. PDF page citations describe extracted text; image-only pages are reported as missing. Excluded formats and secret paths are never offered.'));
+  $('inventory-list').append(element('h3', '', 'Review these files'), element('p', 'field-help', 'Only explicit Import reads a file body. Saved text is capped at 48,000 bytes per file. PDF citations use physical pages; Word uses paragraphs and PowerPoint uses presentation-order slides. Word and PowerPoint text is partial and does not preserve visual layout. Excluded formats and secret paths are never offered.'));
   $('inventory-list').append(element('p', 'field-help', `${inventory.counts.entriesVisited} items checked · ${inventory.counts.eligibleFiles} supported files · ${inventory.counts.excludedEntries} excluded · ${inventory.counts.totalBytes.toLocaleString()} eligible bytes. Coverage: ${inventory.coverage.state}.`));
   const exclusionNames = { secret: 'credential paths', symlink: 'symbolic links', special: 'special files', unsupportedType: 'unsupported formats', hardlink: 'hard links', depth: 'depth limit', permission: 'permission denied', changed: 'changed files' };
   const exclusions = Object.entries(inventory.exclusions).filter(([, count]) => count).map(([key, count]) => `${count} ${exclusionNames[key] || key}`);
@@ -599,15 +608,17 @@ function renderInventory() {
     row.append(element('p', '', `${entry.relativePath} · ${entry.snapshot?.size ?? entry.size ?? '?'} bytes`));
     const importButton = taskAction(entry, 'Import', async () => {
       if (!await confirmAction(`Read and save the text of “${entry.relativePath}” locally? This does not allow model processing.`, { title: 'Import selected text', confirmLabel: 'Import this file' })) return;
-      message('source-message', entry.kind === 'pdf' ? 'Extracting the selected PDF on this computer…' : 'Importing the selected file…');
+      message('source-message', ['pdf', 'docx', 'pptx'].includes(entry.kind) ? 'Extracting the selected document on this computer…' : 'Importing the selected file…');
       const result = await request(`/sources/${saved.source_id}/import`, { method: 'POST', body: { inventory_id: saved.id, entry_id: entry.id } });
       if (result.imported === false) {
-        const explanation = { encrypted: 'This PDF is encrypted. Export an unlocked text copy yourself; LearnBridge does not ask for its password.', malformed: 'This file could not be read as a PDF. Check the original or export a text copy.', text_unavailable: 'This PDF has no extractable text. Use a text export or your own transcription.' };
-        message('source-message', `${explanation[result.extraction_status] || 'PDF text was unavailable.'} No snapshot was saved.`, true); return;
+        const explanation = { encrypted: 'This document is encrypted. Export an unlocked text copy yourself; LearnBridge does not ask for its password.', malformed: 'This document could not be read. Check the original or export a text copy.', text_unavailable: 'This document has no supported extractable text. Use a text export or your own transcription.', unsupported: 'This document contains a format or structure that this importer cannot safely read. Export a text copy.' };
+        if (result.coverage?.reasons?.includes('encrypted_or_legacy_container')) explanation.encrypted = 'This is an encrypted or legacy Office container. Open it yourself and export a supported text copy; LearnBridge does not ask for its password.';
+        message('source-message', `${explanation[result.extraction_status] || 'Document text was unavailable.'} No snapshot was saved.`, true); return;
       }
       await loadSources(); message('source-message', 'Selected snapshot saved locally. Review it before allowing agent sharing.');
     }, 'secondary compact');
     if (entry.kind === 'pdf' && state.pdfCapability?.state !== 'available') { importButton.disabled = true; row.append(element('p', 'field-help', 'PDF extraction unavailable here. Export this file to text.')); }
+    if (['docx', 'pptx'].includes(entry.kind) && state.officeCapability?.state !== 'available') { importButton.disabled = true; row.append(element('p', 'field-help', 'Word and PowerPoint extraction unavailable here. Check the local Python setup or export to text.')); }
     row.append(importButton);
     $('inventory-list').append(row);
   }

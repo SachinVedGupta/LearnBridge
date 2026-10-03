@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import { validatePdfProvenance } from './pdf-provenance.mjs';
+import { validateOfficeProvenance } from './office-provenance.mjs';
 import { randomUUID, createHash } from 'node:crypto';
 import {
   mkdirSync, lstatSync, existsSync, readFileSync, writeFileSync, chmodSync,
@@ -12,7 +13,7 @@ import {
   assertRevision, LearnBridgeError, invalidInput, migrateHostedTasks,
 } from '@learnbridge/core';
 
-export const STORAGE_SCHEMA_VERSION = 4;
+export const STORAGE_SCHEMA_VERSION = 5;
 export const STORAGE_LIMITS = Object.freeze({ documentBytes: 1_000_000, importBytes: 1_000_000, backupBytes: 512_000_000 });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const INTERNAL = Symbol('local-storage-internal');
@@ -247,7 +248,7 @@ function sourceInventory(value, descriptor) {
   const ids = new Set(); const paths = new Set();
   for (const entry of parsed.entries) {
     checkedObject(entry, ['id', 'relativePath', 'kind', 'title', 'snapshot', 'directories']);
-    checkedId(entry.id); relativeSourcePath(entry.relativePath); shortText(entry.title); if (!['text', 'markdown', 'pdf'].includes(entry.kind)) invalidInput();
+    checkedId(entry.id); relativeSourcePath(entry.relativePath); shortText(entry.title); if (!['text', 'markdown', 'pdf', 'docx', 'pptx'].includes(entry.kind)) invalidInput();
     if (ids.has(entry.id) || paths.has(entry.relativePath)) invalidInput(); ids.add(entry.id); paths.add(entry.relativePath);
     checkedObject(entry.snapshot, ['dev', 'ino', 'size', 'mtimeNs', 'ctimeNs', 'nlink', 'version']);
     decimal(entry.snapshot.dev); decimal(entry.snapshot.ino); decimal(entry.snapshot.mtimeNs); decimal(entry.snapshot.ctimeNs); sha256(entry.snapshot.version);
@@ -388,6 +389,13 @@ const MIGRATION_V4 = `
   PRAGMA user_version=4;
 `;
 
+const MIGRATION_V5 = `
+  CREATE TABLE source_office_provenance (entry_id TEXT PRIMARY KEY REFERENCES source_entries(id), student_id TEXT NOT NULL, json TEXT NOT NULL, sha256 TEXT NOT NULL) STRICT;
+  CREATE TRIGGER immutable_source_office_provenance_update BEFORE UPDATE ON source_office_provenance BEGIN SELECT RAISE(ABORT,'immutable source office provenance'); END;
+  CREATE TRIGGER immutable_source_office_provenance_delete BEFORE DELETE ON source_office_provenance BEGIN SELECT RAISE(ABORT,'immutable source office provenance'); END;
+  PRAGMA user_version=5;
+`;
+
 /** SQLite storage is private to a single OS user and one local runtime writer.
  * It is not an authentication mechanism or an importer of arbitrary laptop files.
  */
@@ -425,7 +433,7 @@ export class LocalStore {
       db = new Database(path, { timeout: 1000 });
       db.pragma('foreign_keys=ON');
       const version = db.pragma('user_version', { simple: true });
-      if (![0, 1, 2, 3, STORAGE_SCHEMA_VERSION].includes(version)) failure('VERSION_MISMATCH');
+      if (![0, 1, 2, 3, 4, STORAGE_SCHEMA_VERSION].includes(version)) failure('VERSION_MISMATCH');
       if (version === 0) {
         if (db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'").get().n !== 0) failure('VERSION_MISMATCH');
         const installation = createInstallation({ student_id: randomUUID(), platform: process.platform,
@@ -443,6 +451,10 @@ export class LocalStore {
       if (db.pragma('user_version', { simple: true }) === 3) {
         validateDatabase(db, { version: 3 });
         db.transaction(() => { db.exec(MIGRATION_V4); db.prepare('INSERT INTO schema_migrations VALUES (4,?)').run(hash(MIGRATION_V4)); }).immediate();
+      }
+      if (db.pragma('user_version', { simple: true }) === 4) {
+        validateDatabase(db, { version: 4 });
+        db.transaction(() => { db.exec(MIGRATION_V5); db.prepare('INSERT INTO schema_migrations VALUES (5,?)').run(hash(MIGRATION_V5)); }).immediate();
       }
       validateDatabase(db);
       db.pragma('journal_mode=WAL'); db.pragma('synchronous=FULL');
@@ -611,7 +623,7 @@ export class LocalStore {
         text: saved.text, sha256: saved.sha256, academic_policy: saved.document.academic_policy } };
     }
     const saved = this.getSourceEntry(id); if (!saved) failure('VERSION_MISMATCH');
-    return { full: saved, revision: 1, minimal: { id: saved.id, source_id: saved.source_id, title: saved.title, text: saved.text, sha256: saved.sha256, version: saved.version, trust: 'untrusted_source_content', ...(saved.pdf ? { pdf: saved.pdf } : {}) } };
+    return { full: saved, revision: 1, minimal: { id: saved.id, source_id: saved.source_id, title: saved.title, text: saved.text, sha256: saved.sha256, version: saved.version, trust: 'untrusted_source_content', ...(saved.pdf ? { pdf: saved.pdf } : {}), ...(saved.office ? { office: saved.office } : {}) } };
   }
   #currentGrant(id, target) {
     const row = this.#grant(id); destination(target);
@@ -789,7 +801,7 @@ export class LocalStore {
     return { id: row.id, source_id: row.source_id, student_id: row.student_id, sha256: row.sha256, created_at: row.created_at, inventory };
   }
   importSourceEntry(input) {
-    checkedObject(input, ['source_id', 'inventory_id', 'entry_id', 'title', 'text', 'sha256', 'version', 'pdf']);
+    checkedObject(input, ['source_id', 'inventory_id', 'entry_id', 'title', 'text', 'sha256', 'version', 'pdf', 'office']);
     checkedId(input.source_id); checkedId(input.inventory_id); checkedId(input.entry_id); shortText(input.title); boundedText(input.text); sha256(input.sha256); sha256(input.version);
     if (hash(input.text) !== input.sha256) failure('VERSION_MISMATCH');
     return this.#transaction(() => {
@@ -799,16 +811,20 @@ export class LocalStore {
       if (!selected || selected.snapshot.version !== input.version || selected.title !== input.title) failure('VERSION_MISMATCH');
       const pdf = selected.kind === 'pdf' ? validatePdfProvenance(input.pdf, input.text, selected.snapshot.size) : null;
       if (selected.kind !== 'pdf' && input.pdf !== undefined) invalidInput();
+      const office = ['docx', 'pptx'].includes(selected.kind) ? validateOfficeProvenance(input.office, input.text, selected.snapshot.size, selected.kind) : null;
+      if (!['docx', 'pptx'].includes(selected.kind) && input.office !== undefined) invalidInput();
       const prior = this.#db.prepare('SELECT * FROM source_entries WHERE source_id=? AND entry_id=? AND version=?').get(input.source_id, input.entry_id, input.version);
       if (prior) {
         if (prior.student_id !== this.identity.student_id || prior.sha256 !== input.sha256 || prior.title !== input.title || prior.text !== input.text) failure('REVISION_CONFLICT');
         const existing = this.getSourceEntry(prior.id);
         if (canonicalJson(existing.pdf || null) !== canonicalJson(pdf)) failure('REVISION_CONFLICT');
+        if (canonicalJson(existing.office || null) !== canonicalJson(office)) failure('REVISION_CONFLICT');
         return existing;
       }
       const id = randomUUID();
       this.#db.prepare('INSERT INTO source_entries VALUES (?,?,?,?,?,?,?,?,?,?)').run(id, input.source_id, input.inventory_id, input.entry_id, this.identity.student_id, input.version, input.sha256, input.title, input.text, now());
       if (pdf) { const encoded = canonicalJson(pdf); this.#db.prepare('INSERT INTO source_provenance VALUES (?,?,?,?)').run(id, this.identity.student_id, encoded, hash(encoded)); }
+      if (office) { const encoded = canonicalJson(office); this.#db.prepare('INSERT INTO source_office_provenance VALUES (?,?,?,?)').run(id, this.identity.student_id, encoded, hash(encoded)); }
       return this.getSourceEntry(id);
     });
   }
@@ -817,29 +833,40 @@ export class LocalStore {
     const row = this.#db.prepare('SELECT * FROM source_entries WHERE id=? AND student_id=?').get(id.toLowerCase(), this.identity.student_id);
     if (!row) return null; this.#source(row.source_id, { requireActive: true });
     if (hash(row.text) !== row.sha256) failure('VERSION_MISMATCH');
+    const savedInventory = this.getSourceInventory(row.inventory_id);
+    if (savedInventory.source_id !== row.source_id) failure('VERSION_MISMATCH');
+    const inventory = savedInventory.inventory;
+    const selected = inventory.entries.find(entry => entry.id === row.entry_id);
+    if (!selected || selected.snapshot.version !== row.version || selected.title !== row.title) failure('VERSION_MISMATCH');
     const provenance = this.#db.prepare('SELECT * FROM source_provenance WHERE entry_id=?').get(row.id);
     let pdf;
     if (provenance) {
       if (provenance.student_id !== this.identity.student_id || hash(provenance.json) !== provenance.sha256) failure('VERSION_MISMATCH');
-      const inventory = this.getSourceInventory(row.inventory_id).inventory;
-      const selected = inventory.entries.find(entry => entry.id === row.entry_id);
       if (selected?.kind !== 'pdf') failure('VERSION_MISMATCH');
       pdf = validatePdfProvenance(JSON.parse(provenance.json), row.text, selected.snapshot.size);
     } else {
-      const inventory = this.getSourceInventory(row.inventory_id).inventory;
-      if (inventory.entries.find(entry => entry.id === row.entry_id)?.kind === 'pdf') failure('VERSION_MISMATCH');
+      if (selected.kind === 'pdf') failure('VERSION_MISMATCH');
     }
+    const officeProvenance = this.#db.prepare('SELECT * FROM source_office_provenance WHERE entry_id=?').get(row.id); let office;
+    if (officeProvenance) {
+      if (officeProvenance.student_id !== this.identity.student_id || hash(officeProvenance.json) !== officeProvenance.sha256
+        || !['docx', 'pptx'].includes(selected.kind)) failure('VERSION_MISMATCH');
+      office = validateOfficeProvenance(JSON.parse(officeProvenance.json), row.text, selected.snapshot.size, selected.kind);
+    } else if (['docx', 'pptx'].includes(selected.kind)) failure('VERSION_MISMATCH');
     return { id: row.id, student_id: row.student_id, source_id: row.source_id, inventory_id: row.inventory_id, entry_id: row.entry_id,
-      revision: 1, version: row.version, sha256: row.sha256, title: row.title, text: row.text, created_at: row.created_at, trust: 'untrusted_source_content', ...(pdf ? { pdf } : {}) };
+      revision: 1, version: row.version, sha256: row.sha256, title: row.title, text: row.text, created_at: row.created_at, trust: 'untrusted_source_content', ...(pdf ? { pdf } : {}), ...(office ? { office } : {}) };
   }
   listSourceEntries(sourceId) {
     this.#active(); if (sourceId !== undefined) this.#source(sourceId, { requireActive: true });
     return this.#db.prepare(`SELECT e.id FROM source_entries e JOIN sources s ON s.id=e.source_id WHERE e.student_id=? AND s.state='active' ${sourceId === undefined ? '' : 'AND e.source_id=?'} ORDER BY e.created_at,e.id`)
       .all(...(sourceId === undefined ? [this.identity.student_id] : [this.identity.student_id, sourceId])).map(row => {
-        const { text, pdf, ...metadata } = this.getSourceEntry(row.id);
+        const { text, pdf, office, ...metadata } = this.getSourceEntry(row.id);
         if (pdf) metadata.pdf = { schema_version: pdf.schema_version, parser_version: pdf.parser_version,
           source_sha256: pdf.source_sha256, source_bytes: pdf.source_bytes, page_count: pdf.page_count,
           extraction_status: pdf.extraction_status, coverage: pdf.coverage };
+        if (office) metadata.office = { schema_version: office.schema_version, parser_version: office.parser_version,
+          document_type: office.document_type, source_sha256: office.source_sha256, source_bytes: office.source_bytes,
+          section_count: office.section_count, extraction_status: office.extraction_status, coverage: office.coverage };
         return metadata;
       });
   }
@@ -1122,7 +1149,7 @@ export class LocalStore {
     const manifest = readJsonFile(join(source, 'manifest.json'), 10_000);
     checkedObject(manifest, ['format', 'schema_version', 'created_at', 'installation_id', 'student_id', 'database']);
     checkedObject(manifest.database, ['name', 'bytes', 'sha256']);
-    if (manifest.format !== 'learnbridge-local-backup' || ![1, 2, 3, STORAGE_SCHEMA_VERSION].includes(manifest.schema_version) || manifest.database.name !== 'learnbridge.sqlite'
+    if (manifest.format !== 'learnbridge-local-backup' || ![1, 2, 3, 4, STORAGE_SCHEMA_VERSION].includes(manifest.schema_version) || manifest.database.name !== 'learnbridge.sqlite'
       || !Number.isSafeInteger(manifest.database.bytes) || manifest.database.bytes < 1 || manifest.database.bytes > STORAGE_LIMITS.backupBytes
       || typeof manifest.database.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(manifest.database.sha256)) invalidInput();
     checkedId(manifest.student_id); checkedId(manifest.installation_id);
@@ -1155,12 +1182,13 @@ export class LocalStore {
 }
 
 function validateDatabase(db, { version = STORAGE_SCHEMA_VERSION } = {}) {
-  if (![1, 2, 3, STORAGE_SCHEMA_VERSION].includes(version) || db.pragma('user_version', { simple: true }) !== version) failure('VERSION_MISMATCH');
+  if (![1, 2, 3, 4, STORAGE_SCHEMA_VERSION].includes(version) || db.pragma('user_version', { simple: true }) !== version) failure('VERSION_MISMATCH');
   const ledger = db.prepare('SELECT version,checksum FROM schema_migrations ORDER BY version').all();
   if (ledger.length !== version || ledger[0].version !== 1 || ledger[0].checksum !== hash(MIGRATION)
     || (version >= 2 && (ledger[1].version !== 2 || ledger[1].checksum !== hash(MIGRATION_V2)))
     || (version >= 3 && (ledger[2].version !== 3 || ledger[2].checksum !== hash(MIGRATION_V3)))
     || (version >= 4 && (ledger[3].version !== 4 || ledger[3].checksum !== hash(MIGRATION_V4)))
+    || (version >= 5 && (ledger[4].version !== 5 || ledger[4].checksum !== hash(MIGRATION_V5)))
     || schemaFingerprint(db) !== expectedSchemaFingerprint(version)) failure('VERSION_MISMATCH');
   if (db.pragma('integrity_check', { simple: true }) !== 'ok' || db.pragma('foreign_key_check').length) failure('PROVIDER_FAILURE');
   const installation = parseInstallation(JSON.parse(db.prepare('SELECT json FROM installation WHERE singleton=1').get()?.json));
@@ -1214,11 +1242,16 @@ function validateDatabase(db, { version = STORAGE_SCHEMA_VERSION } = {}) {
 
 function validateAgentDatabase(db, studentId, version) {
   const sources = new Map(); const inventories = new Map(); const entries = new Map(); const grants = new Map();
-  const provenance = new Map();
+  const provenance = new Map(); const officeProvenance = new Map();
   if (version >= 4) for (const row of db.prepare('SELECT * FROM source_provenance').all()) {
     checkedId(row.entry_id); sha256(row.sha256);
     if (row.student_id !== studentId || hash(row.json) !== row.sha256) failure('VERSION_MISMATCH');
     provenance.set(row.entry_id, row);
+  }
+  if (version >= 5) for (const row of db.prepare('SELECT * FROM source_office_provenance').all()) {
+    checkedId(row.entry_id); sha256(row.sha256);
+    if (row.student_id !== studentId || hash(row.json) !== row.sha256) failure('VERSION_MISMATCH');
+    officeProvenance.set(row.entry_id, row);
   }
   for (const row of db.prepare('SELECT * FROM sources').all()) {
     checkedId(row.id); if (row.student_id !== studentId) failure('SCOPE_DENIED'); integer(row.revision, 1, Number.MAX_SAFE_INTEGER); utc(row.created_at); utc(row.updated_at);
@@ -1228,6 +1261,7 @@ function validateAgentDatabase(db, studentId, version) {
   for (const row of db.prepare('SELECT * FROM source_inventories').all()) {
     checkedId(row.id); if (row.student_id !== studentId || !sources.has(row.source_id)) failure('SCOPE_DENIED'); utc(row.created_at);
     const inventory = sourceInventory(JSON.parse(row.json), sources.get(row.source_id).descriptor);
+    if (version < 5 && inventory.entries.some(entry => ['docx', 'pptx'].includes(entry.kind))) failure('VERSION_MISMATCH');
     if (inventory.id !== row.id || hash(canonicalJson(inventory)) !== row.sha256) failure('VERSION_MISMATCH'); inventories.set(row.id, { row, inventory });
   }
   for (const row of db.prepare('SELECT * FROM source_entries').all()) {
@@ -1240,8 +1274,14 @@ function validateAgentDatabase(db, studentId, version) {
       if (version < 4 || !pdf) failure('VERSION_MISMATCH');
       validatePdfProvenance(JSON.parse(pdf.json), row.text, selected.snapshot.size);
     } else if (pdf) failure('VERSION_MISMATCH');
+    const office = officeProvenance.get(row.id);
+    if (['docx', 'pptx'].includes(selected.kind)) {
+      if (version < 5 || !office) failure('VERSION_MISMATCH');
+      validateOfficeProvenance(JSON.parse(office.json), row.text, selected.snapshot.size, selected.kind);
+    } else if (office) failure('VERSION_MISMATCH');
   }
   if ([...provenance.keys()].some(id => !entries.has(id))) failure('VERSION_MISMATCH');
+  if ([...officeProvenance.keys()].some(id => !entries.has(id))) failure('VERSION_MISMATCH');
   for (const row of db.prepare('SELECT * FROM agent_grants').all()) {
     validateGrantRow(row, studentId); const pins = JSON.parse(row.pins_json);
     for (const [kind, selected] of Object.entries(pins)) for (const pin of selected) {
@@ -1261,7 +1301,8 @@ function validateAgentDatabase(db, studentId, version) {
     }
   }
   return { source_count: sources.size, source_entry_count: entries.size, agent_grant_count: grants.size, proposal_count: proposals.length,
-    ...(version >= 4 ? { source_provenance_count: provenance.size } : {}) };
+    ...(version >= 4 ? { source_provenance_count: provenance.size } : {}),
+    ...(version >= 5 ? { source_office_provenance_count: officeProvenance.size } : {}) };
 }
 
 const schemaReferences = new Map();
@@ -1308,7 +1349,7 @@ function schemaFingerprint(db) {
 function expectedSchemaFingerprint(version = STORAGE_SCHEMA_VERSION) {
   if (schemaReferences.has(version)) return schemaReferences.get(version);
   const fixture = new Database(':memory:');
-  try { fixture.exec(MIGRATION); if (version >= 2) fixture.exec(MIGRATION_V2); if (version >= 3) fixture.exec(MIGRATION_V3); if (version >= 4) fixture.exec(MIGRATION_V4); const fingerprint = schemaFingerprint(fixture); schemaReferences.set(version, fingerprint); return fingerprint; } finally { fixture.close(); }
+  try { fixture.exec(MIGRATION); if (version >= 2) fixture.exec(MIGRATION_V2); if (version >= 3) fixture.exec(MIGRATION_V3); if (version >= 4) fixture.exec(MIGRATION_V4); if (version >= 5) fixture.exec(MIGRATION_V5); const fingerprint = schemaFingerprint(fixture); schemaReferences.set(version, fingerprint); return fingerprint; } finally { fixture.close(); }
 }
 
 function validateCreateResult(operation, result, studentId) {

@@ -6,7 +6,7 @@ LearnBridge is a web app for students that brings together AI tutoring, course p
 
 ## Local student workspace
 
-The local edition provides a private student dashboard with tasks, notes, reviewed profile facts, a cited course library, study plans, learning attempts, writing alternatives, research reports, career preparation, project checklists, meals and routines. Selected text/Markdown and macOS PDF imports preserve exact source versions and page evidence. Records use revision checks, restart persistence, backups and fresh-workspace restore. It runs without Supabase, Composio or AI API keys. The public website remains available as a separate edition.
+The local edition provides a private student dashboard with tasks, notes, reviewed profile facts, a cited course library, study plans, learning attempts, writing alternatives, research reports, career preparation, project checklists, meals and routines. Selected text/Markdown, macOS PDF, Word and PowerPoint imports preserve exact source versions and page, paragraph or slide evidence. Office text is partial and requires review of the original for visual content. Records use revision checks, restart persistence, backups and fresh-workspace restore. It runs without Supabase, Composio or AI API keys. The public website remains available as a separate edition.
 
 Requires Node.js **22.16 or newer**. macOS arm64 is the verified foundation target; Linux is experimental and Windows local storage is not supported yet.
 
@@ -63,7 +63,7 @@ Open http://127.0.0.1:3200. Use `npm run dev` for development. The full test sui
 - `web/apps/local-runtime`: loopback service and setup/control commands.
 - `web/packages/core`: edition-independent data contracts and hosted-task migration planner.
 - `web/packages/local-storage`: private SQLite tasks, notes, revisions and backups.
-- `web/packages/local-sources`: selected text/Markdown/PDF inventory, anchored acquisition and native macOS PDF text extraction.
+- `web/packages/local-sources`: selected text/Markdown/PDF/Office inventory, anchored acquisition, native macOS PDF text extraction and bounded standard-library DOCX/PPTX imports.
 - `web/packages/local-academic`: reviewed academic exports and an allowlisted Avenue/D2L read adapter.
 - `web/packages/shared`: shared tutor and editor contracts.
 - `supabase`: database migration and student-isolation test.
