@@ -1,0 +1,12 @@
+{
+  "name": "@learnbridge/local-storage",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.mjs",
+  "engines": { "node": ">=22.16.0" },
+  "dependencies": {
+    "@learnbridge/core": "0.1.0",
+    "better-sqlite3": "13.0.3"
+  }
+}

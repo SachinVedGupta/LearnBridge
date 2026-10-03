@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>LearnBridge · Local workspace</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to workspace</a>
+    <section id="pair-screen" class="pair-screen" aria-labelledby="pair-title">
+      <div class="pair-card">
+        <div class="brand"><span class="brand-mark" aria-hidden="true">L</span><span>LearnBridge</span></div>
+        <p class="eyebrow">YOUR LOCAL WORKSPACE</p>
+        <h1 id="pair-title">A clear place to start.</h1>
+        <p class="pair-intro">Your tasks and notes stay in your LearnBridge data folder on this computer. Pair this browser to open them.</p>
+        <form id="pair-form">
+          <label for="pair-code">Launcher pairing code</label>
+          <input id="pair-code" name="code" type="password" autocomplete="off" spellcheck="false" required maxlength="256" aria-describedby="pair-help">
+          <p id="pair-help" class="field-help">Use the single-use code shown by the LearnBridge launcher. It is never saved in this page.</p>
+          <button class="button primary full-width" type="submit">Open my workspace <span aria-hidden="true">→</span></button>
+        </form>
+        <p id="pair-message" class="notice error" role="alert" hidden></p>
+        <p class="pair-footnote">No cloud account needed. Connecting apps and agent services is a separate setup step.</p>
+      </div>
+    </section>
+
+    <div id="workspace" class="workspace" hidden>
+      <aside class="sidebar" aria-label="Workspace navigation">
+        <div class="brand"><span class="brand-mark" aria-hidden="true">L</span><span>LearnBridge</span></div>
+        <p class="edition"><span class="status-dot" aria-hidden="true"></span> Local workspace</p>
+        <nav class="navigation" aria-label="Main">
+          <button class="nav-item" type="button" data-page="today" aria-current="page"><span aria-hidden="true">◷</span> Today</button>
+          <button class="nav-item" type="button" data-page="notes"><span aria-hidden="true">▤</span> Notes</button>
+          <button class="nav-item" type="button" data-page="setup"><span aria-hidden="true">◇</span> Setup &amp; capabilities</button>
+        </nav>
+        <div class="sidebar-bottom">
+          <p class="local-note">Saved on this computer.<br>No automatic cloud sync.</p>
+          <button id="logout-button" class="button quiet" type="button">Disconnect browser</button>
+        </div>
+      </aside>
+      <main id="main" class="main" tabindex="-1">
+        <header class="workspace-header">
+          <div><p class="eyebrow">A LITTLE CLARITY, EVERY DAY</p><p id="day-label" class="day-label"></p></div>
+          <span class="privacy-badge"><span aria-hidden="true">●</span> Private · Local</span>
+        </header>
+        <div id="global-message" class="notice" role="status" aria-live="polite" hidden></div>
+
+        <section id="page-today" class="page" aria-labelledby="today-title">
+          <div class="page-heading"><div><h1 id="today-title">Make room for what matters.</h1><p>Capture a next step. Keep your notes close. Work at your pace.</p></div><span class="pill">Manual tasks</span></div>
+          <div class="summary-grid" aria-label="Task overview">
+            <div class="summary-card"><span class="summary-label">Still to do</span><strong id="pending-count">0</strong><span>one step at a time</span></div>
+            <div class="summary-card"><span class="summary-label">Due today</span><strong id="today-count">0</strong><span>based on your date</span></div>
+            <div class="summary-card"><span class="summary-label">Completed</span><strong id="completed-count">0</strong><span>progress worth keeping</span></div>
+          </div>
+          <section class="panel task-panel" aria-labelledby="tasks-title">
+            <div class="panel-heading"><h2 id="tasks-title">Your next steps</h2><button id="refresh-tasks" class="button quiet" type="button">Refresh</button></div>
+            <form id="new-task-form" class="task-create">
+              <div class="input-group task-title-input"><label for="new-task-title">What needs doing?</label><input id="new-task-title" name="title" placeholder="e.g. Review lecture 3 and write down questions" required maxlength="300"></div>
+              <div class="input-group"><label for="new-task-due">Due date <span class="optional">optional</span></label><input id="new-task-due" name="due" type="date"></div>
+              <button class="button primary" type="submit">Add task</button>
+            </form>
+            <p id="task-create-message" class="notice error" role="alert" hidden></p>
+            <div class="task-filters" role="group" aria-label="Filter tasks">
+              <button type="button" data-filter="active" class="filter-button" aria-pressed="true">To do</button>
+              <button type="button" data-filter="completed" class="filter-button" aria-pressed="false">Completed</button>
+              <button type="button" data-filter="all" class="filter-button" aria-pressed="false">All</button>
+            </div>
+            <div id="task-list" class="task-list" aria-live="polite"></div>
+            <p class="panel-footnote">These are tasks you create. No connected app is scanned or changed.</p>
+          </section>
+          <div class="secondary-grid">
+            <section class="panel small-panel"><p class="eyebrow">THINK ON PAPER</p><h2>A home for your notes</h2><p>Keep a study outline, assignment questions or a plan you can return to.</p><button class="button secondary" type="button" data-page="notes">Open notes <span aria-hidden="true">→</span></button></section>
+            <section class="panel small-panel muted-panel"><p class="eyebrow">BUILDING YOUR WORKSPACE</p><h2>Connect when you’re ready</h2><p>Review which capabilities are available. This foundation does not automatically read your files or accounts.</p><button class="button quiet" type="button" data-page="setup">View setup <span aria-hidden="true">→</span></button></section>
+          </div>
+        </section>
+
+        <section id="page-notes" class="page" aria-labelledby="notes-title" hidden>
+          <div class="page-heading"><div><h1 id="notes-title">A place to think.</h1><p>Plain-text notes, saved with a revision you can verify.</p></div></div>
+          <div class="notes-layout">
+            <section class="panel notes-library" aria-labelledby="notes-list-title">
+              <div class="panel-heading"><h2 id="notes-list-title">Your notes</h2><button id="new-note-button" class="button secondary compact" type="button">New</button></div>
+              <div id="note-list" class="note-list"></div>
+            </section>
+            <section class="panel note-editor" aria-labelledby="editor-heading">
+              <div class="panel-heading"><h2 id="editor-heading">New note</h2><span id="note-save-state" class="save-state">Not saved</span></div>
+              <form id="note-form">
+                <label for="note-title">Title</label><input id="note-title" name="title" placeholder="Give this note a name" maxlength="300" required>
+                <label for="note-content">Content</label><textarea id="note-content" name="content" placeholder="Start with what you know, what’s unclear, and your next step." rows="18" maxlength="1000000"></textarea>
+                <div class="editor-actions"><button id="save-note-button" class="button primary" type="submit">Save note</button><button id="delete-note-button" class="button danger quiet" type="button" hidden>Delete note</button></div>
+              </form>
+              <div id="note-conflict" class="notice error" role="alert" hidden><p>This note changed elsewhere. Your unsaved text is still here. Reloading will replace it with the saved version.</p><button id="reload-note-button" class="button secondary compact" type="button">Reload saved version</button></div>
+              <p id="note-message" class="notice" role="status" aria-live="polite" hidden></p>
+              <div id="note-evidence" class="note-evidence" hidden><p id="note-revision"></p><p id="note-hash" class="hash-text"></p></div>
+              <p class="panel-footnote">Content is stored as text. Pasted markup is never executed. Deleting a note removes it from the active workspace and search; saved versions may remain in the local database and backups.</p>
+            </section>
+          </div>
+        </section>
+
+        <section id="page-setup" class="page" aria-labelledby="setup-title" hidden>
+          <div class="page-heading"><div><h1 id="setup-title">Know what’s ready.</h1><p>A useful workspace starts with clear boundaries.</p></div><button id="refresh-status" class="button secondary" type="button">Refresh status</button></div>
+          <section class="panel" aria-labelledby="capabilities-title"><div class="panel-heading"><h2 id="capabilities-title">Capabilities</h2><span class="pill">This installation</span></div><div id="capability-list" class="capability-list"></div></section>
+          <div class="secondary-grid">
+            <section class="panel small-panel"><p class="eyebrow">SOURCES</p><h2>Your context, your choice</h2><p>File discovery, D2L and app connections are not configured by this dashboard. No laptop, browser history or cloud account is scanned automatically.</p><p class="inline-status">Source onboarding is not implemented in this foundation.</p></section>
+            <section class="panel small-panel"><p class="eyebrow">PROFILE</p><h2>Start with confirmed facts</h2><p>A reviewed student profile is planned. Your tasks and notes do not automatically become claims about who you are or how you learn.</p><p class="inline-status">Profile review is not implemented in this foundation.</p></section>
+          </div>
+          <section class="panel privacy-panel"><h2>What this browser can access</h2><p>Pairing allows this browser to manage this installation’s tasks and notes until the local session expires or you disconnect it. The pairing code is single-use, and the session is held in an HTTP-only cookie.</p><p id="session-expiry" class="field-help"></p><p>No personal content or authentication token is stored in browser local storage.</p></section>
+        </section>
+        <footer class="workspace-footer">LearnBridge · A student workspace, built step by step.</footer>
+      </main>
+    </div>
+    <div id="confirmation-dialog" class="confirmation-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirmation-title" aria-describedby="confirmation-message" hidden>
+      <div class="confirmation-card">
+        <h2 id="confirmation-title">Review this action</h2>
+        <p id="confirmation-message"></p>
+        <div class="confirmation-actions"><button id="confirmation-cancel" class="button secondary" type="button">Cancel</button><button id="confirmation-accept" class="button primary" type="button">Continue</button></div>
+      </div>
+    </div>
+  </body>
+</html>

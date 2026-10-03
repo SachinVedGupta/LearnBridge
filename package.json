@@ -5,6 +5,18 @@
     "build": "npm --prefix web run build",
     "dev": "npm --prefix web run dev",
     "start": "npm --prefix web run start",
-    "test": "npm --prefix web run test"
+    "test": "npm --prefix web run test",
+    "test:core": "npm --prefix web -w @learnbridge/core test",
+    "demo:core": "node web/packages/core/examples/fixture-demo.mjs",
+    "local:build": "npm --prefix web -w @learnbridge/local-dashboard run build",
+    "local:setup": "npm run local:build && node web/apps/local-runtime/src/cli.mjs setup",
+    "local:start": "npm run local:build && node web/apps/local-runtime/src/cli.mjs start",
+    "local:doctor": "node web/apps/local-runtime/src/cli.mjs doctor",
+    "local:stop": "node web/apps/local-runtime/src/cli.mjs stop",
+    "local:backup": "node web/apps/local-runtime/src/cli.mjs backup",
+    "local:restore": "node web/apps/local-runtime/src/cli.mjs restore",
+    "local:uninstall": "node web/apps/local-runtime/src/cli.mjs uninstall",
+    "local:demo": "npm run local:build && node web/apps/local-runtime/src/cli.mjs demo",
+    "test:local": "npm --prefix web run test:local"
   }
 }
