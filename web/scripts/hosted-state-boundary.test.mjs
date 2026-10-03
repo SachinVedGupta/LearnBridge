@@ -13,9 +13,11 @@ function stateRoute(auth) {
   const module = { exports: {} };
   class AppError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
   const stubs = {
-    'next/server': { NextResponse: { json: (body, options) => ({ body, ...options }) } },
+    'next/server': { NextResponse: { json: (body, options) => ({ body, ...options }) },
+      after: () => assert.fail('Reads and rejected authentication must schedule no save observation.') },
     '@/lib/server/auth': { requireUser: auth, AppError },
     '@/lib/server/access': { sameOrigin: () => null, failure: (error) => ({ status: error.status || 500 }) },
+    '@/lib/adoption/server': { recordHostedStateSave: () => assert.fail('No actual state save occurred in this boundary check.') },
   };
   new Function('require', 'module', 'exports', code)((id) => stubs[id] ?? require(id), module, module.exports);
   return module.exports;

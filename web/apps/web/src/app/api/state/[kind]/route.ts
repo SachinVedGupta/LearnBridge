@@ -1,7 +1,8 @@
 import {z} from 'zod';
-import {NextRequest,NextResponse} from 'next/server';
+import {NextRequest,NextResponse,after} from 'next/server';
 import {requireUser,AppError} from '@/lib/server/auth';
 import {sameOrigin,failure} from '@/lib/server/access';
+import {recordHostedStateSave} from '@/lib/adoption/server';
 const tasksSchema=z.array(z.object({id:z.string().uuid(),title:z.string().max(300),course:z.string().max(300),due:z.string().max(30),done:z.boolean()})).max(1000);
 const draftSchema=z.object({title:z.string().max(500),context:z.string().max(20000),content:z.object({type:z.literal('doc'),content:z.array(z.unknown()).optional()}).passthrough()});
 const valid=(kind:string)=>['tasks','draft'].includes(kind);
@@ -15,6 +16,7 @@ export async function PUT(request:NextRequest,{params}:{params:Promise<{kind:str
  const row={user_id:user.id,kind:(await params).kind,value:checked.data,revision:body.revision+1,updated_at:new Date().toISOString()};
  const query=body.revision===0?db.from('student_state').insert(row):db.from('student_state').update(row).eq('user_id',user.id).eq('kind',(await params).kind).eq('revision',body.revision);
  const {data,error}=await query.select('revision').maybeSingle();if(error||!data)throw new AppError('Your workspace changed elsewhere or could not be saved. Reload before making more changes.',409);
+ after(()=>recordHostedStateSave(db,row.kind,data.revision));
  return NextResponse.json({revision:data.revision});
  }catch(e){return failure(e);}
 }
