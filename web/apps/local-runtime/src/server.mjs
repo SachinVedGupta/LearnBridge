@@ -5,7 +5,7 @@ import { LocalStore } from '@learnbridge/local-storage';
 import { LearnBridgeError } from '@learnbridge/core';
 import { assertLocalRequest, createSessionPolicy, HttpError, plainBody, readJson } from './policy.mjs';
 import { startControl } from './ipc.mjs';
-import { describeRoot, inventorySource, readSelectedEntry, probeSourceCapability } from '../../../packages/local-sources/src/index.mjs';
+import { describeRoot, inventorySource, readSelectedEntry, readSelectedPdf, probeSourceCapability, probePdfCapability } from '../../../packages/local-sources/src/index.mjs';
 import { normalizeAcademicExport, AcademicError } from '../../../packages/local-academic/src/index.mjs';
 import { randomUUID, createHash } from 'node:crypto';
 import { createStudentWorkspace } from './student-workspace.mjs';
@@ -89,7 +89,7 @@ function failure(response, error) {
 export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairingTtlMs,
   // Trusted programmatic dependency injection for native acquisition barriers.
   // The launcher/HTTP/MCP surfaces never accept an adapter or executable.
-  sourceAdapter = { describeRoot, inventorySource, readSelectedEntry, probeSourceCapability },
+  sourceAdapter = { describeRoot, inventorySource, readSelectedEntry, readSelectedPdf, probeSourceCapability, probePdfCapability },
   // Trusted fixture seam only; the CLI/HTTP/MCP never accepts execution configuration.
   hostAdapter = { enabled: false } } = {}) {
   if (typeof dataRoot !== 'string' || !Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Invalid local runtime options.');
@@ -105,8 +105,12 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
   const activeBackups = new Set();
   const sourceOperations = new Set();
   const academicPreviews = new Map();
-  let sourceCapability;
-  try { sourceCapability = await sourceAdapter.probeSourceCapability(); }
+  let sourceCapability, pdfCapability;
+  try {
+    sourceCapability = await sourceAdapter.probeSourceCapability();
+    pdfCapability = sourceAdapter.probePdfCapability ? await sourceAdapter.probePdfCapability()
+      : { state: 'unsupported', reason: 'native_pdf_runtime_unavailable' };
+  }
   catch (error) { store.close(); throw error; }
   let resolveClosed;
   const closed = new Promise(resolveDone => { resolveClosed = resolveDone; });
@@ -135,6 +139,7 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         { id: 'backup', label: 'Backup and restore', state: 'available', detail: 'Use the local launcher commands to make a snapshot or restore into a fresh workspace.' },
         { id: 'mcp', label: 'Agent MCP bridge', state: 'available', detail: 'Four project-scoped tools: status, selected context, pending tasks and pending writing. Sharing requires a destination-specific selection; task and writing acceptance belongs to the student.' },
         { id: 'sources', label: 'Selected local sources', state: sourceCapability.state === 'available' ? 'available' : 'unsupported', detail: 'Explicit text/Markdown folder inventory and selected imports. Requires the verified private Python runtime; no automatic laptop scan.' },
+        { id: 'pdf', label: 'Selected PDF handouts', state: sourceCapability.state === 'available' && pdfCapability.state === 'available' ? 'available' : 'unsupported', detail: 'macOS PDF text imports preserve physical page citations and partial coverage. Native prerequisites are checked; each selected import verifies extraction. Scans require a separate text export; no OCR or password collection.' },
         { id: 'academic', label: 'Avenue / D2L', state: 'requires_auth', detail: 'Reviewed academic exports are supported. Live reads need a supported institution and a separately verified local student session. No university password or token is accepted here.' },
         { id: 'remote', label: 'Phone companion', state: 'unavailable', detail: 'The optional relay protocol is under development. This loopback dashboard does not expose the laptop or launch remote agent work.' },
         { id: 'telemetry', label: 'Local usage reporting', state: 'unavailable', detail: 'Off by default. Setup, doctor, tasks and agent sharing do not report local activity or enroll measurement.' },
@@ -383,7 +388,7 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
       }
       if (route === '/sources') {
         noQuery(url);
-        if (request.method === 'GET') return json(response, 200, { items: store.listSources(), entries: store.listSourceEntries(), capability: sourceCapability });
+        if (request.method === 'GET') return json(response, 200, { items: store.listSources(), entries: store.listSourceEntries(), capability: sourceCapability, pdf_capability: pdfCapability });
         if (request.method === 'POST') {
           const body = await privateBody(['path', 'label'], ['path', 'label'], 4096);
           const descriptor = await sourceOperation(() => sourceAdapter.describeRoot(body.path, { label: body.label }));
@@ -413,9 +418,16 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         }
         const saved = found(store.getSourceInventory(id(body.inventory_id)));
         if (saved.source_id !== sourceId) notFound();
-        const value = await sourceOperation(signal => sourceAdapter.readSelectedEntry(source.descriptor, saved.inventory, id(body.entry_id), { signal, maxBytes: 48000 }));
+        const entryId = id(body.entry_id);
+        const selected = found(saved.inventory.entries.find(item => item.id === entryId));
+        if (selected.kind === 'pdf' && (pdfCapability.state !== 'available' || typeof sourceAdapter.readSelectedPdf !== 'function')) throw new LearnBridgeError('UNSUPPORTED');
+        const reader = selected.kind === 'pdf' ? sourceAdapter.readSelectedPdf : sourceAdapter.readSelectedEntry;
+        const value = await sourceOperation(signal => reader(source.descriptor, saved.inventory, entryId, { signal, maxBytes: 48000 }));
         // Recheck source revocation after the acquisition worker yields.
         if (store.getSource(sourceId)?.state !== 'active') throw new HttpError(403, 'CONSENT_REQUIRED', 'This source was revoked.');
+        if (selected.kind === 'pdf' && value.pdf?.extraction_status !== 'available') {
+          return json(response, 200, { imported: false, extraction_status: value.pdf?.extraction_status || 'text_unavailable', coverage: value.pdf?.coverage || { state: 'unavailable', reasons: ['no_extractable_text'] } });
+        }
         return json(response, 201, { entry: store.importSourceEntry({ source_id: sourceId, inventory_id: saved.id, entry_id: body.entry_id, ...value }) });
       }
       if (route === '/academic/preview') {

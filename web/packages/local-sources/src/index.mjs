@@ -6,6 +6,9 @@ import { basename, isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { StringDecoder } from 'node:string_decoder';
 import { LearnBridgeError, invalidInput } from '@learnbridge/core';
+import { PDF_LIMITS, PDF_PARSER_VERSION, nativePdfPrerequisites, runNativePdf } from './pdf-native.mjs';
+
+export { PDF_LIMITS, PDF_PARSER_VERSION } from './pdf-native.mjs';
 
 export const SOURCE_ADAPTER_VERSION = '0.1.0';
 export const SOURCE_LIMITS = Object.freeze({ maxEntries: 500, maxFiles: 100, maxDepth: 8, maxBytes: 256_000, maxDurationMs: 5000 });
@@ -117,7 +120,7 @@ function stableEntryId(sourceVersion, path, identity) {
 function entry(value, source) {
   object(value, ['id', 'relativePath', 'kind', 'title', 'snapshot', 'directories']);
   const path = relativePath(value.relativePath);
-  const expectedKind = /\.md$/i.test(path) ? 'markdown' : /\.txt$/i.test(path) ? 'text' : null;
+  const expectedKind = /\.md$/i.test(path) ? 'markdown' : /\.txt$/i.test(path) ? 'text' : /\.pdf$/i.test(path) ? 'pdf' : null;
   if (!expectedKind || value.kind !== expectedKind || value.title !== basename(path)) invalidInput();
   const file = snapshot(value.snapshot);
   const dirs = array(value.directories, 9).map(item => { object(item, ['relativePath', 'identity']); return { relativePath: relativePath(item.relativePath, { directory: true }), identity: directoryIdentity(item.identity) }; });
@@ -167,7 +170,7 @@ function validateInventory(value, source) {
 // dir_fd anchors each child lookup to a directory descriptor; every component
 // uses O_NOFOLLOW. There is intentionally no path-based Node read fallback.
 const WORKER = String.raw`
-import os, sys, json, stat, hashlib, re
+import os, sys, json, stat, hashlib, re, base64
 
 class Refused(Exception):
     def __init__(self, code): self.code = code
@@ -292,10 +295,11 @@ def inventory(source, limits):
                 finally: os.close(child)
                 continue
             if not stat.S_ISREG(st.st_mode): exclude('special'); continue
-            if not re.search(r'\.(txt|md)$',name,re.I): exclude('unsupportedType'); continue
+            if not re.search(r'\.(txt|md|pdf)$',name,re.I): exclude('unsupportedType'); continue
             if st.st_nlink!=1: exclude('hardlink'); continue
             if st.st_size<0 or st.st_size>1000000000000: exclude('unsupportedType'); continue
-            kind='markdown' if name.lower().endswith('.md') else 'text'
+            kind='markdown' if name.lower().endswith('.md') else 'pdf' if name.lower().endswith('.pdf') else 'text'
+            if kind=='pdf' and st.st_size>4000000: exclude('unsupportedType'); continue
             chosen={'relativePath':relative,'kind':kind,'title':name,'snapshot':snapshot(st),'directories':chain}
             entries.append(chosen); counts['eligibleFiles']+=1; counts['totalBytes']+=st.st_size; progress(chosen)
     fd=root_fd(source)
@@ -312,7 +316,7 @@ def inventory(source, limits):
         return {'entries':entries,'counts':counts,'exclusions':exclusions,'coverage':{'state':state,'reasons':sorted(reasons)}}
     finally: os.close(fd)
 
-def read_entry(source,chosen,max_bytes):
+def read_entry(source,chosen,max_bytes,binary=False):
     root=root_fd(source)
     held=[root]
     fd=None
@@ -347,6 +351,7 @@ def read_entry(source,chosen,max_bytes):
         validate_chain(source,chosen)
         if not same(os.fstat(fd),chosen['snapshot']) or size!=chosen['snapshot']['size']: raise Refused('VERSION_MISMATCH')
         data=b''.join(chunks)
+        if binary: return {'base64':base64.b64encode(data).decode('ascii'),'source_sha256':hashlib.sha256(data).hexdigest(),'source_bytes':size,'version':chosen['snapshot']['version'],'title':chosen['title']}
         try: text=data.decode('utf-8','strict')
         except UnicodeDecodeError: raise Refused('UNSUPPORTED')
         if '\x00' in text: raise Refused('UNSUPPORTED')
@@ -365,6 +370,10 @@ try:
         finally: os.close(fd)
     elif operation=='inventory': result=inventory(request['descriptor'],request['budget'])
     elif operation=='read': result=read_entry(request['descriptor'],request['entry'],request['maxBytes'])
+    elif operation=='read_pdf': result=read_entry(request['descriptor'],request['entry'],request['maxBytes'],True)
+    elif operation=='verify':
+        validate_chain(request['descriptor'],request['entry'])
+        result={'version':request['entry']['snapshot']['version']}
     else: raise Refused('INVALID_INPUT')
     emit({'event':'result','ok':True,'result':result})
 except Refused as error: emit({'event':'result','ok':False,'code':error.code})
@@ -406,7 +415,7 @@ function runWorker(request, { signal, hooks = {} } = {}) {
     child.on('error', () => finish(new LearnBridgeError('UNSUPPORTED')));
     child.stdout.on('data', chunk => {
       total += chunk.length;
-      if (total > 2_000_000) { stop('worker_failure'); return; }
+      if (total > (request.operation === 'read_pdf' ? 6_000_000 : 2_000_000)) { stop('worker_failure'); return; }
       output += decoder.write(chunk);
       let boundary;
       while ((boundary = output.indexOf('\n')) >= 0) {
@@ -437,6 +446,44 @@ function runWorker(request, { signal, hooks = {} } = {}) {
 }
 
 function signalOption(value) { if (value !== undefined && !(value instanceof AbortSignal)) invalidInput(); return value; }
+function nativePdfResult(value, acquired, selected, maxBytes) {
+  object(value, ['status', 'parser_version', 'page_count', 'pages']);
+  if (!['available', 'text_unavailable', 'encrypted', 'malformed'].includes(value.status)
+    || value.parser_version !== PDF_PARSER_VERSION) fail('VERSION_MISMATCH');
+  const pageCount = integer(value.page_count, PDF_LIMITS.maxPages);
+  const suppliedPages = array(value.pages, PDF_LIMITS.maxPages);
+  if (value.status === 'available' && (pageCount < 1 || suppliedPages.length !== pageCount)) fail('VERSION_MISMATCH');
+  if (['encrypted', 'malformed'].includes(value.status) && suppliedPages.length) fail('VERSION_MISMATCH');
+  let text = '', cursor = 0;
+  const pages = suppliedPages.map((page, index) => {
+    object(page, ['physical_page', 'printed_label', 'text'], ['physical_page', 'text']);
+    if (page.physical_page !== index + 1 || typeof page.text !== 'string' || page.text.includes('\0')) fail('VERSION_MISMATCH');
+    const label = page.printed_label === undefined ? null : string(page.printed_label, 128);
+    if (label !== null && Buffer.byteLength(label) > 128) fail('VERSION_MISMATCH');
+    const header = `${index ? '\n\n' : ''}[PDF page ${page.physical_page}]\n`;
+    const start = cursor + Buffer.byteLength(header);
+    const end = start + Buffer.byteLength(page.text);
+    text += header + page.text; cursor = end;
+    if (cursor > maxBytes) fail('BUDGET_EXCEEDED');
+    return { physical_page: page.physical_page, printed_label: label, text: page.text,
+      sha256: createHash('sha256').update(page.text).digest('hex'), byte_range: { start, end } };
+  });
+  const readable = pages.filter(page => page.text.trim()).length;
+  if ((value.status === 'available') !== (readable > 0)) fail('VERSION_MISMATCH');
+  const available = value.status === 'available';
+  // Unavailable documents do not expose guessed page text or citation ranges.
+  if (!available) text = '';
+  const reasons = available ? (readable === pageCount ? [] : ['pages_without_extractable_text'])
+    : [value.status === 'text_unavailable' ? 'no_extractable_text' : `${value.status}_document`];
+  const pdf = { schema_version: 1, format: 'pdf_text', parser_version: PDF_PARSER_VERSION,
+    source_sha256: acquired.source_sha256, source_bytes: acquired.source_bytes, page_count: pageCount,
+    pages: available ? pages : [], extraction_status: value.status,
+    coverage: { state: available ? (reasons.length ? 'partial' : 'complete') : 'unavailable', reasons } };
+  if (Buffer.byteLength(JSON.stringify(pdf)) > PDF_LIMITS.maxMetadataBytes) fail('BUDGET_EXCEEDED');
+  const result = { text, sha256: createHash('sha256').update(text).digest('hex'), version: selected.snapshot.version, title: selected.title, pdf };
+  if (Buffer.byteLength(JSON.stringify(result)) > PDF_LIMITS.maxResultBytes) fail('BUDGET_EXCEEDED');
+  return result;
+}
 function assembleInventory(source, limits, raw, interruption) {
   const entries = raw.entries.map(value => ({ id: stableEntryId(source.version, value.relativePath, { dev: value.snapshot.dev, ino: value.snapshot.ino }), ...value }));
   const value = { schema_version: 1, id: randomUUID(), source_version: source.version, entries,
@@ -454,6 +501,24 @@ function createAdapter(hooks = {}) {
         if (!result.value?.anchored_directory_fd || !result.value?.nofollow_components) return freeze({ state: 'unsupported', version: SOURCE_ADAPTER_VERSION, reason: 'source_runtime_unavailable' });
         return freeze({ state: 'available', version: SOURCE_ADAPTER_VERSION, platform: process.platform, python_version: result.value.python_version, anchored_directory_fd: true });
       } catch { return freeze({ state: 'unsupported', version: SOURCE_ADAPTER_VERSION, reason: 'source_runtime_unavailable' }); }
+    },
+    async probePdfCapability(options = {}) {
+      object(options, ['verify', 'signal'], []);
+      if (options.verify !== undefined && typeof options.verify !== 'boolean') invalidInput();
+      const signal = signalOption(options.signal);
+      if (signal?.aborted) fail('CANCELLED');
+      if (process.platform !== 'darwin') return freeze({ state: 'unsupported', parser_version: PDF_PARSER_VERSION, reason: 'native_pdf_platform_unsupported' });
+      try {
+        if (!await nativePdfPrerequisites()) fail('UNSUPPORTED');
+        if (signal?.aborted) fail('CANCELLED');
+        if (options.verify === true) {
+          const result = await runNativePdf(null, { signal });
+          object(result, ['status', 'parser_version', 'probe']);
+          if (result.status !== 'available' || result.parser_version !== PDF_PARSER_VERSION || result.probe !== true) fail('UNSUPPORTED');
+        }
+        return freeze({ state: 'available', parser_version: PDF_PARSER_VERSION, platform: 'darwin', processing: 'local_text_only', ocr: false,
+          verification: options.verify === true ? 'native_probe_passed' : 'prerequisites_only', limits: PDF_LIMITS });
+      } catch (value) { if (value?.code === 'CANCELLED') throw value; return freeze({ state: 'unsupported', parser_version: PDF_PARSER_VERSION, reason: 'native_pdf_runtime_unavailable' }); }
     },
     async describeRoot(path, options = {}) {
       object(options, ['label'], []);
@@ -482,6 +547,7 @@ function createAdapter(hooks = {}) {
       if (inventory.coverage.state === 'cancelled' || inventory.coverage.state === 'blocked') fail('CONSENT_REQUIRED', 'review_scope');
       const selected = inventory.entries.find(item => item.id === uuid(entryId));
       if (!selected) fail('SCOPE_DENIED', 'review_scope');
+      if (selected.kind === 'pdf') fail('UNSUPPORTED', 'use_pdf_import');
       const maxBytes = integer(options.maxBytes ?? SOURCE_LIMITS.maxBytes, SOURCE_LIMITS.maxBytes, 1);
       const signal = signalOption(options.signal);
       const result = await runWorker({ operation: 'read', descriptor: source, entry: selected, maxBytes }, { signal, hooks });
@@ -492,19 +558,57 @@ function createAdapter(hooks = {}) {
         || sha(result.value.sha256) !== createHash('sha256').update(result.value.text, 'utf8').digest('hex')) fail('VERSION_MISMATCH', 'refresh');
       return freeze(result.value);
     },
+    async readSelectedPdf(value, suppliedInventory, entryId, options = {}) {
+      object(options, ['maxBytes', 'signal'], []);
+      if (process.platform !== 'darwin') fail('UNSUPPORTED', 'native_pdf_platform_unsupported');
+      const source = { ...descriptor(value), version: value.version };
+      if (await approvedRootPath(source.root) !== source.root) fail('VERSION_MISMATCH', 'refresh');
+      const inventory = validateInventory(suppliedInventory, source);
+      if (inventory.coverage.state === 'cancelled' || inventory.coverage.state === 'blocked') fail('CONSENT_REQUIRED', 'review_scope');
+      const selected = inventory.entries.find(item => item.id === uuid(entryId));
+      if (!selected || selected.kind !== 'pdf') fail('SCOPE_DENIED', 'review_scope');
+      const maxBytes = integer(options.maxBytes ?? 48_000, PDF_LIMITS.maxTextBytes, 1);
+      const signal = signalOption(options.signal);
+      const acquired = await runWorker({ operation: 'read_pdf', descriptor: source, entry: selected, maxBytes: PDF_LIMITS.maxPdfBytes }, { signal, hooks });
+      if (acquired.interrupted) fail(acquired.interrupted === 'cancelled' ? 'CANCELLED' : 'BUDGET_EXCEEDED');
+      object(acquired.value, ['base64', 'source_sha256', 'source_bytes', 'version', 'title']);
+      const original = acquired.value;
+      if (typeof original.base64 !== 'string' || original.base64.length > Math.ceil(PDF_LIMITS.maxPdfBytes / 3) * 4
+        || integer(original.source_bytes, PDF_LIMITS.maxPdfBytes) !== selected.snapshot.size
+        || original.version !== selected.snapshot.version || original.title !== selected.title) fail('VERSION_MISMATCH', 'refresh');
+      const bytes = Buffer.from(original.base64, 'base64');
+      if (bytes.length !== original.source_bytes || bytes.toString('base64') !== original.base64
+        || sha(original.source_sha256) !== createHash('sha256').update(bytes).digest('hex')) fail('VERSION_MISMATCH', 'refresh');
+      if (signal?.aborted) fail('CANCELLED');
+      if (hooks.onPhase) await hooks.onPhase({ phase: 'before_pdf_parse', source_bytes: bytes.length });
+      const parsed = await runNativePdf(bytes, { signal, maxTextBytes: maxBytes,
+        ...(hooks.pdfTimeoutMs === undefined ? {} : { timeoutMs: hooks.pdfTimeoutMs }), onSpawn: hooks.onPhase });
+      if (signal?.aborted) fail('CANCELLED');
+      if (hooks.onPhase) await hooks.onPhase({ phase: 'after_pdf_parse', source_bytes: bytes.length });
+      // PDFKit only sees the immutable buffer read from the approved file FD.
+      // Parsing may take time, so do not return that buffer's text if its source
+      // path/version moved or changed while the native parser was working.
+      const checked = await runWorker({ operation: 'verify', descriptor: source, entry: selected }, { signal });
+      if (checked.interrupted) fail(checked.interrupted === 'cancelled' ? 'CANCELLED' : 'BUDGET_EXCEEDED');
+      object(checked.value, ['version']);
+      if (checked.value.version !== selected.snapshot.version || signal?.aborted) fail(signal?.aborted ? 'CANCELLED' : 'VERSION_MISMATCH', 'refresh');
+      return freeze(nativePdfResult(parsed, original, selected, maxBytes));
+    },
   };
 }
 
 const adapter = createAdapter();
 export const probeSourceCapability = (...args) => adapter.probeSourceCapability(...args);
+export const probePdfCapability = (...args) => adapter.probePdfCapability(...args);
 export const describeRoot = (...args) => adapter.describeRoot(...args);
 export const inventorySource = (...args) => adapter.inventorySource(...args);
 export const readSelectedEntry = (...args) => adapter.readSelectedEntry(...args);
+export const readSelectedPdf = (...args) => adapter.readSelectedPdf(...args);
 
 /** Test construction only. Runtime API inputs cannot install callbacks, change
  * the worker executable, or replace any native filesystem operation. */
 export function createSourceAdapterForTests(hooks) {
-  object(hooks, ['onPhase', 'onBodyRead'], []);
-  for (const value of Object.values(hooks)) if (typeof value !== 'function') invalidInput();
+  object(hooks, ['onPhase', 'onBodyRead', 'pdfTimeoutMs'], []);
+  for (const [key, value] of Object.entries(hooks)) if (key === 'pdfTimeoutMs') integer(value, PDF_LIMITS.maxDurationMs, 100); else if (typeof value !== 'function') invalidInput();
   return Object.freeze(createAdapter(hooks));
 }

@@ -135,26 +135,26 @@ function legacyV2(base) {
 test('WF10 additive v2→v3 migration preserves both historical checksums and identity', t => {
   const { base } = fixture(t); const { root, installation } = legacyV2(base); const store = LocalStore.open({ root });
   try { assert.deepEqual(store.identity, installation); assert.equal(store.integrity().schema_version, STORAGE_SCHEMA_VERSION); } finally { store.close(); }
-  const db = new Database(join(root, 'learnbridge.sqlite')); try { const ledger = db.prepare('SELECT * FROM schema_migrations ORDER BY version').all(); assert.equal(ledger.length, 3); assert.equal(ledger[0].checksum, sha(v1)); assert.equal(ledger[1].checksum, sha(v2)); } finally { db.close(); }
+  const db = new Database(join(root, 'learnbridge.sqlite')); try { const ledger = db.prepare('SELECT * FROM schema_migrations ORDER BY version').all(); assert.equal(ledger.length, STORAGE_SCHEMA_VERSION); assert.equal(ledger[0].checksum, sha(v1)); assert.equal(ledger[1].checksum, sha(v2)); } finally { db.close(); }
 });
 
 test('WF11 SIGKILL inside actual v3 migration rolls back, then stale-owner recovery retries safely', t => {
   const { base } = fixture(t); const { root, installation } = legacyV2(base);
   const result = child(`import{LocalStore}from${JSON.stringify(moduleUrl)};import Database from'better-sqlite3';const original=Database.prototype.prepare;Database.prototype.prepare=function(sql){if(sql==='INSERT INTO schema_migrations VALUES (3,?)')return{run(){process.kill(process.pid,'SIGKILL')}};return original.call(this,sql)};LocalStore.open({root:${JSON.stringify(root)}});`);
   assert.ifError(result.error); assert.equal(result.signal, 'SIGKILL'); const db = new Database(join(root, 'learnbridge.sqlite')); try { assert.equal(db.pragma('user_version', { simple: true }), 2); assert.equal(db.prepare('SELECT count(*) AS n FROM schema_migrations').get().n, 2); assert.equal(db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name='workflow_runs'").get().n, 0); } finally { db.close(); }
-  const reopened = LocalStore.open({ root }); try { assert.deepEqual(reopened.identity, installation); assert.equal(reopened.integrity().schema_version, 3); } finally { reopened.close(); }
+  const reopened = LocalStore.open({ root }); try { assert.deepEqual(reopened.identity, installation); assert.equal(reopened.integrity().schema_version, STORAGE_SCHEMA_VERSION); } finally { reopened.close(); }
 });
 
 test('WF12 v2 backups restore unchanged and only restored roots upgrade', async t => {
   const { base } = fixture(t); const { root, installation } = legacyV2(base); const backupRoot = join(base, 'legacy-backup'); mkdirSync(backupRoot); const bytes = readFileSync(join(root, 'learnbridge.sqlite')); writeFileSync(join(backupRoot, 'learnbridge.sqlite'), bytes);
   writeFileSync(join(backupRoot, 'manifest.json'), JSON.stringify({ format: 'learnbridge-local-backup', schema_version: 2, created_at: new Date().toISOString(), installation_id: installation.id, student_id: installation.student_id, database: { name: 'learnbridge.sqlite', bytes: bytes.length, sha256: sha(bytes) } }));
-  const restored = join(base, 'restored-v2'); const report = await LocalStore.restore({ backupRoot, root: restored }); assert.equal(report.schema_version, 2); const upgraded = LocalStore.open({ root: restored }); try { assert.equal(upgraded.integrity().schema_version, 3); } finally { upgraded.close(); } assert.equal(sha(readFileSync(join(backupRoot, 'learnbridge.sqlite'))), sha(bytes));
+  const restored = join(base, 'restored-v2'); const report = await LocalStore.restore({ backupRoot, root: restored }); assert.equal(report.schema_version, 2); const upgraded = LocalStore.open({ root: restored }); try { assert.equal(upgraded.integrity().schema_version, STORAGE_SCHEMA_VERSION); } finally { upgraded.close(); } assert.equal(sha(readFileSync(join(backupRoot, 'learnbridge.sqlite'))), sha(bytes));
 });
 
 test('WF13 v3 backup/restore preserves runs, history, receipts and domain records; rehashed corruption rejects', async t => {
   const { base, store } = fixture(t); let run = claim(store, ready(store)); const p = proposal(store, run); run = p.run; store.reviewRunAction(p.action.id, { expected_revision: 1, fingerprint: p.action.fingerprint, decision: 'rejected' }); ({ run } = saveStep(store, run));
   const workspace = store.createWorkspaceRecord({ kind: 'profile_fact', title: 'Synthetic reviewed profile', data: { state: 'proposed', value: 'Synthetic' } }); const backupRoot = join(base, 'backup'); await store.backup(backupRoot);
-  const restored = join(base, 'restored'); await LocalStore.restore({ backupRoot, root: restored }); const copy = LocalStore.open({ root: restored }); try { assert.deepEqual(copy.getRun(run.id), run); assert.deepEqual(copy.getWorkspaceRecord(workspace.id), workspace); assert.equal(copy.listRunActions(run.id)[0].review_receipt.decision, 'rejected'); assert.equal(copy.integrity().schema_version, 3); } finally { copy.close(); }
+  const restored = join(base, 'restored'); await LocalStore.restore({ backupRoot, root: restored }); const copy = LocalStore.open({ root: restored }); try { assert.deepEqual(copy.getRun(run.id), run); assert.deepEqual(copy.getWorkspaceRecord(workspace.id), workspace); assert.equal(copy.listRunActions(run.id)[0].review_receipt.decision, 'rejected'); assert.equal(copy.integrity().schema_version, STORAGE_SCHEMA_VERSION); } finally { copy.close(); }
   const db = new Database(join(backupRoot, 'learnbridge.sqlite')); try { const row = db.prepare('SELECT id,json FROM workflow_runs').get(); const forged = JSON.parse(row.json); forged.used.tool_calls = 1001; db.prepare('UPDATE workflow_runs SET json=? WHERE id=?').run(JSON.stringify(forged), row.id); } finally { db.close(); }
   const manifest = JSON.parse(readFileSync(join(backupRoot, 'manifest.json'))); const bytes = readFileSync(join(backupRoot, 'learnbridge.sqlite')); manifest.database.bytes = bytes.length; manifest.database.sha256 = sha(bytes); writeFileSync(join(backupRoot, 'manifest.json'), JSON.stringify(manifest));
   await assert.rejects(LocalStore.restore({ backupRoot, root: join(base, 'forged-restore') }), { code: 'INVALID_INPUT' });
@@ -210,5 +210,5 @@ test('WF19 failed v3 migration releases the writer and preserves schema2 for saf
   const { base } = fixture(t); const { root, installation } = legacyV2(base); const original = Database.prototype.prepare;
   try { Database.prototype.prepare = function(sql) { if (sql === 'INSERT INTO schema_migrations VALUES (3,?)') return { run() { throw new Error('Synthetic v3 migration failure'); } }; return original.call(this, sql); }; assert.throws(() => LocalStore.open({ root }), /Synthetic v3 migration failure/); } finally { Database.prototype.prepare = original; }
   const db = new Database(join(root, 'learnbridge.sqlite')); try { assert.equal(db.pragma('user_version', { simple: true }), 2); assert.equal(db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name='workflow_runs'").get().n, 0); assert.equal(db.prepare('SELECT count(*) AS n FROM schema_migrations').get().n, 2); } finally { db.close(); }
-  const reopened = LocalStore.open({ root }); try { assert.deepEqual(reopened.identity, installation); assert.equal(reopened.integrity().schema_version, 3); } finally { reopened.close(); }
+  const reopened = LocalStore.open({ root }); try { assert.deepEqual(reopened.identity, installation); assert.equal(reopened.integrity().schema_version, STORAGE_SCHEMA_VERSION); } finally { reopened.close(); }
 });

@@ -548,6 +548,10 @@ $('logout-button').addEventListener('click', async event => {
 async function loadSources() {
   const data = await request('/sources');
   state.sources = data.items; state.sourceEntries = data.entries;
+  state.pdfCapability = data.pdf_capability;
+  $('pdf-capability').textContent = data.pdf_capability?.state === 'available'
+    ? 'PDF text imports are supported on this Mac. Each import checks extraction and preserves page numbers. Up to 4 MB and 200 pages; extracted text is capped at 48 KB. Scans need a text export; no OCR or passwords are used.'
+    : 'PDF text extraction is unavailable on this computer. Export the selected handout to text or Markdown to import it.';
   $('source-list').replaceChildren(); $('source-entry-list').replaceChildren();
   for (const source of state.sources) {
     const row = element('article', 'review-row');
@@ -568,7 +572,12 @@ async function loadSources() {
     row.append(element('h3', '', entry.title), element('p', 'hash-text', `SHA-256 ${entry.sha256}`));
     row.append(taskAction(entry, 'Read saved snapshot', async () => {
       const result = await request(`/source-entries/${entry.id}`);
-      row.querySelector('pre')?.remove(); row.append(element('pre', 'source-text', result.entry.text));
+      row.querySelector('pre')?.remove(); row.querySelector('[data-pdf-details]')?.remove();
+      if (result.entry.pdf) {
+        const pdf = result.entry.pdf, details = element('p', 'field-help', `${pdf.page_count} physical pages · ${pdf.coverage.state === 'partial' ? 'Some pages have no extractable text. Do not treat this as the complete handout.' : 'Text available on all pages.'}\nOriginal PDF SHA-256 ${pdf.source_sha256}`);
+        details.dataset.pdfDetails = ''; row.append(details);
+      }
+      row.append(element('pre', 'source-text', result.entry.text));
     }, 'secondary compact'));
     $('source-entry-list').append(row);
   }
@@ -579,7 +588,7 @@ function renderInventory() {
   $('inventory-list').replaceChildren();
   if (!saved) return;
   const inventory = saved.inventory;
-  $('inventory-list').append(element('h3', '', 'Review these files'), element('p', 'field-help', 'Only explicit Import reads a file body. Imports are capped at 48,000 bytes each in this dashboard. Excluded formats and secret paths are never offered.'));
+  $('inventory-list').append(element('h3', '', 'Review these files'), element('p', 'field-help', 'Only explicit Import reads a file body. Saved text is capped at 48,000 bytes per file. PDF page citations describe extracted text; image-only pages are reported as missing. Excluded formats and secret paths are never offered.'));
   $('inventory-list').append(element('p', 'field-help', `${inventory.counts.entriesVisited} items checked · ${inventory.counts.eligibleFiles} supported files · ${inventory.counts.excludedEntries} excluded · ${inventory.counts.totalBytes.toLocaleString()} eligible bytes. Coverage: ${inventory.coverage.state}.`));
   const exclusionNames = { secret: 'credential paths', symlink: 'symbolic links', special: 'special files', unsupportedType: 'unsupported formats', hardlink: 'hard links', depth: 'depth limit', permission: 'permission denied', changed: 'changed files' };
   const exclusions = Object.entries(inventory.exclusions).filter(([, count]) => count).map(([key, count]) => `${count} ${exclusionNames[key] || key}`);
@@ -588,11 +597,18 @@ function renderInventory() {
   for (const entry of inventory.entries) {
     const row = element('div', 'review-row');
     row.append(element('p', '', `${entry.relativePath} · ${entry.snapshot?.size ?? entry.size ?? '?'} bytes`));
-    row.append(taskAction(entry, 'Import', async () => {
+    const importButton = taskAction(entry, 'Import', async () => {
       if (!await confirmAction(`Read and save the text of “${entry.relativePath}” locally? This does not allow model processing.`, { title: 'Import selected text', confirmLabel: 'Import this file' })) return;
-      await request(`/sources/${saved.source_id}/import`, { method: 'POST', body: { inventory_id: saved.id, entry_id: entry.id } });
+      message('source-message', entry.kind === 'pdf' ? 'Extracting the selected PDF on this computer…' : 'Importing the selected file…');
+      const result = await request(`/sources/${saved.source_id}/import`, { method: 'POST', body: { inventory_id: saved.id, entry_id: entry.id } });
+      if (result.imported === false) {
+        const explanation = { encrypted: 'This PDF is encrypted. Export an unlocked text copy yourself; LearnBridge does not ask for its password.', malformed: 'This file could not be read as a PDF. Check the original or export a text copy.', text_unavailable: 'This PDF has no extractable text. Use a text export or your own transcription.' };
+        message('source-message', `${explanation[result.extraction_status] || 'PDF text was unavailable.'} No snapshot was saved.`, true); return;
+      }
       await loadSources(); message('source-message', 'Selected snapshot saved locally. Review it before allowing agent sharing.');
-    }, 'secondary compact'));
+    }, 'secondary compact');
+    if (entry.kind === 'pdf' && state.pdfCapability?.state !== 'available') { importButton.disabled = true; row.append(element('p', 'field-help', 'PDF extraction unavailable here. Export this file to text.')); }
+    row.append(importButton);
     $('inventory-list').append(row);
   }
 }
