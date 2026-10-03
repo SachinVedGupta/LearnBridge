@@ -1,0 +1,266 @@
+{
+  "schema_version": 1,
+  "suite": "local-agent-controlled-source-academic-slice-v1",
+  "checked_at": "2026-10-03T04:17:32.733135+00:00",
+  "status": "PASS",
+  "scope": "Initial W06-W09 slice; synthetic sources plus an actual Codex host session. Live institution access and complete student onboarding are not established.",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "22.23.2",
+    "python": "3.12.14",
+    "runtime": "0.2.0",
+    "storage_schema": 2,
+    "better_sqlite3": "13.0.3",
+    "sqlite": "3.53.4",
+    "mcp_server": "2.3.0",
+    "mcp_client": "2.3.0",
+    "local_zod": "4.6.5"
+  },
+  "automated_tests": {
+    "status": "PASS",
+    "command": "npm test",
+    "passed": 194,
+    "failed": 0,
+    "skipped": 0,
+    "local_subset": 138,
+    "new_phase_suites": {
+      "agent_storage": 17,
+      "native_source_acquisition": 26,
+      "academic_normalizer_and_policy": 18,
+      "academic_real_sdk_transport": 7,
+      "runtime_mcp_bridge": 6,
+      "project_agent_configuration": 4,
+      "source_late_authorization": 5
+    }
+  },
+  "clean_install": {
+    "schema_version": 1,
+    "suite": "local-clean-copy-offline-install-v1",
+    "evidence_type": "synthetic_fixture",
+    "status": "PASS",
+    "environment": {
+      "node": "v22.23.2",
+      "platform": "darwin",
+      "arch": "arm64",
+      "installed_driver": "13.0.3",
+      "sqlite": "3.53.4",
+      "child_node": "v22.23.2"
+    },
+    "scope": {
+      "copied_previous_node_modules": false,
+      "copied_environment_files": false,
+      "copied_personal_data": false,
+      "cloud_configuration_supplied": false,
+      "offline_cache_used": true,
+      "package_lifecycle_hooks_disabled": true
+    },
+    "phases": [
+      {
+        "id": "FI01_EXPLICIT_CLEAN_SOURCE_COPY",
+        "status": "PASS",
+        "duration_ms": 20
+      },
+      {
+        "id": "FI02_FRESH_LOCKED_OFFLINE_INSTALL",
+        "status": "PASS",
+        "duration_ms": 3957
+      },
+      {
+        "id": "FI03_BUILD_STATIC_DASHBOARD",
+        "status": "PASS",
+        "duration_ms": 30
+      },
+      {
+        "id": "FI04_CLOUD_FREE_SETUP_AND_DOCTOR",
+        "status": "PASS",
+        "duration_ms": 109
+      },
+      {
+        "id": "FI05_NEW_PROCESS_CREATES_SYNTHETIC_RECORDS",
+        "status": "PASS",
+        "duration_ms": 44
+      },
+      {
+        "id": "FI06_FRESH_PROCESS_READS_EXACT_SAVED_RECORDS",
+        "status": "PASS",
+        "duration_ms": 42
+      },
+      {
+        "id": "FI07_CLI_BACKUP_AND_FRESH_ROOT_RESTORE",
+        "status": "PASS",
+        "duration_ms": 106
+      },
+      {
+        "id": "FI08_INDEPENDENT_PROCESS_VERIFIES_RESTORED_RECORDS",
+        "status": "PASS",
+        "duration_ms": 46
+      },
+      {
+        "id": "FI09_FRESH_OFFICIAL_SDK_STDIO_DISCOVERY",
+        "status": "PASS",
+        "duration_ms": 231
+      }
+    ],
+    "limitations": [
+      "A clean disposable source copy installed from the existing offline npm cache; not a new computer or an online-download test.",
+      "Only this recorded OS, architecture and Node runtime were exercised.",
+      "Task/note persistence, static build, CLI lifecycle and actual SDK stdio discovery; real hosts, provider OAuth and personal onboarding are separate gates.",
+      "No fresh Python environment is copied or installed; selected-file acquisition requires a suitable project .venv and is verified separately."
+    ],
+    "source": {
+      "file_count": 31,
+      "source_digest": "354f313f03d52ef7050403b08207182e92b6fed0bd0a77bd63ad5fc76add9be5",
+      "lock_sha256": "c5976bc94f4b80dee27d86f80f1520145594ed6880f539874015f9bccd4a1c74"
+    },
+    "observed": {
+      "tasks": 1,
+      "documents": 1,
+      "document_content_sha256": "6b3753692a884de653b1ad19639c7a1b4912c63fb3db43d13d610e742dbbb3d2",
+      "exact_records_survive_new_process": true,
+      "exact_records_survive_fresh_root_restore": true,
+      "static_assets_built_and_hash_matched": 3
+    },
+    "fixture_cleanup": true
+  },
+  "actual_codex_host": {
+    "status": "PASS",
+    "evidence": "CODEX_HOST_VERIFICATION.json",
+    "version": "0.154.0",
+    "authentication": "normal_host_managed_chatgpt",
+    "completed_mcp_calls": 3,
+    "tasks_before_human_review": 0,
+    "tasks_after_exact_acceptance_and_replay": 1,
+    "restart_persistence": true,
+    "synthetic_only": true,
+    "api_fallback": false,
+    "credential_copying": false,
+    "permission_bypass": false
+  },
+  "browser_proof": {
+    "status": "PASS",
+    "data": "synthetic_only",
+    "source_flow": {
+      "inventory_items": 3,
+      "eligible_files": 2,
+      "secret_exclusions": 1,
+      "selected_imports": 1,
+      "selected_file": "lecture.md",
+      "selected_text_bytes": 90,
+      "content_sha256": "a7011e481ec65a8dfb9a6107cd92b85571f46f29808e29b7c6f8c98fc2b1de58",
+      "saved_text_read_back": true
+    },
+    "review_flow": {
+      "cancelled_sharing_created_no_grant": true,
+      "cancelled_acceptance_created_no_task": true,
+      "actual_sdk_read_matched_selected_hash": true,
+      "charged_serialized_bytes": 791,
+      "task_title": "Explain the base case in your own words",
+      "proposal_payload_sha256": "1059e7ff4d6d87cb7cee608003c9e01cd4cbfe102e1cc04d56bfde55a6962653",
+      "accepted_exact_payload": true,
+      "revocation_denied_subsequent_agent_read": true
+    },
+    "academic_flow": {
+      "selected_course_ids": [
+        "101"
+      ],
+      "raw_unknown_deadline": "Friday evening",
+      "precision": "unknown",
+      "snapshot_note_sha256": "b13a9de2bd62413d0de2d7ae1a6f55e7f2467b02f20700fc8ea4486b89e4f7c5",
+      "saved_text_read_back": true,
+      "automatic_task_created": false
+    },
+    "fresh_process_restored_readback": {
+      "tasks": 3,
+      "notes": 2,
+      "source_snapshots": 1,
+      "accepted_proposals": 1,
+      "grant_state": "revoked",
+      "grant_used_bytes": 791,
+      "hashes_match": true,
+      "raw_unknown_deadline_preserved": true,
+      "task_origin": "agent_reviewed"
+    },
+    "responsive": {
+      "width_px": 390,
+      "sources_document_width_px": 390,
+      "review_document_width_px": 390,
+      "viewport_override_reset": true
+    },
+    "screenshots": [
+      "../../../artifacts/local-agent-phase/accepted-task.png",
+      "../../../artifacts/local-agent-phase/review-queue.png",
+      "../../../artifacts/local-agent-phase/sources-mobile.png",
+      "../../../artifacts/local-agent-phase/review-mobile.png"
+    ],
+    "disposable_fixture_cleanup": true
+  },
+  "regressions": {
+    "hosted_build": {
+      "status": "PASS",
+      "command": "npm run build",
+      "live_deployment": false
+    },
+    "legacy_python": {
+      "status": "PASS",
+      "syntax_files": 15,
+      "streamlit_startup_exceptions": 0,
+      "authentication_gate_visible": true,
+      "loopback_health": "ok",
+      "missing_config_rejected": true,
+      "invalid_callback_rejected": true,
+      "unauthenticated_user_rejected": true,
+      "provider_calls": 0
+    },
+    "design_validator": {
+      "status": "PASS",
+      "command": "node docs/design/validate-design.mjs",
+      "features": 27,
+      "acceptance_cases": 160,
+      "work_packages": 22,
+      "local_links": 105
+    }
+  },
+  "fixed_regressions": [
+    "HTTP cancellation after native acquisition discards late results before persistence.",
+    "Project config preview prints only managed content and hashes, preserving unrelated sensitive settings without logging them.",
+    "Unmanaged inline TOML collisions fail without producing invalid configuration.",
+    "Schema-valid multibyte proposals fit bounded UTF-8 IPC framing."
+  ],
+  "remaining_gates": [
+    "Actual Claude host is not installed or verified; configuration and SDK transport proof are separate.",
+    "Live D2L requires institution-specific profile, sanitized local transport, student SSO/MFA and verified session binding.",
+    "Full laptop/cloud onboarding, profile synthesis, PDF/Office extraction, credential vault, durable orchestration and computer/browser actions remain pending.",
+    "Offline clean-copy installation is not fresh-computer, online-download, fresh-Python or cross-platform release proof.",
+    "Linux is experimental; Windows private runtime is unsupported.",
+    "A project license must be chosen before a distributable open-source release; no upstream project source was vendored.",
+    "No real student files/provider accounts were scanned or connected in this phase; the hosted release was not changed."
+  ],
+  "source_hashes": {
+    "package.json": "a4ae88da581ada9755217005ae8f10f9a94d537f80d8e39db2302d00a5337fc0",
+    "web/package.json": "5676223eca7696af012d2080003c59d794a3af01656621d625c8b6794dc3765e",
+    "web/package-lock.json": "c5976bc94f4b80dee27d86f80f1520145594ed6880f539874015f9bccd4a1c74",
+    "web/apps/local-runtime/package.json": "9a560da6499d571327c96bcb9aa223d68c6978bebd347e89035f554d38661a4b",
+    "web/apps/local-runtime/src/server.mjs": "fbf2f6f0332be8433443469fc9f52bc2c07f6c314af240b279601e5aa32631ef",
+    "web/apps/local-runtime/src/ipc.mjs": "bd0a9eaf857fa4e1e2d6c4fc024088e3a87155f31fbeb355760e89aa25f8d557",
+    "web/apps/local-runtime/src/mcp.mjs": "ceceb1efc4bc5eda22426f3e8e92cc5649e12fef61b6e04fcc6d7e2c8b8208cc",
+    "web/apps/local-runtime/src/agent-config.mjs": "5b16123dde8f0b7c9b7c6a7cc7a43ca78fdb82117f62ed63dc8d92e5fa0e9c0c",
+    "web/apps/local-runtime/src/cli.mjs": "6bb34950848dfa4c88115026514ff41626b84f9e450a7ad476caef8d7b36b2a8",
+    "web/apps/local/public/index.html": "2559036a2282b64399d2a9a76ab72766ea5f7f19993dd51b36fc16c7123c0cfe",
+    "web/apps/local/public/app.js": "d0ec809b21f368ee812f9a82b2a2ca1f5d1ad6de8804e5461cc0097d0d8412c2",
+    "web/apps/local/public/styles.css": "6c2808314f5e6dcf63a5f8956ed0b0af48176a4518e63deb80df763f0fa87c07",
+    "web/packages/local-storage/src/index.mjs": "ac9ec76ba8a0e5fdb5394262b70f3d3b8c31d051f955f1f39f3ea721a541312f",
+    "web/packages/local-sources/src/index.mjs": "7ce426a5c36cb2944cc61f77c464e7c8a8abcd3ece6a1399b2f2574006865299",
+    "web/packages/local-academic/src/index.mjs": "6c9f6d00b32543979100e15227f4647d224f729d2b2c46a15efe37b2bd88fbe6",
+    "web/scripts/agent-storage.test.mjs": "53c06d18a9afe4a1209c0ee68ad8b15787c119ecb01d3008afb8eebb6de48a51",
+    "web/scripts/agent-bridge.test.mjs": "fe2c5cb52753bd5ac79fc40b28c0e4687b094c3c7a702da1bdd06242321cd7ec",
+    "web/scripts/agent-config.test.mjs": "627b2fa60831b1196bb5d9dc9f6b52add5f266fe818f179342cb89a95f9f4763",
+    "web/scripts/source-inventory.test.mjs": "d5caae3744de526de918e4d98741da4173ebebacd212b5b70cf5af047beef974",
+    "web/scripts/source-runtime.test.mjs": "a21581f96853c428e44a0592155648b3ca36fa1a8950408924ad634b1d826dd2",
+    "web/scripts/academic-adapter.test.mjs": "f2a5c80a2c2bd3a481eee8de20ae100501e7aaa9b4e66e485433a723299236c3",
+    "web/scripts/academic-mcp.test.mjs": "532dc7a538fa2acd52903a296819453ccf7a8ced5e433e0fd5441817b22ff0d0",
+    "web/scripts/fixtures/academic-mcp-fixture.mjs": "23d24993ac942b8eb28a9e78f1f74584a39b0ca0bffa44f1267f752b396667ea",
+    "web/scripts/verify-local-install.mjs": "2d6baa0956c3d45b1a5971da266f939ac174f6be491f019f9f73f6b053f51ae0",
+    "web/scripts/verify-codex-host.mjs": "7e9f62dbdbfe0ccbd205ada64a57287a0b5c3d0e8d9c2b23fac81012d2f33200"
+  }
+}

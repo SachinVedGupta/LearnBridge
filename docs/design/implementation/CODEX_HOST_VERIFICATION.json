@@ -1,0 +1,90 @@
+{
+  "format": "learnbridge-codex-host-verification",
+  "version": 1,
+  "checked_at": "2026-10-03T04:03:40.186Z",
+  "state": "pass",
+  "gate": "verified",
+  "platform": "darwin",
+  "runtime_version": "0.2.0",
+  "host": {
+    "version": "0.154.0",
+    "authentication_mode": "chatgpt_host_managed",
+    "exit_code": 0,
+    "event_counts": {
+      "thread.started": 1,
+      "turn.started": 1,
+      "item.completed": 5,
+      "item.started": 3,
+      "turn.completed": 1
+    },
+    "diagnostics": {
+      "mcp_mentioned_by_host": false,
+      "startup_ready_mentioned": false,
+      "host_warning_mentioned": false,
+      "deferred_discovery_mentioned": false
+    }
+  },
+  "controls": {
+    "synthetic_only": true,
+    "api_key_fallback": false,
+    "inherited_api_keys": false,
+    "global_config_read_by_verifier": false,
+    "auth_files_read_or_copied_by_verifier": false,
+    "ephemeral": true,
+    "sandbox": "read-only",
+    "permission_bypass": false,
+    "shell_tool": false,
+    "memories": false,
+    "project_instructions": false,
+    "plugins": false,
+    "other_apps": false,
+    "registration": "per_invocation",
+    "raw_transcript_saved": false,
+    "timeout_ms": 120000,
+    "output_limit_bytes": 1000000
+  },
+  "tools": [
+    {
+      "tool": "learnbridge_status",
+      "status": "completed",
+      "result_sha256": "5562098c11ced89d3b3a89bef8080f2721cc822da1fd93cdbe2647d06d6920e7"
+    },
+    {
+      "tool": "learnbridge_context",
+      "status": "completed",
+      "result_sha256": "546e58e865f2b966969a287875c924d0e32aaef82a450d3425c15a5c7c5c7eeb"
+    },
+    {
+      "tool": "learnbridge_propose_task",
+      "status": "completed",
+      "result_sha256": "fa836fbb2f2ad3e28c2b214f9886bccd0121f79e7b893e2e17498c7d3851f12d"
+    }
+  ],
+  "counts": {
+    "completed_mcp_calls": 3,
+    "successful_context_calls": 1,
+    "pending_before_review": 1,
+    "tasks_before_review": 0,
+    "tasks_after_review": 1,
+    "tasks_after_repeated_review": 1
+  },
+  "checks": {
+    "actual_mcp_calls": true,
+    "exact_selected_note": true,
+    "unrelated_note_excluded": true,
+    "proposal_payload_matches": true,
+    "no_task_before_human_review": true,
+    "human_acceptance_exactly_once": true,
+    "restart_persistence": true,
+    "cleanup": true
+  },
+  "limitations": [
+    "One controlled synthetic Codex session on this platform; other host versions, account policies and models need their own checks.",
+    "This does not verify Claude, live academic authorization, connected accounts or real student data."
+  ],
+  "references": [
+    "https://learn.chatgpt.com/docs/extend/mcp?surface=cli",
+    "https://learn.chatgpt.com/docs/non-interactive-mode",
+    "https://learn.chatgpt.com/docs/config-file/config-reference"
+  ]
+}

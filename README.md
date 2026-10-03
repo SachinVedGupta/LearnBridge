@@ -18,13 +18,15 @@ npm run local:start
 
 Open the loopback address shown by the launcher, normally `http://127.0.0.1:3210`, and enter its single-use pairing code. For a disposable sample workspace, use `npm run local:demo`. Read [local setup, backup and recovery](docs/LOCAL_SETUP.md) for commands and boundaries.
 
-The next product direction connects this workspace to each student's existing Codex or Claude Code setup, with Avenue/D2L, browser and document tools, controlled onboarding, study support and internship workflows. **The local MCP bridge, source connections, student profile and agent orchestration are not built yet.** Pairing the dashboard does not connect an AI or scan your files.
+The local edition now includes a **Codex/Claude stdio MCP bridge**, selected text/Markdown source imports, separate destination-specific sharing consent, and a human review queue for agent-proposed tasks. It uses your official agent host and subscription; LearnBridge does not copy agent credentials or provide an API fallback. Follow [agent and source setup](docs/LOCAL_AGENT_SETUP.md). Pairing alone does not connect an AI or scan your files.
+
+Avenue/D2L supports reviewed academic exports and an independently implemented read-only MCP adapter. **A live institution connection, automatic student profile, browser automation and durable agent orchestration remain separate implementation gates.** No university token is accepted by the public website or local dashboard.
 
 Read the [local student assistant blueprint](docs/LOCAL_FIRST_VISION.md) for the feature catalogue, architecture, audited integration choices, and implementation acceptance checks.
 
 The [detailed design and implementation guide](docs/design/README.md) specifies 27 features, controlled onboarding, shared contracts, a staged build plan and objective verification. Give your coding agent [SETUP_LEARNBRIDGE.md](SETUP_LEARNBRIDGE.md) as its setup entry point. It distinguishes the implemented foundation from the remaining plan.
 
-See [implementation status](docs/design/IMPLEMENTATION_STATUS.md) and the [local foundation verification report](docs/design/implementation/LOCAL_FOUNDATION_VERIFICATION.json) for measured evidence and remaining gates. Deleting a local note removes it from active views and search; historical text may remain in the local database and backups. Selective physical erasure is not implemented.
+See [implementation status](docs/design/IMPLEMENTATION_STATUS.md), the [foundation verification](docs/design/implementation/LOCAL_FOUNDATION_VERIFICATION.json) and [agent/source verification](docs/design/implementation/AGENT_SOURCE_VERIFICATION.json) for measured evidence and remaining gates. Deleting a local note removes it from active views and search; historical text may remain in the local database and backups. Selective physical erasure is not implemented.
 
 ## Public website
 
@@ -52,7 +54,7 @@ npm run build
 npm start
 ```
 
-Open http://127.0.0.1:3200. Use `npm run dev` for development. Copy `web/apps/web/.env.example` to the ignored `web/apps/web/.env.local` and configure the services you want to run locally. Never commit API keys, OAuth secrets, or tokens.
+Open http://127.0.0.1:3200. Use `npm run dev` for development. The full test suite also requires the project Python environment described in [agent/source setup](docs/LOCAL_AGENT_SETUP.md#student-setup). Copy `web/apps/web/.env.example` to the ignored `web/apps/web/.env.local` only when that file is absent; preserve existing configuration. Configure the services you want to run locally. Never commit API keys, OAuth secrets, or tokens.
 
 ## Project structure
 
@@ -61,6 +63,8 @@ Open http://127.0.0.1:3200. Use `npm run dev` for development. Copy `web/apps/we
 - `web/apps/local-runtime`: loopback service and setup/control commands.
 - `web/packages/core`: edition-independent data contracts and hosted-task migration planner.
 - `web/packages/local-storage`: private SQLite tasks, notes, revisions and backups.
+- `web/packages/local-sources`: selected text inventory and acquisition using a fixed `.venv` Python worker.
+- `web/packages/local-academic`: reviewed academic exports and an allowlisted Avenue/D2L read adapter.
 - `web/packages/shared`: shared tutor and editor contracts.
 - `supabase`: database migration and student-isolation test.
 - `web/scripts`: provider and OAuth boundary tests.

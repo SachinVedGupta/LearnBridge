@@ -1,18 +1,18 @@
 # Set up LearnBridge with a coding agent
 
-This is the entry point for a student who gives this repository to Codex, Claude Code or another coding agent. The private local foundation now exists: a paired dashboard for manual tasks and notes, SQLite persistence, diagnostics and backup/restore. The public website remains a separate edition. The local agent MCP bridge, Avenue/app sources, student profile and workflow orchestration are not built yet. An agent must use the actual capabilities and commands in this checkout rather than report the whole vision installed.
+This is the entry point for a student who gives this repository to Codex, Claude Code or another coding agent. The local edition now includes a paired dashboard, private SQLite storage, diagnostics/backup, project-scoped stdio MCP, reviewed task proposals, selected text/Markdown acquisition and reviewed academic exports. Read [agent/source setup](docs/LOCAL_AGENT_SETUP.md). The public website is separate. Live institution login, cloud-source onboarding, student profile and durable workflow orchestration remain unfinished. Use actual capabilities rather than report the whole vision installed.
 
 ## Prompt a student can give their agent
 
-> Read SETUP_LEARNBRIDGE.md, docs/LOCAL_SETUP.md and the repository instructions. Set up the private local foundation for my computer. Preserve my settings and files. Use synthetic data to verify pairing, saved tasks/notes, restart persistence and backup/restore. Show what works and what is missing, with evidence. Do not configure global agent settings, search my laptop, read connected apps or send private content to a model during foundation setup. When source onboarding and the MCP bridge become available, let me approve a bounded discovery and processing plan before using them. Let me review profile facts and consequential actions. Build missing capabilities only if I ask you to implement them.
+> Read SETUP_LEARNBRIDGE.md, docs/LOCAL_SETUP.md and the repository instructions. Set up the private local foundation for my computer. Preserve my settings and files. Use synthetic data to verify pairing, saved tasks/notes, restart persistence and backup/restore. Show what works and what is missing, with evidence. Do not configure global agent settings, search my laptop, read connected apps or send private content to a model during foundation setup. Before using selected source imports and the MCP bridge, let me approve a bounded discovery and processing plan. Let me review profile facts and consequential actions. Build missing capabilities only if I ask you to implement them.
 
 This prompt requests setup, not application submission, messages, purchases, calendar changes, hidden memory reads or publication. The student's later explicit authorization can grant appropriate bounded actions; the agent must still respect host rules.
 
 ## Agent instructions for this checkout today
 
 1. Read `AGENTS.md` if present, `CODEX_PROJECT.md`, `README.md` and [the design index](docs/design/README.md). Check the working tree and root/workspace package manifests without reading credential values. Preserve unrelated changes.
-2. Explain the available choices: use [the public website](https://thelearnbridge.vercel.app/), install the private local foundation, or run the hosted website for development with its cloud configuration. Recommend the local foundation for the local-workspace request. It does not yet connect the student's Codex/Claude subscription.
-3. Verify Node.js **22.16+**, npm and platform support. macOS arm64 is the verified foundation target; Linux is experimental and Windows private local storage is rejected. Follow [local setup](docs/LOCAL_SETUP.md):
+2. Explain the available choices: use [the public website](https://thelearnbridge.vercel.app/), install the private local edition, or run the hosted website for development with its cloud configuration. The local MCP bridge can connect the student's official Codex/Claude host; normal account access, project trust and explicitly reviewed sharing are still required.
+3. Verify Node.js **22.16+**, npm and platform support. macOS arm64 is the verified foundation target; Linux is experimental and Windows private local storage is rejected. Before the full local/test suite, check the project `.venv/bin/python3` prerequisite in [agent/source setup](docs/LOCAL_AGENT_SETUP.md#student-setup). Preserve an existing environment. If absent, create it with a suitable installed Python using `python3 -m venv --without-pip .venv`; no acquisition packages or global Python changes are needed. If native directory-FD/no-follow support is unavailable, report source acquisition and its full verification as blocked; basic tasks/notes can still run. Follow [local setup](docs/LOCAL_SETUP.md):
 
    ```sh
    npm run setup
@@ -33,14 +33,14 @@ This prompt requests setup, not application submission, messages, purchases, cal
    npm start
    ```
 
-   The hosted development site serves at `http://127.0.0.1:3200` by default. Use `npm run dev` during development. Respect existing `.env.local`; do not overwrite it. If configuration is missing, copy the example only into an absent ignored file and let the student fill secret values through the appropriate secure flow. Never print them. Student sign-in and provider account consent remain necessary. Do not connect a developer's desktop or university sessions to the public backend.
-6. Do not modify global Codex/Claude settings or claim MCP discovery during this foundation setup; no local MCP server/config generator exists yet. The shared core still has `npm run test:core` and `npm run demo:core`. Those demonstrate contracts independently and do not prove a live integration. `npm test` includes local/core fixtures and hosted boundary tests; live account behavior remains a separate gate.
+   The hosted development site serves at `http://127.0.0.1:3200` by default. Use `npm run dev` during development. `npm test` includes source-worker checks and requires the same project Python prerequisite as step 3. Respect existing `.env.local`; do not overwrite it. If configuration is missing, copy the example only into an absent ignored file and let the student fill secret values through the appropriate secure flow. Never print them. Student sign-in and provider account consent remain necessary. Do not connect a developer's desktop or university sessions to the public backend.
+6. For agent setup, follow [LOCAL_AGENT_SETUP.md](docs/LOCAL_AGENT_SETUP.md): preview/apply project-only configuration with an expected input hash; preserve unrelated settings and refuse unmanaged collisions. Never modify global Codex/Claude settings. Verify actual SDK/host discovery and a synthetic read/propose/review workflow separately. `npm test` includes local/core/academic fixtures and hosted boundary tests; live host/provider behavior remains a separate gate.
 7. If asked to build the next local capabilities, follow [W06 onward](docs/design/IMPLEMENTATION_PLAN.md#m1-local-foundation) and the [status page](docs/design/IMPLEMENTATION_STATUS.md). Production dependencies, external configuration and releases follow repository approval rules. Preserve unrelated code/data and do not infer authorization for a personal scan from an implementation request.
-8. Do not change global Python; historical Streamlit work uses `.venv` and its own validation. Do not restore compromised tracked credentials.
+8. Do not change global Python. Controlled file acquisition uses a fixed isolated stdlib worker in the repository's `.venv`, with no Python packages required. Preserve an existing environment; if absent, create a project-only venv as described in agent setup. Historical Streamlit work retains its own validation. Do not restore compromised tracked credentials.
 
 ## Remaining setup and onboarding capabilities
 
-The foundation commands above are implemented. The agent-registration and personal-source onboarding behavior below remains an implementation contract for later slices, not a list of currently available integrations.
+Foundation commands, project configuration, bounded MCP context/proposals, selected local text imports and reviewed academic exports are implemented. The broader personal/cloud onboarding, live institution login and profile synthesis below remain staged contracts; use the setup guide to distinguish current operations from future ones.
 
 ### Diagnose and plan
 
@@ -56,7 +56,7 @@ Verify discovery and an actual synthetic workflow, not merely that a config file
 
 ### Verify the implemented foundation for each setup
 
-Start the loopback runtime, pair the dashboard, save a synthetic task and note, stop/restart, and read them back. Verify private requests fail without pairing, cross-origin attempts fail and missing optional integrations appear honestly. Run the local security/recovery fixtures and write a sanitized report. Protect the hosted edition through existing regression checks. No agent/provider child is launched by this slice; child-environment enforcement must be verified when an agent adapter is added.
+Start the runtime, pair the dashboard, save synthetic records, stop/restart, and read them back. Verify unpaired/cross-origin refusal and optional capabilities. Then register a synthetic source, inventory metadata, import only a chosen file, grant separate destination processing and verify the SDK/host read plus pending proposal and exact human acceptance. Run security/recovery fixtures and write a sanitized report. Source workers and MCP children have bounded environments and lifecycle checks. Protect the hosted edition with regression checks.
 
 ### Onboard with student-selected sources
 
@@ -80,7 +80,7 @@ Return a concise receipt with:
 - Capabilities ready, unavailable or needing a specific student action; distinguish connection from successful read/write.
 - Tests passed/failed/blocked and sanitized evidence report path.
 - Onboarding scopes/processing choices, confirmed profile fields and coverage gaps; never raw secrets or unselected content.
-- How to start/stop and back up/restore this installation. Explain that uninstall retains data and that deletion hides active records while note history/backups can retain text. Source revoke, selective physical purge and generated agent configuration are not available in this foundation.
+- How to start/stop and back up/restore this installation. Uninstall retains data; deletion hides active records while history/backups can retain text. Source/sharing revoke blocks future reads but retains saved snapshots and cannot erase already shared host context. Generated project registration can be removed by editing only the managed entry. Selective physical purge remains unavailable.
 - One useful verified workflow and the next concrete step.
 
 If an expected command or capability is absent in another checkout, say so and use only its actual implementation. Do not fabricate a successful install, integration or complete profile from this document alone.
