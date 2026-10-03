@@ -707,14 +707,40 @@ $('academic-form').addEventListener('submit', event => {
   event.preventDefault(); busy(event.submitter, async () => {
     state.academicPreview = null; $('academic-import').hidden = true; $('academic-library-import').hidden = true;
     const result = await request('/academic/preview', { method: 'POST', body: { export: JSON.parse($('academic-export').value), selected_course_ids: $('academic-courses').value.split(',').map(value => value.trim()).filter(Boolean) } });
-    state.academicPreview = result.preview_id; renderAcademicPreview(result.snapshot); $('academic-preview').hidden = false; $('academic-import').hidden = false; $('academic-library-import').hidden = false;
-    message('academic-message', 'Preview only. Check course selection and uncertain deadlines before saving.');
+    state.academicPreview = { id: result.preview_id, review_hash: result.refresh.review_hash }; renderAcademicPreview(result.snapshot, result.refresh); $('academic-preview').hidden = false; $('academic-import').hidden = false; $('academic-library-import').hidden = false;
+    message('academic-message', 'Preview only. Check changes, course selection and uncertain deadlines before saving. Missing items do not delete your tasks.');
   }).catch(error => message('academic-message', error.message, true));
 });
-function renderAcademicPreview(snapshot) {
+for (const input of ['academic-courses', 'academic-export']) $(input).addEventListener('input', () => {
+  state.academicPreview = null; $('academic-preview').hidden = true; $('academic-import').hidden = true; $('academic-library-import').hidden = true;
+});
+function renderAcademicPreview(snapshot, refresh) {
   const panel = $('academic-preview'); panel.replaceChildren();
   panel.append(element('h3', '', `${snapshot.institution.name} · reviewed import`), element('p', 'field-help', `Selected courses: ${snapshot.selected_course_ids.join(', ')}. ${snapshot.assignments.length} assignments, ${snapshot.announcements.length} announcements, ${snapshot.materials.length} materials. This export does not prove a live connection or complete university coverage.`));
   for (const course of snapshot.courses) panel.append(element('p', '', course.title));
+  if (refresh) {
+    panel.append(element('h3', '', refresh.base.current_snapshot_id ? 'Compare with your saved version' : 'First saved version for this selection'),
+      element('p', 'field-help', refresh.content_changed ? 'This export changes the selected content or reported coverage. Review the details before replacing the current library version.' : 'The selected content and safety state match your saved version. This records a reviewed observation without duplicating the content snapshot.'),
+      element('p', 'field-help', 'Dates and coverage come from the selected export. They do not prove a live university refresh.'));
+    const labels = { added: 'Added', changed: 'Changed', unchanged: 'Unchanged', not_returned: 'Not returned in this export', conflicted: 'Conflicting source variants' };
+    for (const [kind, entries] of Object.entries(refresh.changes)) {
+      panel.append(element('p', 'field-help', `${labels[kind] || kind}: ${entries.length}`));
+      if (kind === 'unchanged' || !entries.length) continue;
+      const rows = element('div');
+      for (const change of entries.slice(0, 40)) {
+        const before = change.before, after = change.after;
+        const row = element('div', 'review-row'); row.append(element('p', '', `${change.category} · ${after?.title || before?.title || change.id}`));
+        if (kind === 'not_returned') row.append(element('p', 'field-help', 'Retained as history. Absence from this export does not establish removal from D2L or delete a task.'));
+        if (kind === 'conflicted') row.append(element('p', 'field-help', 'Conflicting variants are excluded from current search until a new unambiguous export is reviewed.'));
+        if (change.category === 'assignments' && (before?.deadline || after?.deadline)) row.append(element('p', 'field-help', `Previously: ${before?.deadline ? deadlineLabel({ deadline: before.deadline }) : 'not present'}. Now: ${after?.deadline ? deadlineLabel({ deadline: after.deadline }) : 'not returned'}.`));
+        if (before?.title && after?.title && before.title !== after.title) row.append(element('p', 'field-help', `Previous title: ${before.title}`));
+        row.append(element('p', 'hash-text', `Previous source hash: ${before?.source_hash || 'none'}\nNew source hash: ${after?.source_hash || 'none'}`)); rows.append(row);
+      }
+      if (entries.length > 40) rows.append(element('p', 'field-help', `Showing the first 40 of ${entries.length} changes in this group. Select fewer courses for a smaller review.`));
+      panel.append(rows);
+    }
+    panel.append(element('p', 'hash-text', `Review SHA-256 ${refresh.review_hash}`));
+  }
   for (const assignment of snapshot.assignments) {
     const row = element('div', 'review-row');
     row.append(element('h3', '', assignment.title), element('p', 'field-help', `${deadlineLabel(assignment)}${assignment.deadline?.precision === 'unknown' && assignment.deadline.original ? ` · Source says: ${assignment.deadline.original}` : ''}`));
@@ -727,7 +753,7 @@ function renderAcademicPreview(snapshot) {
   const details = element('details'); details.append(element('summary', '', 'Exact normalized snapshot'), element('pre', 'source-text', JSON.stringify(snapshot, null, 2))); panel.append(details);
 }
 $('academic-import').addEventListener('click', event => busy(event.currentTarget, async () => {
-  const previewId = state.academicPreview;
+  const previewId = state.academicPreview?.id;
   if (!previewId || !await confirmAction('Save exactly the reviewed academic snapshot as a local note? No live D2L connection or task is created.', { title: 'Save reviewed export', confirmLabel: 'Save snapshot' })) return;
   await request('/academic/import', { method: 'POST', body: { preview_id: previewId } }); await loadDocuments();
   message('academic-message', 'Reviewed snapshot saved in Notes. Agent sharing is a separate choice.');
@@ -745,10 +771,34 @@ async function loadCourses() {
     const option = element('option', '', `${snapshot.institution.name} · ${new Date(snapshot.retrieved_at).toLocaleString()}`); option.value = record.id; $('course-snapshot').append(option);
     const row = element('article', 'review-row');
     row.append(element('h3', '', snapshot.institution.name), element('p', 'field-help', `${snapshot.courses.map(course => course.title).join(', ')} · ${snapshot.assignments.length} assignments · ${snapshot.materials.length} materials`));
+    if (record.stream_id) {
+      row.append(element('p', 'field-help', `Current reviewed version · stream revision ${record.stream_revision}. Previous versions are retained separately.`));
+      const historyPanel = element('div'); row.append(taskAction(record, 'Review retained history', async () => {
+        const history = await request(`/academic/streams/${record.stream_id}/history`); historyPanel.replaceChildren();
+        historyPanel.append(element('p', 'field-help', history.notice), element('p', 'field-help', `${history.items.length} retained content versions · ${history.stream.observation_count} reviewed observations. Dates are source-reported.`));
+        for (const item of history.items) {
+          const itemRow = element('div', 'review-row');
+          itemRow.append(element('p', '', `${item.status === 'current' ? 'Current' : 'Historical'} · ${new Date(item.retrieved_at).toLocaleString()}`), element('p', 'hash-text', `Snapshot SHA-256 ${item.snapshot_hash}`));
+          itemRow.append(taskAction(item, 'Read retained version', async () => {
+            const exact = await request(`/academic/streams/${record.stream_id}/history/${item.id}`);
+            itemRow.querySelector('.academic-history-body')?.remove();
+            const body = element('div', 'academic-history-body'); const retained = exact.item.snapshot;
+            body.append(element('p', 'notice', exact.notice));
+            for (const assignment of retained.assignments) {
+              body.append(element('h3', '', assignment.title), element('p', 'field-help', `${deadlineLabel(assignment)}${assignment.deadline?.precision === 'unknown' && assignment.deadline.original ? ` · Source says: ${assignment.deadline.original}` : ''}`));
+              if (assignment.description) body.append(element('p', '', assignment.description));
+            }
+            for (const source of [...retained.announcements, ...retained.materials]) body.append(element('h3', '', source.title), element('p', '', source.body || 'No text supplied in this export.'));
+            const details = element('details'); details.append(element('summary', '', 'Exact retained snapshot and coverage'), element('pre', 'source-text', JSON.stringify({ status: exact.item.status, snapshot: retained }, null, 2)));
+            body.append(details); itemRow.append(body);
+          }, 'secondary compact')); historyPanel.append(itemRow);
+        }
+      }, 'secondary compact'), historyPanel);
+    }
     const coverage = element('details'); coverage.append(element('summary', '', 'Coverage and unknown deadlines'), element('pre', 'source-text', JSON.stringify({ coverage: snapshot.coverage, warnings: snapshot.warnings }, null, 2))); row.append(coverage);
     row.append(taskAction(record, 'Remove from active library', async () => {
       if (!await confirmAction('Remove this snapshot from active course search? Historical versions and backups may retain it.', { title: 'Remove course snapshot', confirmLabel: 'Remove from library' })) return;
-      await request(`/courses/${record.id}`, { method: 'DELETE', body: { expected_revision: record.revision } });
+      await request(`/courses/${record.id}`, { method: 'DELETE', body: { expected_revision: record.revision, ...(record.stream_id ? { expected_stream_revision: record.stream_revision } : {}) } });
       $('course-results').replaceChildren(); $('course-citation').hidden = true; await loadCourses();
     }, 'danger quiet compact'));
     $('course-snapshots').append(row);
@@ -783,9 +833,11 @@ $('course-search-form').addEventListener('submit', event => {
   }).catch(error => message('course-message', error.message, true));
 });
 $('academic-library-import').addEventListener('click', event => busy(event.currentTarget, async () => {
-  if (!state.academicPreview || !await confirmAction('Add exactly this reviewed export to the local course library? Unknown deadlines remain unresolved. Agent sharing is separate.', { title: 'Add reviewed course snapshot', confirmLabel: 'Add to library' })) return;
-  await request('/academic/library-import', { method: 'POST', body: { preview_id: state.academicPreview } });
-  await loadCourses(); message('academic-message', 'Saved in Courses. You can search selected courses and open exact citations.');
+  const preview = state.academicPreview;
+  if (!preview || !await confirmAction('Save exactly these reviewed changes to the local course library? Unknown deadlines stay unresolved, old versions stay in history and your tasks remain unchanged. Agent sharing is separate.', { title: 'Save reviewed course changes', confirmLabel: 'Save these changes' })) return;
+  const result = await request('/academic/library-import', { method: 'POST', body: { preview_id: preview.id, review_hash: preview.review_hash } });
+  await loadCourses(); state.academicPreview = null; $('academic-import').hidden = true; $('academic-library-import').hidden = true;
+  message('academic-message', ['unchanged', 'replayed'].includes(result.status) ? 'Reviewed observation saved without a duplicate content snapshot. Search the current version in Courses; retained history is separate.' : 'Reviewed course version saved. Search current courses or inspect retained history. Your tasks were not changed.');
 }).catch(error => message('academic-message', error.message, true)));
 $('refresh-courses').addEventListener('click', event => busy(event.currentTarget, loadCourses).catch(error => message('course-message', error.message, true)));
 

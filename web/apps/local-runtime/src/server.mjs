@@ -6,7 +6,7 @@ import { LearnBridgeError } from '@learnbridge/core';
 import { assertLocalRequest, createSessionPolicy, HttpError, plainBody, readJson } from './policy.mjs';
 import { startControl } from './ipc.mjs';
 import { describeRoot, inventorySource, readSelectedEntry, readSelectedPdf, readSelectedOffice, probeSourceCapability, probePdfCapability, probeOfficeCapability } from '../../../packages/local-sources/src/index.mjs';
-import { normalizeAcademicExport, AcademicError } from '../../../packages/local-academic/src/index.mjs';
+import { AcademicError } from '../../../packages/local-academic/src/index.mjs';
 import { randomUUID, createHash } from 'node:crypto';
 import { createStudentWorkspace } from './student-workspace.mjs';
 import { workflowHash } from './workflows.mjs';
@@ -130,7 +130,7 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         { id: 'notes', label: 'Notes', state: 'available', detail: 'Multiple text notes with immutable revisions and verified hashes.' },
         { id: 'planning', label: 'Study planning', state: 'available', detail: 'Deterministic local study-plan previews with capacity deficits, task revision checks and saved review. No external calendar writes.' },
         { id: 'profile', label: 'Reviewed profile', state: 'available', detail: 'Student-entered facts with exact review, conflicts, purpose filters and stale source checks. No automatic identity or mastery inference.' },
-        { id: 'library', label: 'Course library', state: 'available', detail: 'Reviewed academic snapshots with course-filtered search and exact version citations. Live university authentication remains a separate gate.' },
+        { id: 'library', label: 'Course library', state: 'available', detail: 'Reviewed export comparisons, immutable history, unchanged-content deduplication and current-course search with exact citations. Dates and coverage are source-reported; live university authentication remains a separate gate.' },
         { id: 'workflows', label: 'Durable local workflows', state: 'available', detail: 'Saved step journal, cumulative budgets, cancellation and restart recovery for registered local recipes. Unverified model turns remain disabled.' },
         { id: 'learning', label: 'Learning and catch-up', state: 'available', detail: 'Selected-course cited host recipes, your actual attempts and reviewed feedback, capacity-aware catch-up plans. A recorded check does not establish mastery.' },
         { id: 'writing', label: 'Writing review', state: 'available', detail: 'Source-pinned drafts, private alternatives and exact revisions with preserved originals and verified Markdown exports. Rich PDF and Office output conversion is unavailable.' },
@@ -310,6 +310,18 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         noQuery(url); if (request.method !== 'GET') methodError();
         return json(response, 200, { items: studentWorkspace.listSnapshots() });
       }
+      if (route === '/academic/streams') {
+        noQuery(url); if (request.method !== 'GET') methodError();
+        return json(response, 200, { items: studentWorkspace.listAcademicStreams(), live_access: 'requires_auth' });
+      }
+      const academicHistoryRoute = /^\/academic\/streams\/([^/]+)\/history(?:\/([^/]+))?$/.exec(route);
+      if (academicHistoryRoute) {
+        noQuery(url); if (request.method !== 'GET') methodError();
+        const streamId = id(academicHistoryRoute[1]);
+        return json(response, 200, academicHistoryRoute[2]
+          ? studentWorkspace.academicHistorySnapshot(streamId, id(academicHistoryRoute[2]))
+          : studentWorkspace.academicStreamHistory(streamId));
+      }
       if (route === '/courses/search' || route === '/courses/citation') {
         noQuery(url); if (request.method !== 'POST') methodError();
         const body = await privateBody(route.endsWith('search') ? ['snapshot_ids', 'course_ids', 'query', 'limit'] : ['snapshot_ids', 'course_ids', 'source_id', 'version_hash', 'chunk_id'], ['snapshot_ids', 'course_ids'], 16384);
@@ -318,8 +330,8 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
       const courseRoute = /^\/courses\/([^/]+)$/.exec(route);
       if (courseRoute) {
         noQuery(url); if (request.method !== 'DELETE') methodError();
-        const body = await privateBody(['expected_revision'], ['expected_revision'], 4096);
-        studentWorkspace.forgetSnapshot(id(courseRoute[1]), body.expected_revision); return json(response, 200, { deleted: true, retention: 'Active course retrieval stops. Historical local revisions and backups may retain this snapshot.' });
+        const body = await privateBody(['expected_revision', 'expected_stream_revision'], ['expected_revision'], 4096);
+        studentWorkspace.forgetSnapshot(id(courseRoute[1]), body.expected_revision, { expected_stream_revision: body.expected_stream_revision }); return json(response, 200, { deleted: true, retention: 'Active course retrieval stops. Historical local revisions and backups may retain this snapshot.' });
       }
       if (route === '/plans') {
         noQuery(url); if (request.method !== 'GET') methodError();
@@ -439,22 +451,37 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
       if (route === '/academic/preview') {
         noQuery(url); if (request.method !== 'POST') methodError();
         const body = await privateBody(['export', 'selected_course_ids'], ['export', 'selected_course_ids'], 256000);
-        const snapshot = normalizeAcademicExport(body.export, { selectedCourseIds: body.selected_course_ids });
+        const refresh = studentWorkspace.previewAcademicExport(body);
+        const snapshot = refresh.snapshot;
         for (const [key, value] of academicPreviews) if (value.expires < Date.now()) academicPreviews.delete(key);
+        // Keep exact retries while space permits without making successful
+        // imports consume every slot for the full five-minute preview lifetime.
+        for (const [key, value] of academicPreviews) {
+          if (academicPreviews.size < 10) break;
+          if (value.consumed) academicPreviews.delete(key);
+        }
         if (academicPreviews.size >= 10) throw new HttpError(429, 'RATE_LIMITED', 'Review or discard an academic preview first.');
         const previewId = randomUUID();
-        academicPreviews.set(previewId, { snapshot, nonce: session.nonce, expires: Date.now() + 300000 });
-        return json(response, 200, { preview_id: previewId, snapshot, notice: 'Review these imported facts and unknown deadlines. No live university access was used.' });
+        academicPreviews.set(previewId, { snapshot, refresh, nonce: session.nonce, expires: Date.now() + 300000 });
+        return json(response, 200, { preview_id: previewId, snapshot, refresh, notice: 'Review these imported facts, changes and unknown deadlines. Not-returned items are retained in history and do not delete tasks. No live university access was used.' });
       }
       if (route === '/academic/import' || route === '/academic/library-import') {
         noQuery(url); if (request.method !== 'POST') methodError();
-        const body = await privateBody(['preview_id'], ['preview_id'], 4096);
+        const libraryImport = route === '/academic/library-import';
+        const body = await privateBody(libraryImport ? ['preview_id', 'review_hash'] : ['preview_id'], libraryImport ? ['preview_id', 'review_hash'] : ['preview_id'], 4096);
         const preview = academicPreviews.get(id(body.preview_id));
         if (!preview || preview.nonce !== session.nonce || preview.expires < Date.now()) throw new HttpError(403, 'CONSENT_REQUIRED', 'Preview expired. Review the export again.');
-        if (route === '/academic/library-import') return json(response, 201, { snapshot: studentWorkspace.saveSnapshot(preview.snapshot, body.preview_id) });
+        if (libraryImport) {
+          const saved = studentWorkspace.commitAcademicRefresh(preview.refresh, {
+            review_hash: body.review_hash, expected_head_revision: preview.refresh.base.revision, idempotency_key: `academic-preview-${body.preview_id}`,
+          });
+          preview.consumed = true;
+          return json(response, 201, saved);
+        }
         const content = JSON.stringify(preview.snapshot, null, 2);
         if (Buffer.byteLength(content) > 48000) throw new HttpError(413, 'BUDGET_EXCEEDED', 'Select fewer courses for this import.');
         const value = store.createDocument({ title: 'Reviewed academic snapshot', text: content, kind: 'study', academic_policy: 'learning_support' }, { idempotencyKey: body.preview_id });
+        preview.consumed = true;
         return json(response, 201, documentResult(value));
       }
       if (route === '/tasks') {

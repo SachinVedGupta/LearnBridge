@@ -1,0 +1,174 @@
+{
+  "format": "learnbridge_academic_refresh_verification",
+  "date": "2026-10-03",
+  "status": "PASS_FOR_MEASURED_SLICE",
+  "base_commit": "73137b7",
+  "synthetic_only": true,
+  "platform": {
+    "os": "macOS",
+    "architecture": "arm64",
+    "node": "22.23.2",
+    "python": "3.12.14"
+  },
+  "commands": {
+    "full_suite": "npm test",
+    "refresh_domain": "node --test web/scripts/academic-refresh.test.mjs",
+    "refresh_storage": "node --test web/scripts/local-academic-refresh.test.mjs",
+    "refresh_http": "node --test web/scripts/local-academic-refresh-http.test.mjs",
+    "clean_install": "node web/scripts/verify-local-install.mjs",
+    "build": "npm run build",
+    "design": "node docs/design/validate-design.mjs"
+  },
+  "measured_checks": {
+    "full_suite": {
+      "passed": 532,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "duration_ms": 45386.920625
+    },
+    "refresh_domain": {
+      "passed": 17,
+      "included_in_full_suite": true,
+      "exact_scope_identity": true,
+      "semantic_dedup": true,
+      "exact_review": true,
+      "missing_conflicting_current_exclusion": true,
+      "coherent_provenance": true
+    },
+    "refresh_storage": {
+      "passed": 16,
+      "included_in_full_suite": true,
+      "atomic_snapshot_head_transaction": true,
+      "actual_SQL_throw_and_SIGKILL_rollback": true,
+      "current_history_authority": true,
+      "dual_revision_forget_reactivation": true,
+      "legacy_ambiguity_denied": true,
+      "head_byte_budget_before_write": true,
+      "explicit_null_batch_data_preserved": true
+    },
+    "refresh_http": {
+      "passed": 8,
+      "included_in_full_suite": true,
+      "actual_paired_loopback": true,
+      "exact_review_and_stale_CAS": true,
+      "session_logout_restart_preview_barriers": true,
+      "metadata_history_omits_bodies": true,
+      "explicit_historical_body": true,
+      "current_search_omits_missing": true,
+      "manual_task_note_preservation": true,
+      "consumed_preview_capacity_reclaimed": true,
+      "exact_restart_fresh_restore": true
+    },
+    "clean_install": {
+      "passed_phases": 9,
+      "source_files": 66,
+      "source_digest": "b6c729ea94f761c5b75d6ae4f34accee3b7bd6ce45e8d5e6a02c15b4d49f4187",
+      "lock_sha256": "c5976bc94f4b80dee27d86f80f1520145594ed6880f539874015f9bccd4a1c74",
+      "static_assets": 9,
+      "mcp_tools": 4,
+      "offline_cache": true,
+      "fixture_cleanup": true
+    },
+    "build": {
+      "status": "PASS",
+      "hosted_edition_compiles": true,
+      "no_hosted_provider_config_changes": true
+    },
+    "design": {
+      "status": "PASS",
+      "scope": "documentation_only",
+      "features": 29,
+      "acceptance_cases": 182,
+      "work_packages": 24,
+      "product_tests_executed": false
+    },
+    "browser_created_restart_restore": {
+      "status": "PASS",
+      "evidence_type": "synthetic_browser_created_records",
+      "current_snapshots": 1,
+      "retained_snapshots": 2,
+      "observations": 3,
+      "manual_tasks_unchanged": 1,
+      "notes": 0,
+      "agent_grants": 0,
+      "records_sha256": "cf5ee2a7dc2040ddea78764bb24f7ebc1b57d93fe493abf7cb21604711e03b29",
+      "exact_restart_readback": true,
+      "exact_fresh_restore_readback": true,
+      "storage_schema": 5,
+      "backup_schema": 5
+    }
+  },
+  "browser": {
+    "passed_flows": [
+      "first exact reviewed save",
+      "editing selection invalidates old dashboard preview",
+      "changed deadline before/after",
+      "missing material label retains uncertainty",
+      "saved changed version excludes absent reading from current search",
+      "unchanged observation produces no duplicate content version",
+      "metadata history lists two versions and three observations",
+      "explicit readable historical source with unknown deadline preserved",
+      "manual task untouched and zero automatic notes or grants"
+    ],
+    "console_errors": 0,
+    "desktop_client_width": 1280,
+    "desktop_scroll_width": 1280,
+    "mobile_client_width": 390,
+    "mobile_scroll_width": 390,
+    "horizontal_overflow": false,
+    "screenshots": [
+      {
+        "path": "artifacts/local-academic-refresh-desktop.jpg",
+        "media_type": "image/jpeg",
+        "sha256": "388115a76e88bd4633db2c5c9fb191472d4b30084cfa76b5564425b60dc252f8"
+      },
+      {
+        "path": "artifacts/local-academic-history-desktop.jpg",
+        "media_type": "image/jpeg",
+        "sha256": "b46123198b4d36b152ee1a291de6618095d020939505487ac74810a96b033b9e"
+      },
+      {
+        "path": "artifacts/local-academic-history-mobile.jpg",
+        "media_type": "image/jpeg",
+        "sha256": "da6167d4b245f39703cb35756ea6fda46224d56991695aa151cc2e4457b492b8"
+      }
+    ]
+  },
+  "limits": {
+    "preview_request_bytes": 256000,
+    "persisted_snapshot_bytes": 100000,
+    "head_bytes": 128000,
+    "history_refs": 128,
+    "receipts": 128,
+    "capacity": "whichever_limit_is_reached_first",
+    "retained_previews": 10,
+    "preview_lifetime_ms": 300000
+  },
+  "limitations": [
+    "Selected exports only; no university login, actual live D2L data fetch or truthful source-clock/coverage certification.",
+    "No provider/model call, personal discovery, automatic task update, new MCP tool, new production dependency or storage migration.",
+    "Current library search excludes older managed IDs; separately exported notes remain retained copies and require their own selected sharing grant.",
+    "Forgetting hides active/history access; database revisions, backups and deliberately exported notes can remain.",
+    "Generic backup validation checks stored bytes/hashes/storage invariants; academic service separately validates accessed snapshot and current-head relationships, not every historical receipt reconstruction.",
+    "History and receipt capacities refuse before writes; no automatic pruning/archive workflow.",
+    "Clean offline-cache installation is on this Mac with 66 allowlisted files and no copied Python; not a new computer, online install or other-OS proof.",
+    "Embedded Codex, actual Claude turns and live institution/session setup remain separate release gates.",
+    "Hosted public setup remains on the previously recorded deployment; this local increment does not change hosted behavior."
+  ],
+  "source_hashes": {
+    "web/packages/local-academic/src/index.mjs": "6c9f6d00b32543979100e15227f4647d224f729d2b2c46a15efe37b2bd88fbe6",
+    "web/packages/local-academic/src/library.mjs": "b595bc75099d6b97ef5e886354d923430ea01729286d8d1cc730f675cc8b5b6c",
+    "web/packages/local-academic/src/refresh.mjs": "af4240d4e2de49e94e9ff76dbaac12d889e6d2aa2b55fe8f28f2c6c653623155",
+    "web/apps/local-runtime/src/student-workspace.mjs": "fafc4cf5e6d3f152f857b738ecb8dc7bee2a4b134ceaa71859d57d2479c6b9e8",
+    "web/packages/local-storage/src/index.mjs": "44c12087cc99e299daac067f64e0d15067e524dfbfb47d88b4de13d3e639a4a3",
+    "web/apps/local-runtime/src/server.mjs": "86cbd79c362e1bf6da9c3a19a3050205f97bec7febe72c220a6f94d3dc4d4b6d",
+    "web/apps/local/public/app.js": "3616f71fcdfbcd1d4637446417f09eeee2bc159609efe09c31a29677642a78f7",
+    "web/apps/local/public/index.html": "492fe281c1498169cba22398ad2a0ecefe8ecc000920b1c841439fc4a09fc137",
+    "web/scripts/academic-refresh.test.mjs": "93af0f67056613efa0add7f229686d915446aca6c595b0696aaac40c95635312",
+    "web/scripts/local-academic-refresh.test.mjs": "0d223af99256981e655343abe437799610604e821b1d9db7e9f2c39aa316e909",
+    "web/scripts/local-academic-refresh-http.test.mjs": "6459fa1f3976de9f51cd099fd97ac571508804e899a85ac1881cef5b5a32b3ef",
+    "web/scripts/local-student-workspace.test.mjs": "96007d81555bedae7bfe987f00c635d38f80392d9d8f1247cc95f9b325f981ed",
+    "web/scripts/verify-local-install.mjs": "d59d81a8652729f3099a092619f9ec6f7f136e4f05f482a198161da952b720ae"
+  }
+}

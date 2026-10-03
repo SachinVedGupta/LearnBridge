@@ -54,7 +54,7 @@ Review the task proposal's title, deadline, reason and payload hash in the dashb
 | --- | --- | --- |
 | Today, Notes and Planning | Private task/note edits; capacity-aware study-plan preview; exact accepted blocks and unresolved work | No connected calendar mutation; a scheduled block does not prove work occurred |
 | Profile | Candidate review/correction, expiry/conflicts, selected purpose-limited preview and retained note export | No hidden identity discovery, automatic confirmation or remote sharing |
-| Courses and Learning | Reviewed academic snapshots, course/version citations, selected-topic tutor recipes, student answer checkpoints and catch-up proposals | No live university login; a recipe is not a model-generated lesson; activity does not prove mastery |
+| Courses and Learning | Reviewed export comparisons, current snapshots, explicit retained history, exact citations, selected-topic tutor recipes, student answer checkpoints and catch-up proposals | Export dates/coverage are source-reported. No live university login; a recipe is not a model-generated lesson; activity does not prove mastery |
 | Writing | Selected-source recipes, labelled alternatives, exact review and private Markdown artifact bytes/provenance | PDF/DOCX/LaTeX generation and external document writes are unavailable; a prepared download is not proof of a saved file |
 | Research | Selected pasted source excerpts or exact local note ranges; evidence citations, conflicts and reviewed note exports | No automatic browsing, publisher verification or invented freshness |
 | Career | Manual role records/shortlists; answers from selected confirmed career facts; missing facts; exact draft review; student interview attempts; reviewed local follow-up reminders | No automatic job discovery/live opening verification, application submission or message sending; manual answers are not execution-tested skill |
@@ -69,7 +69,9 @@ An embedded Codex invocation and protocol adapter are under separate host verifi
 
 ## Avenue / D2L
 
-Start with [the academic export template](../web/packages/local-academic/examples/academic-export.json). Paste a reviewed export into Sources, select specific course IDs, review the normalized facts and uncertain deadlines, then save a snapshot note. No task or remote connection is created automatically. Share that note separately if you want agent study planning.
+Start with [the academic export template](../web/packages/local-academic/examples/academic-export.json). Paste an export into Sources, select specific course IDs, and review the normalized facts, reported coverage and uncertain deadlines. **Save reviewed course changes** compares the exact selection with its current version, preserves prior versions and avoids duplicate content. Missing or conflicting items stay out of current search; absence does not delete a task. In Courses, **Review retained history** lists metadata; **Read retained version** explicitly opens one version with its historical/current label. See [the refresh contract and verification](design/implementation/ACADEMIC_REFRESH.md).
+
+**Save reviewed snapshot as a note** is a separate retained copy for host context. No task, sharing grant or remote connection is created automatically. Share that exact note separately if you want agent study planning. Later library refreshes do not rewrite or recall an exported note: check its source-reported date and version before reusing it.
 
 The independent academic package can operate over an injected official MCP client, allowing only supported read schemas for explicitly selected courses. It rejects unknown/write/file-download/token tools, expired sessions, scope mismatches and oversized results. The actual upstream Avenue revision is audited in [AVENUE_ADAPTER_AUDIT.md](design/implementation/AVENUE_ADAPTER_AUDIT.md); unchanged upstream execution is not enabled because of logging, broad transport and file-writing concerns.
 

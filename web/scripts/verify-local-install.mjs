@@ -38,7 +38,7 @@ const ALLOWLIST = Object.freeze([
   'web/packages/local-sources/src/pdf-native.mjs', 'web/packages/local-sources/src/pdf-text.swift',
   'web/packages/local-sources/src/office-native.mjs', 'web/packages/local-sources/src/office-text.py',
   'web/packages/local-academic/src/index.mjs',
-  'web/packages/local-academic/src/library.mjs', 'web/packages/local-academic/src/planning.mjs',
+  'web/packages/local-academic/src/library.mjs', 'web/packages/local-academic/src/refresh.mjs', 'web/packages/local-academic/src/planning.mjs',
   'web/packages/local-academic/src/tutoring.mjs',
   'web/apps/local/build.mjs', 'web/apps/local/public/index.html',
   'web/apps/local/public/app.js', 'web/apps/local/public/styles.css',

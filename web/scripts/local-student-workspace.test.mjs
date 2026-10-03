@@ -39,8 +39,9 @@ test('academic library import, exact citation, restart and forget use the real p
   const f = await fixture(t); let call = f.call;
   const raw = JSON.parse(readFileSync(new URL('../packages/local-academic/examples/academic-export.json', import.meta.url)));
   const preview = await call('/academic/preview', { export: raw, selected_course_ids: ['101'] }); assert.equal(preview.status, 200);
-  const first = await call('/academic/library-import', { preview_id: preview.data.preview_id }); assert.equal(first.status, 201);
-  const repeated = await call('/academic/library-import', { preview_id: preview.data.preview_id }); assert.equal(repeated.data.snapshot.id, first.data.snapshot.id);
+  const reviewed = { preview_id: preview.data.preview_id, review_hash: preview.data.refresh.review_hash };
+  const first = await call('/academic/library-import', reviewed); assert.equal(first.status, 201);
+  const repeated = await call('/academic/library-import', reviewed); assert.equal(repeated.data.snapshot.id, first.data.snapshot.id);
   const record = first.data.snapshot;
   const scope = { snapshot_ids: [record.id], course_ids: ['101'] };
   const search = await call('/courses/search', { ...scope, query: 'base case' }); assert.equal(search.status, 200); assert.ok(search.data.results.length > 0);
@@ -49,7 +50,7 @@ test('academic library import, exact citation, restart and forget use the real p
   assert.equal(citation.status, 200); assert.equal(citation.data.text, reference.excerpt); assert.equal(citation.data.untrusted, true);
   assert.equal((await call('/courses/search', { ...scope, course_ids: ['UNSELECTED'], query: 'base case' })).status, 403);
   call = await f.restart(); assert.equal((await call('/courses')).data.items.length, 1);
-  assert.equal((await call(`/courses/${record.id}`, { expected_revision: record.revision }, 'DELETE')).status, 200);
+  assert.equal((await call(`/courses/${record.id}`, { expected_revision: record.revision, expected_stream_revision: first.data.stream.revision }, 'DELETE')).status, 200);
   assert.equal((await call('/courses/search', { ...scope, query: 'base case' })).status, 403);
 });
 test('profile export is an exact reviewed local copy with idempotent readback and no implicit agent grant', async t => {

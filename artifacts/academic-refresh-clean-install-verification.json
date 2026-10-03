@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "suite": "local-clean-copy-offline-install-v1",
+  "evidence_type": "synthetic_fixture",
+  "status": "PASS",
+  "environment": {
+    "node": "v22.23.2",
+    "platform": "darwin",
+    "arch": "arm64",
+    "installed_driver": "13.0.3",
+    "sqlite": "3.53.4",
+    "child_node": "v22.23.2"
+  },
+  "scope": {
+    "copied_previous_node_modules": false,
+    "copied_environment_files": false,
+    "copied_personal_data": false,
+    "cloud_configuration_supplied": false,
+    "offline_cache_used": true,
+    "package_lifecycle_hooks_disabled": true
+  },
+  "phases": [
+    {
+      "id": "FI01_EXPLICIT_CLEAN_SOURCE_COPY",
+      "status": "PASS",
+      "duration_ms": 22
+    },
+    {
+      "id": "FI02_FRESH_LOCKED_OFFLINE_INSTALL",
+      "status": "PASS",
+      "duration_ms": 7879
+    },
+    {
+      "id": "FI03_BUILD_STATIC_DASHBOARD",
+      "status": "PASS",
+      "duration_ms": 37
+    },
+    {
+      "id": "FI04_CLOUD_FREE_SETUP_AND_DOCTOR",
+      "status": "PASS",
+      "duration_ms": 181
+    },
+    {
+      "id": "FI05_NEW_PROCESS_CREATES_SYNTHETIC_RECORDS",
+      "status": "PASS",
+      "duration_ms": 64
+    },
+    {
+      "id": "FI06_FRESH_PROCESS_READS_EXACT_SAVED_RECORDS",
+      "status": "PASS",
+      "duration_ms": 58
+    },
+    {
+      "id": "FI07_CLI_BACKUP_AND_FRESH_ROOT_RESTORE",
+      "status": "PASS",
+      "duration_ms": 171
+    },
+    {
+      "id": "FI08_INDEPENDENT_PROCESS_VERIFIES_RESTORED_RECORDS",
+      "status": "PASS",
+      "duration_ms": 63
+    },
+    {
+      "id": "FI09_FRESH_OFFICIAL_SDK_STDIO_DISCOVERY",
+      "status": "PASS",
+      "duration_ms": 353
+    }
+  ],
+  "limitations": [
+    "A clean disposable source copy installed from the existing offline npm cache; not a new computer or an online-download test.",
+    "Only this recorded OS, architecture and Node runtime were exercised.",
+    "Task/note persistence, static build, CLI lifecycle and actual SDK stdio discovery; real hosts, provider OAuth and personal onboarding are separate gates.",
+    "No fresh Python environment is copied or installed; selected-file acquisition requires a suitable project .venv and is verified separately."
+  ],
+  "source": {
+    "file_count": 66,
+    "source_digest": "b6c729ea94f761c5b75d6ae4f34accee3b7bd6ce45e8d5e6a02c15b4d49f4187",
+    "lock_sha256": "c5976bc94f4b80dee27d86f80f1520145594ed6880f539874015f9bccd4a1c74"
+  },
+  "observed": {
+    "tasks": 1,
+    "documents": 1,
+    "document_content_sha256": "6b3753692a884de653b1ad19639c7a1b4912c63fb3db43d13d610e742dbbb3d2",
+    "exact_records_survive_new_process": true,
+    "exact_records_survive_fresh_root_restore": true,
+    "static_assets_built_and_hash_matched": 9
+  },
+  "fixture_cleanup": true
+}
