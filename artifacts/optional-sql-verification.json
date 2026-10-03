@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-03T19:05:25.226Z",
+  "runtime": {
+    "pglite": "0.5.8",
+    "pgtap": "0.0.9"
+  },
+  "postgres_version": "PostgreSQL 18.3 (PGlite 0.5.8) on wasm32-unknown-emscripten, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.74 (1092ec30a3fb1d46b1782ff1b4db5094d3d06ae5), 32-bit",
+  "suite": "student_adoption_remote",
+  "scope": "disposable_single_session_postgresql_wasm_synthetic_auth",
+  "production_configuration_changed": false,
+  "live_supabase_verified": false,
+  "concurrent_sessions_verified": false,
+  "real_jwt_session_revocation_verified": false,
+  "deployed_retention_scheduler_verified": false,
+  "migrations": [
+    {
+      "name": "202610020001_student_workspace.sql",
+      "sha256": "7edfce1b902788d8f80a05d8d52bb8573607bac1ac04f21d847150b9b3bbe96c",
+      "status": "passed"
+    },
+    {
+      "name": "202610030002_adoption_metrics.sql",
+      "sha256": "0af7b880249a9b608c7d462dc4a03d4e0ffca113d64305590020edc6337e06a8",
+      "status": "passed"
+    },
+    {
+      "name": "202610030003_remote_companion_foundation.sql",
+      "sha256": "501782701d3af680c8b013e0244e87a0645fe782a100ceb41c3d30be43dd89d1",
+      "status": "passed"
+    }
+  ],
+  "fixtures": [
+    {
+      "name": "student_isolation.sql",
+      "sha256": "0ed06dda11c7a179d44b82c24b638f6026752b3d9d358e2908a2b204397b242c",
+      "assertions": 5,
+      "status": "passed",
+      "tap": [
+        "1..5",
+        "ok 1 - A sees only A state",
+        "ok 2 - A cannot update B",
+        "ok 3 - A cannot delete B",
+        "ok 4 - A cannot insert B state",
+        "ok 5 - unknown quota categories denied"
+      ]
+    },
+    {
+      "name": "adoption_isolation.sql",
+      "sha256": "9e5bfef03cd52a138aff9a20a3205de9877208f51ba29d5bbc72986ad83c8d8f",
+      "assertions": 25,
+      "status": "passed",
+      "tap": [
+        "1..25",
+        "ok 1 - anon cannot read raw public events",
+        "ok 2 - narrow valid opted-in event accepted",
+        "ok 3 - same event ID retry is not counted again",
+        "ok 4 - event ID cannot change payload",
+        "ok 5 - anon cannot call owner aggregate RPC",
+        "ok 6 - anon cannot read enrollment settings",
+        "ok 7 - unconfirmed account cannot enroll reporting",
+        "ok 8 - unconfirmed account cannot record identity activity",
+        "ok 9 - ordinary account cannot read raw identities",
+        "ok 10 - own initial settings default off",
+        "ok 11 - account counting does not grant directory access",
+        "ok 12 - stale settings cannot broaden directory sharing",
+        "ok 13 - ordinary account cannot become admin",
+        "ok 14 - ordinary signed-in account cannot query aggregates",
+        "ok 15 - client cannot invent a successful saved revision",
+        "ok 16 - actual recent own state save counted once",
+        "ok 17 - same successful save retry not counted again",
+        "ok 18 - directory sharing needs a separate current-revision choice",
+        "ok 19 - student B cannot write account A settings",
+        "ok 20 - authorized admin sees exact deduplicated copy count",
+        "ok 21 - directory contains only explicitly selected student",
+        "ok 22 - aggregate report has no name or email",
+        "ok 23 - own activity cannot be reinserted after reporting opt-out",
+        "ok 24 - opt-out removes future directory access immediately",
+        "ok 25 - unconfirmed account cannot retain admin access"
+      ]
+    },
+    {
+      "name": "adoption_bounds.sql",
+      "sha256": "9a990c32b273f5576d83c4486bd9ed7d2f46b8d331fbdd5c993bc374d552766e",
+      "assertions": 12,
+      "status": "passed",
+      "tap": [
+        "1..12",
+        "ok 1 - retained raw capacity pauses instead of claiming accepted",
+        "ok 2 - quota rejection creates no extra raw row",
+        "ok 3 - database quota loss is visible in coverage",
+        "ok 4 - global rolling-minute cap refuses the 121st accepted observation",
+        "ok 5 - rate-limited event does not occupy raw storage",
+        "ok 6 - only accepted observations increment aggregate views",
+        "ok 7 - rate loss is separately visible",
+        "ok 8 - ordinary authenticated user cannot invoke service-owner retention cleanup",
+        "ok 9 - actual fixed retention cleanup removes expired raw observations",
+        "ok 10 - expired raw account associations are removed",
+        "ok 11 - older-than-twelve-month aggregates are removed",
+        "ok 12 - private consent settings retain their separately disclosed lifecycle"
+      ]
+    },
+    {
+      "name": "remote_companion_isolation.sql",
+      "sha256": "39f037b37ebd5fc1fe31366dba05567f8099aeb4a86c53352d2309a4a568a723",
+      "assertions": 43,
+      "status": "passed",
+      "tap": [
+        "1..43",
+        "ok 1 - one-use pairing challenge cannot replay",
+        "ok 2 - anonymous cannot read credentials or raw binding tables",
+        "ok 3 - one installation workspace cannot have two active bearer bindings",
+        "ok 4 - A sees only confirmed A binding",
+        "ok 5 - authenticated owner cannot read raw prompt rows directly",
+        "ok 6 - B cannot list A binding",
+        "ok 7 - B cannot enqueue A job",
+        "ok 8 - forged phone session fails JWT session binding",
+        "ok 9 - forged canonical hash cannot be retained",
+        "ok 10 - extra executable input cannot be retained",
+        "ok 11 - JSON null request identity fails before retention",
+        "ok 12 - astral prompt respects the same UTF-16 bound as JavaScript",
+        "ok 13 - Unicode whitespace-only prompt is not retained",
+        "ok 14 - enqueue acknowledgement is queued, never completed",
+        "ok 15 - canonical retry retains one job ID",
+        "ok 16 - changed bytes with the same key conflict",
+        "ok 17 - redelivery retains the current lease epoch",
+        "ok 18 - stale lease cannot accept local execution",
+        "ok 19 - JSON null epoch cannot bypass SQL equality",
+        "ok 20 - string epoch is not a numeric lease",
+        "ok 21 - JSON null sequence is rejected",
+        "ok 22 - fractional sequence is rejected",
+        "ok 23 - unsafe integer sequence is rejected",
+        "ok 24 - local acceptance is separate from completion",
+        "ok 25 - exact event replay does not create another event",
+        "ok 26 - status-only device cannot fabricate completion",
+        "ok 27 - expired status lease renews control only and retains the accepted run",
+        "ok 28 - old control epoch cannot replay after lease renewal",
+        "ok 29 - phone cancellation persists until local acknowledgement",
+        "ok 30 - cancellation retry while acknowledgment is pending is idempotent",
+        "ok 31 - expired cancellation lease renews control without a fresh execution",
+        "ok 32 - renewed cancellation can be acknowledged without redispatch",
+        "ok 33 - cancellation retry after acknowledgment preserves the acknowledged outcome",
+        "ok 34 - active accepted request cannot be silently erased before stop or revocation",
+        "ok 35 - B cannot erase an A prompt or its delivery tombstone",
+        "ok 36 - B recovery cannot revoke A account binding",
+        "ok 37 - fresh owner session erases revoked-device prompt without claiming stop delivery",
+        "ok 38 - repeated prompt erasure preserves the delivery tombstone",
+        "ok 39 - erasure removes actual prompt bytes and retains unacknowledged state/run ownership",
+        "ok 40 - fresh A session revokes old A session bindings without exposing content",
+        "ok 41 - explicit recovery permits one fresh binding and leaves the old bearer revoked",
+        "ok 42 - revoked credential cannot claim or upload",
+        "ok 43 - declared retention purge removes prompt rows and cascades event rows"
+      ]
+    }
+  ],
+  "protocol_hash_checks": [
+    {
+      "name": "ascii",
+      "expected_sha256": "5793849cd504aaa5f5735b0a8ecc2c13c8ef2ba522c0f5985eeb785d04d5f41d",
+      "observed_sha256": "5793849cd504aaa5f5735b0a8ecc2c13c8ef2ba522c0f5985eeb785d04d5f41d",
+      "status": "passed"
+    },
+    {
+      "name": "quoting",
+      "expected_sha256": "10bc6b83661ab75f880eaae56c594139cdd3656ff8cff8bfdf0976541b5e600f",
+      "observed_sha256": "10bc6b83661ab75f880eaae56c594139cdd3656ff8cff8bfdf0976541b5e600f",
+      "status": "passed"
+    },
+    {
+      "name": "whitespace",
+      "expected_sha256": "9efc0f838476cd00795de06a832f4d0d75dec83e30d6291a789bcb086085d696",
+      "observed_sha256": "9efc0f838476cd00795de06a832f4d0d75dec83e30d6291a789bcb086085d696",
+      "status": "passed"
+    },
+    {
+      "name": "unicode",
+      "expected_sha256": "68ca8041aa07b4b7bea2a3bf84b352b24dfca8b2e5b3f5a3add02edb3baa5e7e",
+      "observed_sha256": "68ca8041aa07b4b7bea2a3bf84b352b24dfca8b2e5b3f5a3add02edb3baa5e7e",
+      "status": "passed"
+    },
+    {
+      "name": "separator",
+      "expected_sha256": "41df9f671b27993df92019cdca24a4b63d3febc61392aba23c0c5dce9fa6ab30",
+      "observed_sha256": "41df9f671b27993df92019cdca24a4b63d3febc61392aba23c0c5dce9fa6ab30",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}
