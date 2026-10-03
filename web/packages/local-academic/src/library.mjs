@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { AcademicError } from './index.mjs';
+import { AcademicError, normalizeAcademicDeadline } from './index.mjs';
 
 const MAX_BYTES = 4_000_000;
 const hash = value => createHash('sha256').update(value).digest('hex');
@@ -40,28 +40,83 @@ function selections(value, max = 100) { return [...new Set(array(value, max).map
 function instant(value) { if (typeof value !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(value) || !Number.isFinite(Date.parse(value))) fail(); return new Date(value).toISOString(); }
 function sealed(payload, field = 'library_hash') { return { ...payload, [field]: fingerprint(payload) }; }
 
+const CATEGORIES = ['courses', 'assignments', 'announcements', 'materials'];
+const ERROR_CODES = ['AUTH_REQUIRED', 'AUTH_EXPIRED', 'SCOPE_DENIED', 'UNSUPPORTED', 'TIMEOUT', 'PROVIDER_FAILURE', 'CANCELLED', 'BUDGET_EXCEEDED', 'INVALID_INPUT'];
+function stableId(origin, account, category, course, source) {
+  const bytes = Buffer.from(fingerprint([origin, account, category, course || '', source]).slice(0, 32), 'hex');
+  bytes[6] = (bytes[6] & 15) | 0x50; bytes[8] = (bytes[8] & 63) | 0x80;
+  const hex = bytes.toString('hex'); return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+function sourceId(value) { if (typeof value !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/.test(value)) fail(); return value; }
 function verifiedSnapshot(value) {
-  object(value, ['format', 'schema_version', 'institution', 'account_ref', 'retrieved_at', 'selected_course_ids', 'courses', 'assignments', 'announcements', 'materials', 'coverage', 'errors', 'warnings', 'conflicts', 'changes', 'snapshot_hash'], ['format', 'schema_version', 'institution', 'account_ref', 'retrieved_at', 'selected_course_ids', 'courses', 'assignments', 'announcements', 'materials', 'coverage', 'snapshot_hash']);
+  const keys = ['format', 'schema_version', 'institution', 'account_ref', 'retrieved_at', 'selected_course_ids', 'courses', 'assignments', 'announcements', 'materials', 'coverage', 'errors', 'warnings', 'conflicts', 'changes', 'snapshot_hash']; object(value, keys, keys);
   if (value.format !== 'learnbridge-academic-snapshot' || value.schema_version !== 1 || !digest(value.snapshot_hash)) fail();
   const { snapshot_hash, changes, ...payload } = value;
   if (fingerprint(payload) !== snapshot_hash) fail();
   object(value.institution, ['name', 'origin', 'timezone'], ['name', 'origin', 'timezone']);
-  text(value.institution.name); id(value.account_ref); instant(value.retrieved_at);
+  text(value.institution.name, 150); sourceId(value.account_ref); if (instant(value.retrieved_at) !== value.retrieved_at) fail();
+  if (value.institution.timezone !== null) { text(value.institution.timezone, 100); try { new Intl.DateTimeFormat('en', { timeZone: value.institution.timezone }); } catch { fail(); } }
   let origin; try { origin = new URL(value.institution.origin); } catch { fail(); }
-  if (origin.protocol !== 'https:' || origin.origin !== value.institution.origin || origin.username || origin.password) fail();
-  const selected = new Set(selections(value.selected_course_ids));
+  if (origin.protocol !== 'https:' || origin.origin !== value.institution.origin || origin.username || origin.password || origin.port || !origin.hostname.includes('.') || /^\d+(?:\.\d+){3}$/.test(origin.hostname) || ['.localhost', '.local', '.internal'].some(suffix => origin.hostname.endsWith(suffix))) fail('SCOPE_DENIED');
+  const selectedIds = array(value.selected_course_ids, 100).map(sourceId); const selected = new Set(selectedIds);
+  if (canonical([...selected].sort()) !== canonical(selectedIds)) fail();
   const seen = new Set();
-  for (const category of ['courses', 'assignments', 'announcements', 'materials']) for (const row of array(value[category])) {
+  function verifyRow(row, category) {
     const keys = category === 'courses' ? ['id', 'source_id', 'title', 'url', 'code', 'source_hash'] : category === 'assignments' ? ['id', 'source_id', 'course_id', 'title', 'url', 'description', 'deadline', 'source_hash'] : category === 'announcements' ? ['id', 'source_id', 'course_id', 'title', 'url', 'body', 'published_at', 'source_hash'] : ['id', 'source_id', 'course_id', 'title', 'url', 'body', 'type', 'source_hash'];
-    object(row, keys, keys); id(row.id); id(row.source_id); text(row.title); if (seen.has(row.id)) fail(); seen.add(row.id);
-    if (!selected.has(category === 'courses' ? row.source_id : id(row.course_id))) fail('SCOPE_DENIED');
-    if (row.url !== null) { let url; try { url = new URL(row.url); } catch { fail(); } if (url.origin !== origin.origin || url.username || url.password || [...url.searchParams.keys()].some(key => /token|key|secret|auth|session|password|^code$/i.test(key))) fail('SCOPE_DENIED'); }
+    object(row, keys, keys); id(row.id); sourceId(row.source_id); text(row.title, 300);
+    const course = category === 'courses' ? row.source_id : sourceId(row.course_id);
+    if (!selected.has(course)) fail('SCOPE_DENIED');
+    if (row.id !== stableId(origin.origin, value.account_ref, category, category === 'courses' ? null : course, row.source_id)) fail();
+    if (row.url !== null) { text(row.url, 2048); let url; try { url = new URL(row.url); } catch { fail(); } if (url.href !== row.url || url.origin !== origin.origin || url.username || url.password || [...url.searchParams.keys()].some(key => /token|key|secret|auth|session|password|^code$/i.test(key)) || /token=|secret=|password=|authorization=/i.test(url.hash)) fail('SCOPE_DENIED'); }
     const { source_hash, ...sourcePayload } = row;
     if (!digest(source_hash) || fingerprint(sourcePayload) !== source_hash) fail();
     if (category !== 'courses') text(category === 'assignments' ? row.description : row.body, 50_000, true);
+    if (category === 'courses' && row.code !== null) text(row.code, 120, true);
+    if (category === 'materials') text(row.type, 100);
+    if (['assignments', 'announcements'].includes(category)) { const deadline = category === 'assignments' ? row.deadline : row.published_at; if (canonical(normalizeAcademicDeadline(deadline, value.institution.timezone)) !== canonical(deadline)) fail(); }
+    return row;
   }
+  for (const category of CATEGORIES) for (const row of array(value[category], category === 'courses' ? 100 : 2000)) {
+    verifyRow(row, category); if (seen.has(row.id)) fail(); seen.add(row.id);
+  }
+  object(value.coverage, CATEGORIES, CATEGORIES);
+  const conflicts = array(value.conflicts || [], 2000); const conflictIds = new Set();
+  for (const conflict of conflicts) {
+    object(conflict, ['category', 'id', 'variants'], ['category', 'id', 'variants']);
+    if (!CATEGORIES.includes(conflict.category) || seen.has(conflict.id) || conflictIds.has(conflict.id)) fail(); conflictIds.add(conflict.id);
+    const variants = array(conflict.variants, 2000); const hashes = new Set(); if (variants.length < 2) fail();
+    for (const row of variants) { verifyRow(row, conflict.category); if (row.id !== conflict.id || hashes.has(row.source_hash)) fail(); hashes.add(row.source_hash); }
+  }
+  for (const category of CATEGORIES) {
+    const coverage = value.coverage[category]; object(coverage, ['state', 'received', 'accepted', 'skipped', 'duplicates', 'conflicts'], ['state', 'received', 'accepted', 'skipped', 'duplicates', 'conflicts']);
+    if (!['complete', 'partial', 'unavailable', 'unknown'].includes(coverage.state)) fail();
+    for (const key of ['received', 'accepted', 'skipped', 'duplicates', 'conflicts']) if (!Number.isInteger(coverage[key]) || coverage[key] < 0 || coverage[key] > (category === 'courses' ? 100 : 2000)) fail();
+    if (coverage.accepted !== value[category].length || coverage.conflicts !== conflicts.filter(row => row.category === category).length || coverage.received < coverage.accepted + coverage.skipped + coverage.duplicates + coverage.conflicts * 2) fail();
+  }
+  for (const error of array(value.errors || [], 100)) {
+    object(error, ['category', 'code', 'course_id'], ['category', 'code']); if (!CATEGORIES.includes(error.category) || !ERROR_CODES.includes(error.code) || (error.course_id !== undefined && !selected.has(sourceId(error.course_id)))) fail();
+  }
+  for (const warning of array(value.warnings || [], 10_000)) {
+    const counted = ['EXACT_DUPLICATE_COLLAPSED', 'CONFLICTING_DUPLICATE_NEEDS_REVIEW'].includes(warning?.code);
+    const dated = warning?.code === 'DEADLINE_NEEDS_REVIEW'; const missing = warning?.code === 'SELECTED_COURSE_MISSING';
+    const keys = counted ? ['code', 'category', 'count'] : dated ? ['code', 'category', 'source_id', 'course_id'] : missing ? ['code', 'category', 'source_id'] : ['code', 'category']; object(warning, keys, keys);
+    if (!CATEGORIES.includes(warning.category) || (!counted && !dated && !missing && !['INVALID_ROW', 'UNSAFE_OR_OUT_OF_SCOPE_ROW'].includes(warning.code))) fail();
+    if (counted && (!Number.isInteger(warning.count) || warning.count < 1 || warning.count > 2000)) fail();
+    if (dated && (warning.category !== 'assignments' || !selected.has(sourceId(warning.course_id)))) fail();
+    if ((dated || missing) && !sourceId(warning.source_id)) fail();
+    if (missing && (warning.category !== 'courses' || !selected.has(warning.source_id))) fail();
+  }
+  for (const category of CATEGORIES) {
+    const unsafe = conflicts.some(row => row.category === category) || value.errors.some(row => row.category === category)
+      || value.warnings.some(row => row.category === category && !['EXACT_DUPLICATE_COLLAPSED', 'DEADLINE_NEEDS_REVIEW'].includes(row.code));
+    if (unsafe && value.coverage[category].state !== 'partial') fail();
+  }
+  if (value.changes !== undefined) { object(value.changes, ['added', 'changed', 'unchanged', 'missing'], ['added', 'changed', 'unchanged', 'missing']); for (const ids of Object.values(value.changes)) array(ids, 8100).forEach(id); }
   return value;
 }
+
+/** Validate the complete immutable observation before refresh comparisons or indexing. */
+export function validateAcademicSnapshot(raw) { return verifiedSnapshot(clone(raw)); }
 
 function chunksFor(source, units) {
   const chunks = [];
@@ -108,12 +163,13 @@ export function buildAcademicLibrary(raw) {
   const versions = new Map(); const current = new Map(); const coverage = [];
   function add(source, units) {
     if (!chosen.has(source.course_id) || revoked.has(source.source_id)) return;
+    const existing = current.get(source.source_id); if (existing && existing.category !== source.category) fail();
     const key = `${source.source_id}:${source.version_hash}`;
     if (versions.has(key)) {
       const prior = versions.get(key); if (prior.content_hash !== source.content_hash || prior.course_id !== source.course_id || prior.format !== source.format) fail();
       const old = current.get(source.source_id);
       if (old && old.retrieved_at === source.retrieved_at && old.version_hash !== source.version_hash) fail();
-      if (!old || old.retrieved_at < source.retrieved_at) { current.set(source.source_id, source); prior.retrieved_at = source.retrieved_at; }
+      if (!old || old.retrieved_at < source.retrieved_at) { current.set(source.source_id, source); versions.set(key, { ...prior, ...source }); }
       return;
     }
     const chunks = chunksFor(source, units); const candidate = { ...source, extraction_status: chunks.length ? 'available' : 'text_unavailable', chunks };
@@ -140,7 +196,16 @@ export function buildAcademicLibrary(raw) {
     } else fail('UNSUPPORTED');
     add({ source_id: record.source_id, version_hash: record.version_hash, course_id: record.course_id, title: record.title, format: record.format, category: 'selected_file', url: null, parser_version: record.parser_version, retrieved_at, content_hash: fingerprint(units) }, units);
   }
-  const sources = [...versions.values()].map(source => ({ ...source, status: current.get(source.source_id)?.version_hash === source.version_hash ? 'current' : 'historical' })).sort((a, b) => a.source_id.localeCompare(b.source_id) || a.version_hash.localeCompare(b.version_hash));
+  const sources = [...versions.values()].map(source => {
+    let status = current.get(source.source_id)?.version_hash === source.version_hash ? 'current' : 'historical'; let freshness;
+    if (status === 'current' && source.snapshot_hash) {
+      const latest = snapshots.filter(snapshot => snapshot.selected_course_ids.includes(source.course_id)).at(-1);
+      if (latest && !latest[source.category].some(row => row.id === source.source_id)) {
+        status = 'last_known'; freshness = { state: latest.conflicts?.some(row => row.id === source.source_id) ? 'conflicted' : 'not_returned', snapshot_hash: latest.snapshot_hash, retrieved_at: latest.retrieved_at, coverage_state: latest.coverage[source.category].state };
+      }
+    }
+    return { ...source, status, ...(freshness ? { freshness } : {}) };
+  }).sort((a, b) => a.source_id.localeCompare(b.source_id) || a.version_hash.localeCompare(b.version_hash));
   return clone(sealed({ format: 'learnbridge-academic-library', schema_version: 1, selected_course_ids: selected, sources, coverage, revoked_source_count: revoked.size }));
 }
 
@@ -152,10 +217,11 @@ function verifiedLibrary(raw) {
   const courses = new Set(selections(library.selected_course_ids)); const versions = new Set(); const current = new Set();
   if (!Number.isInteger(library.revoked_source_count) || library.revoked_source_count < 0 || library.revoked_source_count > 2000) fail();
   for (const source of array(library.sources, 10_000)) {
-    object(source, ['source_id', 'version_hash', 'course_id', 'title', 'format', 'category', 'url', 'parser_version', 'retrieved_at', 'snapshot_hash', 'content_hash', 'deadline', 'extraction_status', 'chunks', 'status'], ['source_id', 'version_hash', 'course_id', 'title', 'format', 'category', 'url', 'parser_version', 'retrieved_at', 'content_hash', 'extraction_status', 'chunks', 'status']);
+    object(source, ['source_id', 'version_hash', 'course_id', 'title', 'format', 'category', 'url', 'parser_version', 'retrieved_at', 'snapshot_hash', 'content_hash', 'deadline', 'extraction_status', 'chunks', 'status', 'freshness'], ['source_id', 'version_hash', 'course_id', 'title', 'format', 'category', 'url', 'parser_version', 'retrieved_at', 'content_hash', 'extraction_status', 'chunks', 'status']);
     id(source.source_id); id(source.course_id); text(source.title); text(source.parser_version, 100); instant(source.retrieved_at);
-    if (!courses.has(source.course_id) || !digest(source.version_hash) || !digest(source.content_hash) || !['text', 'markdown', 'pdf_text'].includes(source.format) || !['assignments', 'announcements', 'materials', 'selected_file'].includes(source.category) || !['current', 'historical'].includes(source.status) || !['available', 'text_unavailable'].includes(source.extraction_status)) fail();
-    const key = `${source.source_id}:${source.version_hash}`; if (versions.has(key) || (source.status === 'current' && current.has(source.source_id))) fail(); versions.add(key); if (source.status === 'current') current.add(source.source_id);
+    if (!courses.has(source.course_id) || !digest(source.version_hash) || !digest(source.content_hash) || !['text', 'markdown', 'pdf_text'].includes(source.format) || !['assignments', 'announcements', 'materials', 'selected_file'].includes(source.category) || !['current', 'historical', 'last_known'].includes(source.status) || !['available', 'text_unavailable'].includes(source.extraction_status)) fail();
+    if (source.status === 'last_known') { object(source.freshness, ['state', 'snapshot_hash', 'retrieved_at', 'coverage_state'], ['state', 'snapshot_hash', 'retrieved_at', 'coverage_state']); if (!['not_returned', 'conflicted'].includes(source.freshness.state) || !digest(source.freshness.snapshot_hash) || !['complete', 'partial', 'unavailable', 'unknown'].includes(source.freshness.coverage_state) || source.category === 'selected_file' || !source.snapshot_hash || instant(source.freshness.retrieved_at) < source.retrieved_at) fail(); } else if (source.freshness !== undefined) fail();
+    const key = `${source.source_id}:${source.version_hash}`; if (versions.has(key) || (source.status !== 'historical' && current.has(source.source_id))) fail(); versions.add(key); if (source.status !== 'historical') current.add(source.source_id);
     if (source.snapshot_hash !== undefined && !digest(source.snapshot_hash)) fail();
     if (source.url !== null) { text(source.url, 2048); let url; try { url = new URL(source.url); } catch { fail(); } if (url.protocol !== 'https:' || url.username || url.password || [...url.searchParams.keys()].some(key => /token|key|secret|auth|session|password|^code$/i.test(key))) fail(); }
     const chunks = array(source.chunks, 10_000); if ((source.extraction_status === 'text_unavailable') !== (chunks.length === 0)) fail(); const chunkIds = new Set();
@@ -175,6 +241,11 @@ function verifiedLibrary(raw) {
     object(row, ['snapshot_hash', 'retrieved_at', 'selected_course_ids', 'categories'], ['snapshot_hash', 'retrieved_at', 'selected_course_ids', 'categories']); if (!digest(row.snapshot_hash) || selections(row.selected_course_ids).some(course => !courses.has(course))) fail(); instant(row.retrieved_at);
     object(row.categories, ['courses', 'assignments', 'announcements', 'materials'], ['courses', 'assignments', 'announcements', 'materials']);
     for (const value of Object.values(row.categories)) { object(value, ['state', 'scoped_records', 'coverage_claim'], ['state', 'scoped_records', 'coverage_claim']); if (!['complete', 'partial', 'unavailable', 'unknown'].includes(value.state) || !Number.isInteger(value.scoped_records) || value.scoped_records < 0 || value.coverage_claim !== 'source_reported') fail(); }
+  }
+  for (const source of library.sources) if (source.snapshot_hash) {
+    const observation = library.coverage.find(row => row.snapshot_hash === source.snapshot_hash);
+    if (!observation || observation.retrieved_at !== source.retrieved_at || !observation.selected_course_ids.includes(source.course_id) || source.category === 'selected_file') fail();
+    if (source.status === 'last_known') { const last = library.coverage.find(row => row.snapshot_hash === source.freshness.snapshot_hash); if (!last || last.retrieved_at !== source.freshness.retrieved_at || !last.selected_course_ids.includes(source.course_id) || last.categories[source.category].state !== source.freshness.coverage_state) fail(); }
   }
   return library;
 }
@@ -213,5 +284,5 @@ export function resolveAcademicCitation(raw, rawOptions) {
   const source = library.sources.find(item => item.source_id === options.source_id && item.version_hash === options.version_hash && courses.has(item.course_id));
   const chunk = source?.chunks.find(item => item.chunk_id === options.chunk_id);
   if (!chunk) fail('SCOPE_DENIED');
-  return { source_id: source.source_id, version_hash: source.version_hash, course_id: source.course_id, title: source.title, status: source.status, retrieved_at: source.retrieved_at, text: chunk.text, text_hash: chunk.text_hash, locator: chunk.locator, chunk_id: chunk.chunk_id, untrusted: true };
+  return { source_id: source.source_id, version_hash: source.version_hash, course_id: source.course_id, title: source.title, status: source.status, retrieved_at: source.retrieved_at, ...(source.snapshot_hash ? { snapshot_hash: source.snapshot_hash } : {}), ...(source.freshness ? { freshness: source.freshness } : {}), text: chunk.text, text_hash: chunk.text_hash, locator: chunk.locator, chunk_id: chunk.chunk_id, untrusted: true };
 }

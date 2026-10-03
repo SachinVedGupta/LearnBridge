@@ -918,6 +918,51 @@ export class LocalStore {
       this.#saveWorkspaceRecord(next, input.expected_revision); return next;
     });
   }
+  /** Trusted domain services may atomically publish up to four private records.
+   * Caller-selected UUIDs support references within this bounded batch; the
+   * student identity, revisions and timestamps are always assigned here. This
+   * accepts only data, never callbacks, SQL, paths or executable operations.
+   */
+  commitWorkspaceBatch(input) {
+    checkedObject(input, ['creates', 'updates']);
+    const batch = privateJson(input, 520000);
+    if (!Array.isArray(batch.creates) || !Array.isArray(batch.updates)
+      || batch.creates.length + batch.updates.length < 1 || batch.creates.length + batch.updates.length > 4) invalidInput();
+    const ids = new Set();
+    const creates = batch.creates.map(item => {
+      checkedObject(item, ['id', 'kind', 'title', 'data']); const id = checkedId(item.id);
+      if (ids.has(id) || !WORKSPACE_KINDS.includes(item.kind)) invalidInput(); ids.add(id);
+      return { id, kind: item.kind, title: shortText(item.title), data: privateJson(item.data, 128000) };
+    });
+    const updates = batch.updates.map(item => {
+      checkedObject(item, ['id', 'expected_revision', 'title', 'data']); const id = checkedId(item.id);
+      if (ids.has(id)) invalidInput(); ids.add(id); integer(item.expected_revision, 1, Number.MAX_SAFE_INTEGER);
+      return { ...item, id, ...(item.title === undefined ? {} : { title: shortText(item.title) }),
+        ...(item.data === undefined ? {} : { data: privateJson(item.data, 128000) }) };
+    });
+    return this.#transaction(() => {
+      // Check every CAS/existence condition before the first row is written.
+      for (const item of creates) if (this.#db.prepare('SELECT id FROM workspace_records WHERE id=?').get(item.id)) failure('REVISION_CONFLICT');
+      const current = updates.map(item => { const record = this.getWorkspaceRecord(item.id); if (!record) failure('REVISION_CONFLICT'); assertRevision(item.expected_revision, record.revision); return record; });
+      const timestamp = now();
+      const created = creates.map(item => validateWorkspaceRecord({ ...item, schema_version: 1,
+        student_id: this.identity.student_id, revision: 1, created_at: timestamp, updated_at: timestamp, deleted_at: null }, this.identity.student_id));
+      const updated = updates.map((item, index) => validateWorkspaceRecord({ ...current[index],
+        title: item.title === undefined ? current[index].title : item.title,
+        data: item.data === undefined ? current[index].data : item.data,
+        revision: current[index].revision + 1, updated_at: timestamp }, this.identity.student_id));
+      for (const record of created) { const json = JSON.stringify(record);
+        this.#db.prepare('INSERT INTO workspace_records VALUES (?,?,?,?,?,?)').run(record.id, record.student_id, record.kind, 1, null, json);
+        this.#db.prepare('INSERT INTO workspace_revisions VALUES (?,?,?,?)').run(record.id, 1, json, hash(canonicalJson(record)));
+      }
+      updated.forEach((record, index) => this.#saveWorkspaceRecord(record, updates[index].expected_revision));
+      // Independent persisted readback is still inside the transaction, so a
+      // mismatch also rolls back all candidate, head and revision rows.
+      const result = { creates: created.map(record => this.getWorkspaceRecord(record.id)), updates: updated.map(record => this.getWorkspaceRecord(record.id)) };
+      if (canonicalJson(result) !== canonicalJson({ creates: created, updates: updated })) failure('VERSION_MISMATCH');
+      return result;
+    });
+  }
   deleteWorkspaceRecord(id, expectedRevision) {
     return this.#transaction(() => { const record = this.getWorkspaceRecord(id); if (!record) failure('REVISION_CONFLICT'); assertRevision(expectedRevision, record.revision); const timestamp = now(); const next = { ...record, revision: record.revision + 1, updated_at: timestamp, deleted_at: timestamp }; this.#saveWorkspaceRecord(next, expectedRevision); return next; });
   }
