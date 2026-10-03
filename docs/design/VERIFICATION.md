@@ -2,7 +2,7 @@
 
 An agent should be able to verify most engineering behavior using deterministic fixtures and instrumented outcomes. It cannot definitively prove all AI judgments, browser/provider compatibility or learning quality without real-source and human checks. This plan makes those boundaries explicit instead of treating self-evaluation as proof.
 
-The future runtime suites and commands here are required implementation work. W01 core fixtures and a separate SQLite feasibility probe now exist; their measured scope and remaining gates are in [implementation status](IMPLEMENTATION_STATUS.md). Feature acceptance IDs live in the three feature files and onboarding. [Example report](examples/verification-report.example.json) illustrates the report format using synthetic status only.
+The future runtime suites and commands here are required implementation work. Measured foundation/MCP/source results and remaining gates are in [implementation status](IMPLEMENTATION_STATUS.md). Feature acceptance IDs live in the four feature files and onboarding. F28/F29 remote/adoption cases are specified, not executed by adding these documents. [Example report](examples/verification-report.example.json) illustrates the report format using synthetic status only.
 
 ## Result semantics
 
@@ -88,6 +88,28 @@ local verify --report <path>                machine-readable evidence
 ```
 
 Actual naming may differ, but commands must exit nonzero for failed required tests, report required BLOCKED/SKIP distinctly, and return a sanitized report path. Offline fixture verification must not contact real AI or personal sources. Existing `npm test` now includes core and hosted fixtures, while `npm run build` validates the hosted build. Neither verifies the unimplemented local runtime or all planned features.
+
+## Remote and adoption verification
+
+Use the exact F28/F29 cases in [the feature specification](FEATURES_REMOTE_AND_ADOPTION.md), with the following independent observables. Build synthetic two-account hosted databases and a real outbound fixture daemon, not mocks of ownership/lease checks. No real laptop files, credentials or names/emails are needed in deterministic tests.
+
+| Gate | Fixture and fault injection | Definitive evidence |
+| --- | --- | --- |
+| Remote identity | Accounts A/B; devices A1/A2/B1; unpaired phone; expired/replayed registration; changed installation key or restored backup | Only the authenticated account's confirmed binding dispatches/reads. B cannot enumerate A's jobs/artifacts, and stale device credentials cannot revive a restored installation |
+| Narrow relay | Send unknown recipe, arbitrary path/executable/protocol message, forged source grant and copied local student ID | Policy rejects before worker/host invocation; zero fixture source reads/agent turns. Loopback cookies and IPC/host credentials never enter hosted storage or event/log exports |
+| Exactly-once local effects | Repeat request IDs; two claimers; drop ack after local run starts or reviewed task saves; kill/restart daemon; expired lease writer publishes late | Durable local mapping and event epochs reconcile one run/task. Agent completion is a native event plus verified stored result; uncertain native acceptance stays unknown rather than triggering another turn |
+| Review and revocation | Alter payload/source after preview, forged human receipt, wrong native request/session, expired phone session, device/source revoke during read, result uploaded before revoke, missing/replayed policy receipt | No stale/forged action executes. Valid phone task acceptance has exact human/target/hash binding and read-back. Native decline blocks work. Late content is discarded; locally governed result delivery is withheld without a fresh exact-result receipt. Already transmitted bytes are not claimed recalled |
+| Sleep/cancel/delivery | Offline laptop, expired queued job, event reorder/duplicates, disconnect during result, cancel during side effect | Phone reports waiting/interrupted/unknown accurately; cursor resumes without duplicated UI/results. Cancellation does not assert rollback. Retained result/artifact content expires from declared relay stores |
+| No hidden fallback | Valid selected host hits auth/plan limit while an API key is also configured | No paid-mode inference, credential export or different computer chosen. Missing host/permission has an explicit next step |
+| Copy setup prompt | Real browser clipboard success, denied clipboard, manual-copy fallback, double click and ingestion retry | Exact versioned prompt on clipboard after success; event only after resolved success; failure/manual-copy distinction and retry dedup. Prompt contains no hidden telemetry or private-search instruction |
+| Metric semantics | Labeled fixture of repeated pageviews, two copies from one session, two accounts, opt-out local installs, repeated activation and synthetic bot bursts | Queries reproduce declared visit/copy/account/opt-in-installation totals. No copy becomes an installation; local denominators explicitly exclude non-reporting users. Bot filtering and undercount limits remain visible |
+| Metric ownership/privacy | Anonymous forged account events, student-to-admin requests, canaries in query/email/title/path/prompt/token; opt-out with queued events; retention clock | Strict producer/schema rules, RLS/admin denial and redaction; zero forbidden bytes in collector/analytics/logs. No default local reporting; opt-out purges queue. Names/emails stay in private auth-backed view; deletion removes identity links |
+
+Release W23's public subset only after actual public-page/clipboard/event/database/admin checks. A real database with RLS exercises student/anonymous principals directly; an API handler mock does not prove database isolation. When Vercel analytics is enabled, prove public route redaction and no private-route collection using a bounded authorized hosted smoke event; reconcile its aggregate result within the provider's documented delay, without claiming exact unique humans. Local activation/usage claims require their later consent/receipt checks. Anonymous/session estimates, registered accounts, active accounts and opt-in installation counts use separate named methods and are never silently merged.
+
+Release W24 only after a real supported phone browser completes one request through the hosted relay to an actual locally authenticated official agent, with cited approved fixture context, exact human-reviewed task acceptance and fresh-process read-back. Exercise disconnect/reconnect and device revoke. Record host/runtime/protocol versions, supported account mode and device/OS. Provider-native mobile remote functionality or a raw app-server WebSocket spike alone is not this proof. Later supported Claude modes need their own live host gate.
+
+The current official SDK/Codex host evidence establishes the existing MCP slice, not the new relay or event collector. New production dependencies, analytics services, relay configuration and deployment remain concrete separately authorized actions at implementation time. This planning change sends no metrics and registers no device.
 
 ## Live provider matrix
 

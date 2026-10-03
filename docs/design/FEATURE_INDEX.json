@@ -1,7 +1,7 @@
 {
-  "schema_version": "0.1.0",
+  "schema_version": "0.2.0",
   "document_kind": "design_traceability_not_product_results",
-  "reviewed_at": "2026-10-02",
+  "reviewed_at": "2026-10-03",
   "implementation_tests_executed": false,
   "features": [
     {
@@ -471,6 +471,50 @@
       "implementation_packages": [
         "W07"
       ]
+    },
+    {
+      "id": "F28",
+      "name": "Phone-to-local agent companion",
+      "specification": "FEATURES_REMOTE_AND_ADOPTION.md",
+      "acceptance_ids": [
+        "F28-A01",
+        "F28-A02",
+        "F28-A03",
+        "F28-A04",
+        "F28-A05",
+        "F28-A06",
+        "F28-A07",
+        "F28-A08",
+        "F28-A09",
+        "F28-A10",
+        "F28-A11",
+        "F28-A12"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W24"
+      ]
+    },
+    {
+      "id": "F29",
+      "name": "Website and local setup adoption measurement",
+      "specification": "FEATURES_REMOTE_AND_ADOPTION.md",
+      "acceptance_ids": [
+        "F29-A01",
+        "F29-A02",
+        "F29-A03",
+        "F29-A04",
+        "F29-A05",
+        "F29-A06",
+        "F29-A07",
+        "F29-A08",
+        "F29-A09",
+        "F29-A10"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W23"
+      ]
     }
   ],
   "work_packages": [
@@ -663,7 +707,34 @@
         "W07",
         "W12"
       ],
-      "optional_dependencies": []
+      "optional_dependencies": [
+        "W24"
+      ]
+    },
+    {
+      "id": "W23",
+      "required_dependencies": [
+        "W01",
+        "W05"
+      ],
+      "optional_dependencies": [
+        "W07",
+        "W11"
+      ]
+    },
+    {
+      "id": "W24",
+      "required_dependencies": [
+        "W03",
+        "W04",
+        "W07",
+        "W11",
+        "W12"
+      ],
+      "optional_dependencies": [
+        "W09",
+        "W17"
+      ]
     }
   ]
 }

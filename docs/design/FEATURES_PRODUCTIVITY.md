@@ -353,13 +353,13 @@ Background actions are limited by the schedule's authorized capabilities. A requ
 
 ## F23 — Voice capture, mobile companion, and optional sync
 
-**Meaning and milestone.** M6: let the student capture a quick note/task and review selected LearnBridge data from a supported device, without pretending local storage alone makes remote access or transcription available.
+**Meaning and milestone.** M6: let the student capture a quick note/task and review selected LearnBridge data from a supported device, without pretending local storage alone makes remote access or transcription available. [F28 phone-to-local execution](FEATURES_REMOTE_AND_ADOPTION.md#f28--phone-to-local-agent-companion) is a separate optional M3 extension after durable agent/review gates; it need not wait for voice or full sync.
 
 ### Expected behavior and implementation
 
 Voice capture requires microphone permission and an explicit local/cloud transcription choice. The preview shows the transcript and proposed task/note before saving. Keep uncertain dates/names unresolved. Raw audio retention is configurable and disclosed; default to removing temporary audio after the student accepts/discards the transcript, including derived temporary files. Conversational voice is a separate capability, not required for capture.
 
-The initial mobile companion can be a responsive read/review interface with manual entry. Access to a laptop's local runtime requires authenticated, short-lived device pairing and a supported encrypted transport. Do not expose the proposed authenticated local service on the LAN without the separate pairing and encrypted-transport release gate. The architecture must specify session expiry, revocation, replay protection, and the private read/write gates before enabling pairing. For access while the laptop is unavailable, optional hosted sync needs account authentication, selected-data consent, conflict handling, and a separate release gate. No local D2L browser token is synchronized.
+The initial mobile capture/sync can be a responsive read/review interface with manual entry. Reuse F28's account/device-bound outbound relay only when that transport is implemented and verified; typed/voice capture and independently supported selected hosted sync do not depend on remote agent control. Access to the laptop needs its remote release gate, not a LAN exposure of the paired loopback service. For access while the laptop is unavailable, optional hosted sync needs account authentication, selected-data consent, conflict handling, and a separate release gate. No local D2L browser token is synchronized.
 
 Implementation order: (1) responsive local UI and typed quick capture; (2) one supported transcription adapter with measured accuracy/limits; (3) authenticated device pairing and selected read/task-write operations; (4) optional sync. Cloud transcription may require API billing even when the student uses a subscription-backed coding agent: provider modes have distinct capabilities. In particular, the reviewed OpenAI plan-usage [preview limits](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations) do not make an audio/transcription API available; choose and verify an allowed adapter rather than silently charging an API account.
 
@@ -374,7 +374,7 @@ Implementation order: (1) responsive local UI and typed quick capture; (2) one s
 - **F23-A05:** Edit one task offline on two devices from the same revision. Reconnect and assert a visible conflict with both edits preserved, not silent overwrite; retrying a successfully accepted operation does not duplicate it.
 - **F23-A06:** Inspect a selected sync fixture. Assert no D2L/browser credential material, excluded source content, or unselected profile fields leave the local runtime.
 
-**Live gate.** Prove one end-to-end capture on each released microphone/platform/transcription mode and one paired-device session including revocation. Hosted sync is not released based only on responsive layout tests.
+**Live gate.** Prove one end-to-end capture on each released microphone/platform/transcription mode. Device A04/revocation checks apply when remote access ships; A05 conflict/replay and A06 selected-data checks apply when sync ships. Those optional-mode gates do not block a local-only capture release, whose excluded cases remain explicitly NOT_IMPLEMENTED. Hosted sync is not released based only on responsive layout tests.
 
 **Quality rubric.** Measure transcription/task extraction against consented labeled samples; review accent/noise/date failures and capture friction. A valid task schema does not prove the transcript heard the student correctly.
 

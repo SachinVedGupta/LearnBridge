@@ -6,7 +6,7 @@ LearnBridge is a web app for students that brings together AI tutoring, course p
 
 ## Local student workspace
 
-The local foundation now provides a private dashboard for manual tasks and plain-text notes, with revision checks, restart persistence, backups and fresh-workspace restore. It runs on this computer without Supabase, Composio or AI API keys. The public website remains available as a separate edition.
+The local edition provides a private student dashboard with tasks, notes, reviewed profile facts, a cited course library, study plans, learning attempts, writing alternatives, research reports, career preparation, project checklists, meals and routines. Selected text/Markdown and macOS PDF imports preserve exact source versions and page evidence. Records use revision checks, restart persistence, backups and fresh-workspace restore. It runs without Supabase, Composio or AI API keys. The public website remains available as a separate edition.
 
 Requires Node.js **22.16 or newer**. macOS arm64 is the verified foundation target; Linux is experimental and Windows local storage is not supported yet.
 
@@ -18,13 +18,13 @@ npm run local:start
 
 Open the loopback address shown by the launcher, normally `http://127.0.0.1:3210`, and enter its single-use pairing code. For a disposable sample workspace, use `npm run local:demo`. Read [local setup, backup and recovery](docs/LOCAL_SETUP.md) for commands and boundaries.
 
-The local edition now includes a **Codex/Claude stdio MCP bridge**, selected text/Markdown source imports, separate destination-specific sharing consent, and a human review queue for agent-proposed tasks. It uses your official agent host and subscription; LearnBridge does not copy agent credentials or provide an API fallback. Follow [agent and source setup](docs/LOCAL_AGENT_SETUP.md). Pairing alone does not connect an AI or scan your files.
+The **Codex/Claude stdio MCP bridge** exposes status, selected context, pending task proposals and pending writing proposals. It uses your official agent host and subscription, with separate destination-specific sharing consent and human review. LearnBridge does not copy agent credentials or provide an API fallback. Follow [agent and source setup](docs/LOCAL_AGENT_SETUP.md), or have your coding agent read the [LearnBridge student skill](.agents/skills/learnbridge-student/SKILL.md). Pairing alone does not connect an AI or scan your files. An embedded Codex chat is still disabled pending its actual host compatibility check.
 
-Avenue/D2L supports reviewed academic exports and an independently implemented read-only MCP adapter. **A live institution connection, automatic student profile, browser automation and durable agent orchestration remain separate implementation gates.** No university token is accepted by the public website or local dashboard.
+Avenue/D2L supports reviewed academic exports and an independently implemented read-only MCP adapter. Live institution login, broad cloud onboarding and general computer automation remain separate implementation gates. Profile facts require explicit review; tutoring recipes contain cited context and instructions until your host generates an answer. Career tools prepare drafts and practice without submitting applications. No university token is accepted by the public website or local dashboard.
 
 Read the [local student assistant blueprint](docs/LOCAL_FIRST_VISION.md) for the feature catalogue, architecture, audited integration choices, and implementation acceptance checks.
 
-The [detailed design and implementation guide](docs/design/README.md) specifies 27 features, controlled onboarding, shared contracts, a staged build plan and objective verification. Give your coding agent [SETUP_LEARNBRIDGE.md](SETUP_LEARNBRIDGE.md) as its setup entry point. It distinguishes the implemented foundation from the remaining plan.
+The [detailed design and implementation guide](docs/design/README.md) specifies 29 features, controlled onboarding, shared contracts, a staged build plan and objective verification. The new `/setup` route in this checkout offers a copyable agent setup prompt. Optional [phone access and adoption measurement](docs/design/FEATURES_REMOTE_AND_ADOPTION.md) have disabled protocol foundations. Disposable database isolation and recovery checks passed; live Supabase/session, provider and device release gates remain pending. Give your coding agent [SETUP_LEARNBRIDGE.md](SETUP_LEARNBRIDGE.md) as its setup entry point.
 
 See [implementation status](docs/design/IMPLEMENTATION_STATUS.md), the [foundation verification](docs/design/implementation/LOCAL_FOUNDATION_VERIFICATION.json) and [agent/source verification](docs/design/implementation/AGENT_SOURCE_VERIFICATION.json) for measured evidence and remaining gates. Deleting a local note removes it from active views and search; historical text may remain in the local database and backups. Selective physical erasure is not implemented.
 
@@ -63,7 +63,7 @@ Open http://127.0.0.1:3200. Use `npm run dev` for development. The full test sui
 - `web/apps/local-runtime`: loopback service and setup/control commands.
 - `web/packages/core`: edition-independent data contracts and hosted-task migration planner.
 - `web/packages/local-storage`: private SQLite tasks, notes, revisions and backups.
-- `web/packages/local-sources`: selected text inventory and acquisition using a fixed `.venv` Python worker.
+- `web/packages/local-sources`: selected text/Markdown/PDF inventory, anchored acquisition and native macOS PDF text extraction.
 - `web/packages/local-academic`: reviewed academic exports and an allowlisted Avenue/D2L read adapter.
 - `web/packages/shared`: shared tutor and editor contracts.
 - `supabase`: database migration and student-isolation test.

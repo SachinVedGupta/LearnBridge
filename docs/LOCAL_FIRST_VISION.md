@@ -170,6 +170,15 @@ Recurring jobs run while the local machine is available. Show missed runs and ca
 
 Use small commits for these stages when authorized. Maintain a compatibility matrix for macOS, Windows and Linux rather than assuming one working laptop proves portability. Public-site deployments stay a separate release action.
 
+## October 3 roadmap additions: remote access and adoption
+
+The detailed [F28/F29 specifications](design/FEATURES_REMOTE_AND_ADOPTION.md) and [W23/W24 work packages](design/IMPLEMENTATION_PLAN.md#optional-hosted-extensions-at-the-appropriate-checkpoints) add two planned capabilities without enabling them now:
+
+- **Public setup and adoption:** an anonymous-accessible setup page with a versioned Copy setup prompt button, estimated visitors, successful copies and verified account activity; separately consented local activation/usage later. Name/email belongs only to a private verified-account view. Website traffic/copies are not proof of local installations or exact humans. Build the public portion after the local dashboard, alongside core academic work.
+- **Phone-to-local agent:** a student signs into the normal website on their phone, selects their confirmed computer/workspace and requests a bounded study workflow. An outbound laptop client picks up a durable job, uses a supported official agent under the student's account and returns bounded results/citations/reviewable tasks. Build after full durable runs, approval handling and agent/day-plan execution, before M6 voice/full sync; keep it optional. The computer must remain available, private credentials stay local and relay/model content processing requires explicit consent. Native vendor phone remote is an alternative, not proof of a LearnBridge custom-site transport.
+
+Traffic/account metrics and optional local reporting are separate from remote task payloads. Both additions need their own ownership, replay, recovery, privacy and live outcome evidence; the historical core verification does not establish that these features ship.
+
 ## Initial implementation decisions
 
 Recommended starting scope: local dashboard plus MCP/skills, SQLite and managed folders, Avenue reads, daily planning, course tutoring, and internship discovery. Add reviewed external actions after that data flow is reliable. Prefer one agent orchestrator and specialist workflow recipes over many always-running agents.

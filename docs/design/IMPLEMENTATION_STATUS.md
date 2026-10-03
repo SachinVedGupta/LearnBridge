@@ -1,63 +1,49 @@
 # LearnBridge implementation status
 
-Updated October 3, 2026. The private local edition now has tasks, notes, paired browser access, controlled text imports, a Codex/Claude MCP bridge and human-reviewed agent task proposals. The first W06–W09 slice is implemented; live institution login, complete profile onboarding and general automation remain future work. The hosted application's authentication/provider code remains separate.
+Updated October 3, 2026. The local edition now contains a usable student workspace, selected-source MCP tools, persistent review and planning records, and several complete local workflows. The hosted edition remains separate. This page distinguishes working deterministic features from live model, provider and platform gates; it does not mark the entire 29-feature design complete.
 
-## Implemented capabilities and boundaries
+## What works in the local dashboard
 
-| Work | Current implementation | Verification boundary |
+| Area | Current behavior | Evidence and limits |
 | --- | --- | --- |
-| W01 shared core | Versioned contracts, identity/destination shapes, adapter ports, immutable document revisions and run/checkpoint rules | Pure fixtures; run contracts are not an executing orchestration engine |
-| W01 hosted-task migration | Exact backup, owner-bound IDs, duplicate/completion preservation and review mappings; reviewed eligible snapshots persist transactionally | Synthetic exports; no live student data migration |
-| W02 storage driver and distribution | Pinned better-sqlite3 13.0.3; dependency-free static dashboard served by the loopback runtime | Actual installed driver, static hashes and clean-copy installation; macOS arm64 verified |
-| W03 private storage | Persistent installation identity; tasks, notes, immutable text/revisions/hashes, conflict checks, idempotency, import journal, backup/fresh restore | Actual SQLite/process/recovery checks; schema 2 also persists sources, grants, budgets and proposals. Credential vaults, attachments, durable runs and selective physical purge remain pending |
-| W04 local boundary | Loopback-only service, single-use pairing, browser sessions and nonce/origin/host checks; private Unix control IPC | Actual HTTP/process adversarial fixtures; programs with full same-OS-user access remain outside the sandbox claim |
-| W05 dashboard | Tasks/notes; selected-folder review/import; destination-specific context sharing; exact task proposal accept/reject; capability diagnostics | Browser cancellation, acceptance, revocation, snapshot read-back, fresh-process backup/restore, desktop and 390px layout checks |
-| W06 initial agent bridge | Official SDK stdio server with status, bounded approved context and pending task proposal tools; separate destination-bound IPC credentials | Actual SDK transport plus real Codex CLI calls; no grant/approval/shell/external-write tools |
-| W07 initial host setup | Project-only Codex/Claude preview and expected-hash merge; unrelated settings preserved, sensitive merge content not printed; isolated child environment | Config collision/stale input/privacy fixtures; real Codex CLI 0.154.0 verified. Live Claude remains unverified because it is not installed here |
-| W08 initial source onboarding | Explicit selected roots; metadata-only inventory; selected text/Markdown acquisition; immutable content/version/hash; separate agent-sharing grant | Actual fixed Python worker, directory-FD/no-follow checks, file/root swaps, budgets and late logout/expiry/revocation/cancellation discard. Full laptop/cloud onboarding and profile synthesis remain pending |
-| W09 initial academic import | Reviewed selected-course exports, raw uncertain deadlines, saved snapshot notes; independent allowlisted MCP read adapter | Normalizer fixtures and real SDK synthetic transport. Live institution profiles, SSO/MFA, sanitized transport and session vault are not implemented |
-| Hosted regression | Existing hosted tests and build still pass | Fixtures/build only; this slice did not deploy or re-test live two-student/provider accounts |
+| Private workspace | Tasks, notes, immutable revisions, search, import journals, paired browser access, backups and fresh-root restore | Actual SQLite, HTTP, process, recovery and browser checks. Schema 4 stores workflow runs, leases, action receipts, versioned workspace records and immutable PDF page evidence. Physical selective erasure and attachments remain pending. |
+| Selected sources | Metadata-only review of explicitly selected folders, then selected text/Markdown and macOS PDF imports | Fixed project Python worker, no-follow directory/file checks, byte/time budgets, cancellation and late-result rejection. PDF physical-page citations, separate original/text hashes, partial/unavailable states and atomic storage. No automatic laptop, cloud or agent-memory scan. |
+| Agent bridge | Four stdio MCP tools: status, approved context, pending task proposals and pending writing proposals | Actual SDK transport and adversarial fixtures. A historical real Codex turn verified the original three tools. The fourth tool has fixture proof; a live writing-proposal turn remains pending. Claude is not installed here. |
+| Agent setup | Project-only Codex/Claude configuration preview and guarded merge, plus a reusable student workflow skill | Stale configuration/collision/privacy checks. Official host account and trust approvals remain with the student. No subscription credential copying or paid API fallback. |
+| Profile | Candidate, confirmed, corrected, conflicting and stale facts, with purpose-specific context and source evidence | Persistent revision and selected-evidence fixtures. Confirmation belongs to the human; source activity does not establish mastery or a complete profile. |
+| Course library | Reviewed course snapshots, source-version citations, retrieval filters and uncertain deadline handling | Exact source revisions and hashes, normalization and retrieval fixtures. No live Brightspace entitlement is implied. |
+| Today and study plans | Explainable task ordering, capacity and dependencies, timezones/DST, saved plan previews and review | Deterministic scheduling and stale-plan checks; actual browser plan acceptance. Planning does not silently create calendar events. |
+| Learning | Source-cited tutor recipes, actual student attempts, catch-up plans, reviewed feedback and checkpoints | Actual browser save and review. Recipes prepare context/instructions; they are not generated tutor answers. Attempts and self-reports are not inferred mastery. |
+| Writing | Source-pinned outline/feedback drafts, exact human review, saved private alternatives and Markdown export preparation | Originals/history preserved, stale-source and graded-work guards, actual browser acceptance/readback. Markdown bytes/hash verified; a browser file-download event was not verified in the current run. Rich Office/PDF conversion remains pending. |
+| Research | Selected-note or manually supplied official excerpt capture, exact citations, questions/conflicts, reviewed report-to-note export | Actual browser capture/report/export and persistent readback. No implicit web fetch or factual-truth certification. |
+| Career | Selected job excerpts, confirmed experience, reviewed drafts, practice attempts and local follow-up tasks | Fixtures and browser draft/practice checks. No live employer compatibility, resume upload, application submission or automatic role-freshness claim. |
+| Daily life | Unit-compatible pantry/recipe quantities, reviewed meal plans, separate-currency integer-cent expenses and manual routine tasks | Browser grocery calculation, expense total and routine task. No medical advice, currency conversion, purchases or background automation. |
+| Updates and projects | Selected manual updates, honest briefing coverage, literal task suggestions, ordered checklists, selected resources and goals | Actual browser briefing, task acceptance and prerequisite behavior. Missing owners/dates stay unknown. Schedules are paused/manual; no unattended connected-app writes. |
+| Durable workflows | Persistent run/checkpoint journal, lease epochs, budgets, exact action review, effect receipts and uncertain-outcome recovery | SQLite restart/adversarial fixtures. A durable journal is not a general-purpose executing agent or proof of external effects. |
 
-Read [local setup/recovery](../LOCAL_SETUP.md), [agent/source setup](../LOCAL_AGENT_SETUP.md), [core](../../web/packages/core/README.md), [storage](../../web/packages/local-storage/README.md), [source acquisition](../../web/packages/local-sources/README.md) and [academic adapter](../../web/packages/local-academic/README.md) for commands and implementation boundaries.
+The dashboard lazily loads its workflow screens, clears session state on disconnect, and refreshes task/note selections when returning to Today or agent review. Desktop and 390px browser checks used only disposable synthetic records.
 
-The [agent/source verification record](implementation/AGENT_SOURCE_VERIFICATION.json) records the current measured checks, source hashes, browser proof and limitations. [Real Codex host evidence](implementation/CODEX_HOST_VERIFICATION.json) records three completed MCP calls and exactly-once human task acceptance. The [phase plan](implementation/AGENT_SOURCE_PHASE_PLAN.md) and [Avenue audit](implementation/AVENUE_ADAPTER_AUDIT.md) explain implementation choices. Earlier evidence remains in the [foundation report](implementation/LOCAL_FOUNDATION_VERIFICATION.json), [W01 report](implementation/W01_VERIFICATION.json), [historical SQLite probe](spikes/sqlite-probe-report.json) and [driver feasibility notes](spikes/SQLITE_FEASIBILITY.md).
+## Optional components prepared, with release gates
 
-## Measured verification
+| Component | Implemented foundation | Not enabled or not proved |
+| --- | --- | --- |
+| Embedded Codex host | Fixed one-shot invocation, strict event parser, durable browser-owned turn records, cancel/logout/source-change barriers and no automatic replay | Disabled by default. Actual pinned-host attempts did not complete a safe selected-context turn. The app-server configuration check found seven inherited MCP servers and inherited hooks/plugins despite a selected-server override; an empty diagnostic profile inherited none. A separate official student login and verified isolated profile are still required. Do not claim embedded chat or native resume works. External project MCP remains available. |
+| D2L/Avenue | Reviewed export import and independent allowlisted MCP read adapter | Managed institution profiles, sanitized authenticated transport, session vault and an actual authorized student SSO/MFA/read remain pending. University credentials are not accepted by the website. |
+| Public setup | Public `/setup` route, full versioned setup prompt, copy success after the browser Clipboard promise and manual selection fallback | New route has not been deployed by this build. Rendered prompt and success/fallback states were browser-checked; exact OS clipboard bytes were not verified. Copying is not installation. |
+| Adoption measurement | Strict anonymous observations, separate authenticated reporting/directory choices, guarded APIs, bounded database RPC design and successful-save hooks | Flag defaults off. Disposable PostgreSQL SQL/RLS/retention fixtures passed. Production migration, live Supabase/session/concurrency, scheduled retention, admin provisioning and actual collection remain unverified. No historical user counts or local telemetry enrollment are produced. Anonymous observations are not unique people. |
+| Phone companion | Owner/session-bound request envelopes, unapplied relay migration, disabled APIs and outbound-only local preparation library | Off by default. No public listener or hosted native agent. No source/result text delivery, model invocation or phone round trip. Disposable SQL/RPC isolation and hash checks passed; live Supabase/session/concurrency, mobile and host gates remain pending. |
 
-The current full suite passed **194/194 tests**, with no skips or failures; **138** cover the local storage/runtime/agent/source/academic paths. The existing hosted production build passes. A clean disposable source copy passed **9/9 phases**, installing locked dependencies from the offline cache without old node_modules, environment files or personal data, then verifying persistence, backup/restore and actual SDK stdio discovery. This is not a fresh-computer, online-download or fresh-Python installation proof.
+See [host adapter boundaries](implementation/CODEX_APP_SERVER_SPIKE.md), [adoption implementation and release checks](implementation/ADOPTION_METRICS.md), [remote/adoption feature design](FEATURES_REMOTE_AND_ADOPTION.md), and the [execution ledger](implementation/FULL_BUILD_PLAN.md).
 
-A real installed Codex CLI used its normal ChatGPT-managed authentication and made status/context/proposal MCP calls against a disposable synthetic workspace. It read the exact approved note, excluded unrelated content, left zero tasks before human review and saved one task after acceptance/replay. The task survived restart. This is separate from SDK fixture transport and does not establish Claude or live university support.
+## Current verification and reproduction
 
-Browser checks imported one selected synthetic lecture, cancelled sharing and acceptance, then granted context, accepted a proposal, saved a selected-course academic export and revoked future agent reads. Backup/restore read-back in a fresh process confirmed exact text hashes, three tasks, two notes, one source snapshot, a revoked grant and one accepted proposal. Sources and review screens fit a 390px viewport without horizontal document overflow. The historical foundation run separately recorded 111 tests, an eight-phase installation proof and its task/note browser checks.
+The current measured build record is [Full workspace verification](implementation/FULL_WORKSPACE_VERIFICATION.json). Historical reports retain their original source snapshots and counts: [foundation](implementation/LOCAL_FOUNDATION_VERIFICATION.json), [agent/source slice](implementation/AGENT_SOURCE_VERIFICATION.json), [real external Codex host](implementation/CODEX_HOST_VERIFICATION.json), and [shared core](implementation/W01_VERIFICATION.json). Design validation separately covers 29 specifications, 182 planned acceptance cases and 24 work packages; those counts are not implementation passes.
 
-Legacy Python syntax, Streamlit startup/health, the authentication gate, invalid callback and missing-config behavior were also checked without provider calls. See the current verification record for scope.
-
-Node **22.16+** is required; Node **22.23.2**, Python **3.12.14** and macOS arm64 were exercised. Selected-file acquisition needs a suitable project `.venv` with the required native filesystem primitives; doctor reports unsupported environments explicitly. Linux remains experimental. Windows requires native private ACL/control work and is rejected. Passing this slice does not complete all 160 feature acceptance cases or establish compatibility with every student machine.
-
-## What a student can do now
-
-Install the locked workspace, initialize a private data root, start the runtime and pair their browser. Create/edit tasks and notes, restart, back up and restore into a fresh selected root. Select a narrow course/project folder, review names/sizes without reading bodies, then import specific text files. Select saved record versions for a time- and byte-bounded Codex or Claude grant, register the bridge in their project and review resulting task proposals. These local features require no Supabase, Composio or model API key; real model access belongs to the official agent host and account.
-
-Academic exports can become reviewed notes with selected courses and honest deadline precision. A university login and a ready-made Brightspace connection are not supplied by this release. Pairing does not scan personal sources or automatically connect an AI. The fixture demo uses a disposable synthetic root.
-
-Deleting a note removes it from active views and search, while history, deleted metadata and backups can retain content. Revocation prevents future agent reads but cannot retract context already sent to a host. Uninstall retains workspace data and repository files. One browser profile pairs with one active loopback workspace at a time; separate profiles are needed for simultaneous workspaces.
-
-## Next work, in order
-
-1. **One real local university connection.** Implement a reviewed institution profile, sanitized transport, supervised student SSO/MFA and session binding. Verify selected-course reads and expired/replaced-session denial against a real authorized session. Keep university credentials out of the website and agent outputs.
-2. **Complete actual host/platform setup gates.** Verify an installed Claude host and each claimed OS/runtime with normal trust/approval, installation, restart and recovery. Add unsupported-platform support only after its native privacy/control proof.
-3. **Broaden controlled sources and reviewed profile onboarding.** Add PDF/Office extraction, explicit cloud source selection, provenance, profile review, retention and revoke behavior before any wider discovery. Do not infer a complete student profile from a few notes.
-4. **Cited academic planning with durable runs.** Build planning/tutoring against approved evidence, resumable checkpoints and verifiable results. Preserve learning and unknown deadlines; evaluate real student usefulness separately from deterministic fixtures.
-5. **Reviewed browser/document and career actions.** Implement bounded adapters and exact human approvals for consequential writes/submission following their feature acceptance tests. General computer automation remains outside the current bridge.
-
-The owner still needs to choose a project license before a distributable open-source release. No Avenue, browser-use or internship project's source has been vendored. The initial academic adapter is independently implemented.
-
-## Reproduce checks
+The full automated suite exercises deterministic core, local storage/runtime/source/workflow and hosted boundaries. A clean disposable source copy installs locked dependencies from the offline cache, verifies process persistence and backup/restore, and discovers four tools through the actual MCP SDK transport. This proves the exercised installation on this Mac, not fresh-computer online installation or every platform. Legacy Python syntax, Streamlit health, its authentication gate, invalid callback and missing-config behavior were checked without provider calls.
 
 ```sh
 npm run setup
 npm run test:core
-npm run demo:core
 npm run test:local
 npm run local:build
 node web/scripts/verify-local-install.mjs
@@ -66,4 +52,21 @@ npm run build
 node docs/design/validate-design.mjs
 ```
 
-For an installed, signed-in Codex CLI, the separate opt-in `node web/scripts/verify-codex-host.mjs` checks the actual host using synthetic content and normal permissions. It can be blocked by account access/limits; it is not part of the deterministic test suite. The interactive `npm run local:demo` stays in the foreground until stopped. Use [the agent/source checklist](../LOCAL_AGENT_SETUP.md#agent-verifiable-checks) and [foundation checklist](../LOCAL_SETUP.md#agent-verification-checklist) for independent browser and persistent-record checks. The design validator checks specification consistency only. Remaining feature/provider/platform/human-quality gates are in [Verification](VERIFICATION.md).
+Node 22.16+ is required. Node 22.23.2, Python 3.12.14 and macOS arm64 were exercised. Selected-file imports require the project `.venv` and native filesystem primitives checked by doctor. Linux remains experimental; Windows is rejected until native privacy/control support exists. The normal project-host integration can be independently checked with `node web/scripts/verify-codex-host.mjs` using synthetic sources and the student's official signed-in Codex host. It is an opt-in live check, outside the deterministic suite.
+
+## Student setup and privacy
+
+Give a coding agent [SETUP_LEARNBRIDGE.md](../../SETUP_LEARNBRIDGE.md) and the [student skill](../../.agents/skills/learnbridge-student/SKILL.md). Follow [local setup/recovery](../LOCAL_SETUP.md), [agent/source setup](../LOCAL_AGENT_SETUP.md) and [workspace instructions](../../agents/WORKSPACE.md). Start with sample records, verify persistence, then select narrow sources and review profile facts. Sharing imported content with a model is a separate, expiring, destination-bound choice.
+
+Deleting a record removes it from active views; history and backups can retain copies. Revocation stops future reads but cannot recall content already sent to a host or text deliberately exported to a new note. Uninstall retains the workspace and repository. Pairing does not sign in to providers or expose the laptop to the public website. No personal discovery, telemetry, remote pairing or university login runs as a setup side effect.
+
+## Next implementation gates
+
+1. Finish a genuinely isolated, actual selected-context Codex turn before enabling embedded chat; independently test an installed Claude host.
+2. Add managed institution/session transport and verify one student-authorized, selected-course Brightspace read with expiry and no writes.
+3. Extend selected-source ingestion beyond shipped macOS PDF text to Office and explicit cloud account sources, with provenance, retention and revoke tests before broad onboarding.
+4. Add real browser/document adapters and rich artifact generation behind exact reviews and meaningful fixture/readback checks.
+5. Build on passed disposable adoption/relay SQL and RLS checks; verify live Supabase sessions/concurrency, scheduled deletion and real opted-in browser/mobile gates before any release flag is enabled.
+6. Evaluate tutoring usefulness with students; complete native voice/capture/sync and each additional platform only after its specific permission and recovery proof.
+
+A project license remains an owner decision before a distributable open-source release. No Avenue, browser-use or internship project's source has been vendored. Existing hosted authentication/provider behavior is not re-certified by local fixtures, and this work has not deployed new provider configuration.

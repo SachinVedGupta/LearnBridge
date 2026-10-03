@@ -10,12 +10,12 @@ const read = (file) => fs.readFileSync(path.join(directory, file), 'utf8');
 const index = JSON.parse(read('FEATURE_INDEX.json'));
 assert.equal(index.document_kind, 'design_traceability_not_product_results');
 assert.equal(index.implementation_tests_executed, false);
-assert.equal(index.features.length, 27);
-assert.equal(index.work_packages.length, 22);
+assert.equal(index.features.length, 29);
+assert.equal(index.work_packages.length, 24);
 const features = new Map(index.features.map((feature) => [feature.id, feature]));
-assert.equal(features.size, 27, 'Duplicate feature ID');
+assert.equal(features.size, 29, 'Duplicate feature ID');
 const packages = new Map(index.work_packages.map((work) => [work.id, work]));
-assert.equal(packages.size, 22, 'Duplicate work package ID');
+assert.equal(packages.size, 24, 'Duplicate work package ID');
 const visiting = new Set();
 const visited = new Set();
 function visit(id) {
@@ -33,7 +33,7 @@ function visit(id) {
 }
 for (const id of packages.keys()) visit(id);
 const cases = new Set();
-for (let n = 1; n <= 27; n++) {
+for (let n = 1; n <= 29; n++) {
   const id = `F${String(n).padStart(2, '0')}`;
   const feature = features.get(id);
   assert(feature, `Missing ${id}`);

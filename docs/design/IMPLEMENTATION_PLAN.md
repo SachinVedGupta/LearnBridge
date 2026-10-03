@@ -11,21 +11,21 @@ Build a local edition beside the hosted website, in dependency order. Each packa
 5. Update feature/compatibility status with evidence and remaining blockers. Request approval only for the concrete dependency/service/release action that still needs it. Prepare reviewable patches first.
 6. When commits are authorized, use separate commits for foundation, feature, verification and documentation stages as appropriate. Never bundle private data or generated student artifacts. Push/deploy is a separate explicit action.
 
-The work packages below describe target implementation. The hosted commands and W01 core fixture commands listed in [setup](../../SETUP_LEARNBRIDGE.md) exist today; other local CLI names remain targets to create. Consult [implementation status](IMPLEMENTATION_STATUS.md), and do not run invented commands and report success.
+The work packages below describe target implementation. The hosted, local lifecycle, source and project MCP commands listed in [setup](../../SETUP_LEARNBRIDGE.md) exist today; full durable run/execution, remote and measurement APIs remain targets to create. Consult [implementation status](IMPLEMENTATION_STATUS.md), and do not run invented commands and report success.
 
 ## Milestones and release slices
 
 | Milestone | Scope | Exit gate |
 | --- | --- | --- |
 | M0 | Design and source feasibility | This documentation package is coherent, links/examples parse; implementation not claimed |
-| M1 | Private local foundation and workspace agent bridge | Clean demo setup, storage restart, pairing/private APIs, MCP discovery, lifecycle and hosted regression |
+| M1 | Private local foundation and workspace agent bridge; optional public setup/adoption slice W23 | Clean demo setup, storage restart, pairing/private APIs, MCP discovery, lifecycle and hosted regression |
 | M2 | Controlled profile and academic evidence | Approved source discovery, reviewed facts, course/material imports, coverage and exact citations |
-| M3 | Agent execution and useful daily learning workflow | Verified agent mode, cited Today plan, learning attempt, reviewed tasks, local scheduling previews |
+| M3 | Agent execution and useful daily learning workflow; optional remote companion W24 after core | Verified agent mode, cited Today plan, learning attempt, reviewed tasks, local scheduling previews |
 | M4 | Documents, browser and career | Verified artifact formats, official job shortlist and supervised application draft with no unapproved submit |
 | M5 | Connected productivity and recurring reads | Provider-specific inbox/calendar/document/project workflows, read-back and revision/conflict recovery |
 | M6 | Life features, platform-specific desktop, voice/mobile/sync | Individually verified useful recipes; privacy/device/platform gates for each optional extension |
 
-M1–M3 form **Local Student Core**. Its release claim is setup + approved sources + course context + planning/tutoring + local reviewed tasks. It need not contain every M4–M6 idea to be a useful product. Browser write support, each app provider, each artifact format and each OS ship independently only after their gates pass.
+M1–M3 form **Local Student Core**. Its release claim is setup + approved sources + course context + planning/tutoring + local reviewed tasks. It need not contain every M4–M6 idea to be a useful product. Browser write support, each app provider, each artifact format and each OS ship independently only after their gates pass. F29 web/setup measurement can ship early after W05; local activation measurement follows W07/W11. F28 remote execution follows full W07/W11/W12 as an optional M3 extension. Neither hosted extension blocks Local Student Core or requires M6 voice/full sync.
 
 ## M1 Local foundation
 
@@ -87,7 +87,7 @@ Deliver: enrollment/announcements/assignments/materials with stable IDs, raw/nor
 
 ### W10 Build course library and retrieval evidence
 
-Dependencies: W08/W09 (manual imports can work without Avenue). Create SourceVersion/chunk/FTS extraction/index pipeline, source viewers and scoped search. Text/Markdown and text PDFs first; OCR/Office as separately tested additions. Reuse the downloader and safe path workers.
+Dependencies: W08; W09 is required only for live institution reads, with reviewed manual imports available independently. Create SourceVersion/chunk/FTS extraction/index pipeline, source viewers and scoped search. Text/Markdown and text PDFs first; OCR/Office as separately tested additions. Reuse the downloader and safe path workers.
 
 Deliver: source version/page citations, content change detection, import coverage and forget. Acceptance: F07-A01–A06 plus the 30-query recall/locator benchmark and S05/S07. M2 release also needs clean onboarding with one approved real source; synthetic tests alone do not prove institutional access.
 
@@ -101,7 +101,7 @@ Deliver: one real inference+tool turn per released mode, failure handling with n
 
 ### W12 Add Today, tasks and local calendar planning
 
-Dependencies: W07/W09/W10; W11 or workspace mode for prose. Implement normalized task graph/recurrence, source override rules, deterministic ranking and workload allocator. ICS/manual calendar first, provider read after capability probe. Plans remain previews and local tasks; external event execution waits for M5.
+Dependencies: W07/W10; W09 is required only for live institution-backed plans. Reviewed academic exports/manual course inputs satisfy source gates for non-institution workflows. W11 or workspace mode supplies prose. Implement normalized task graph/recurrence, source override rules, deterministic ranking and workload allocator. ICS/manual calendar first, provider read after capability probe. Plans remain previews and local tasks; external event execution waits for M5.
 
 Deliver: accepted cited task plan surviving restart, conflict/unscheduled work display. Acceptance: all F04 cases, F05-A01/A02/A03/A06 and deadline/time fixtures. Avoid an AI optimizer when deterministic intervals suffice.
 
@@ -110,6 +110,37 @@ Deliver: accepted cited task plan surviving restart, conflict/unscheduled work d
 Dependencies: W10/W11/W12. Course/topic selection, restrictions, hint/teach-back flows, actual attempt/checkpoint records, exam weighting/evidence, revision plan and task acceptance. Show selected source/context use. Never silently fill graded assignment answers or infer mastery from activity.
 
 Deliver: one end-to-end course refresh → day plan → source-cited topic session → student attempt → accepted next step. Acceptance: F08-A01–A06, F09-A01–A05, cited-source/learning quality rubrics and live student pilot. M3 exits with Local Student Core release evidence and onboarding/setup docs reflecting actual supported commands.
+
+## Optional hosted extensions at the appropriate checkpoints
+
+### W23 Add public setup and adoption measurement
+
+**Placement:** web/setup slice after W05, parallel with remaining M1/M2 work. Opt-in local activation/weekly-active reporting after full W07/W11 and a verified student workflow. Stable package numbers do not imply that W23 waits for W22.
+
+**Dependencies:** W01/W05; W07/W11 are required for the later local measurement slice, optional for the public setup page. Reuse current website account verification and database isolation. See [F29](FEATURES_REMOTE_AND_ADOPTION.md#f29--website-and-local-setup-adoption-measurement).
+
+1. Create an anonymous-accessible hosted `/setup` page with supported platforms, the canonical setup prompt/version, prerequisites and a Copy setup prompt control. Clipboard failure keeps manual selection available. Emit a successful-copy event only after the clipboard promise resolves. The prompt itself authorizes no telemetry, account-linking or personal search. Keep signup optional.
+2. Define metrics before instrumentation: traffic/page views and estimated visitors; successful prompt-copy events; verified registered accounts; meaningful active accounts; separately opt-in activated/weekly-active local installations. Label each denominator and method. Clicks do not establish installation; an account or installation is not necessarily one unique human.
+3. Prepare reviewed Vercel pageview integration for allowlisted public routes and a first-party Supabase event collector for setup clicks. Vercel custom events are plan-gated; do not require a paid analytics upgrade for first-party click counting. Validate SDK/current quotas and obtain any required service/dependency approval before adding or enabling them. The collector uses a strict event schema, body/rate limits, retry IDs, short retention and bounded abuse handling; anonymous clients cannot write account events.
+4. Derive signup and meaningful hosted activity from authenticated server outcomes. Keep provider-permitted name/email in a private auth-backed account directory; use opaque IDs/counts in analytic tables. Implement server-checked admin roles plus RLS for aggregate/admin views, retention/purge jobs and a clear tracking notice. Do not expose a student roster or assume marketing consent.
+5. Later add a local usage toggle, telemetry-only rotating installation identity and optional separately confirmed account link. Send minimal setup/first-workflow/weekly-active receipts; offline mode queues bounded events only after consent. Opt-out deletes the unsent queue and stops requests. Source data, prompt/task titles, credentials, host session IDs and remote-job payloads never become metrics. Basic local setup and use remain fully functional without reporting.
+
+**Deliver:** public setup page, reliable clipboard feedback, documented metric queries/denominators, private owner dashboard and optional local reporting once its later gates pass. **Acceptance:** F29-A01–A10 and [measurement/security proof](VERIFICATION.md#remote-and-adoption-verification). Early web release must pass applicable public-copy/event/account/admin/privacy cases; local cases remain NOT_IMPLEMENTED until their own gate passes. Test actual hosted database/RLS and browser flow, not a button-click mock or API request count. Deployment remains a separate authorized release.
+
+### W24 Add an optional phone-to-local agent companion
+
+**Placement:** optional M3 extension after the first reliable local agent/day-plan workflow, before broad desktop automation; separate from M6 voice and full-data sync.
+
+**Dependencies:** full W03/W04/W07/W11/W12, supported actual host authentication/approval mode and reviewed relay service. W09/W17 are optional only for institution/connected-app workflows that have separately passed their read/consent gates. The current three-tool MCP bridge and task review queue alone do not satisfy full W07/W11. See [F28](FEATURES_REMOTE_AND_ADOPTION.md#f28--phone-to-local-agent-companion).
+
+1. Pin and verify a permitted local Codex stdio app-server/SDK adapter with actual turn events, cancellation, native approvals and recovery. Keep Claude custom-site mode unavailable until its supported adapter/auth path is proven. Native provider phone remote can be documented as an alternative, but is not the LearnBridge website backend. Optional ChatGPT plan/API inference is a separate F25 mode, not a desktop-control API or silent billing fallback.
+2. Extend schemas with distinct website account, installation instance, device principal, grant and job/run identity. Implement short-lived registration challenge plus human confirmation in the paired local UI; save only device credentials through a verified secure local store. Restoration/reinstall/account change invalidates prior bindings. Preserve loopback/IPC security; never upload agent/university auth or forward raw privileged protocol calls.
+3. Build owner-isolated Supabase device/job/event/result tables, atomic job claims, monotonic lease epochs, retry IDs, quotas and expiring results. Use existing Next.js APIs for short authenticated requests. A local outbound HTTPS poller claims work with backoff; no inbound laptop port or long-lived Vercel function is required. Persist the local job-to-run mapping before execution so redelivery reconciles rather than starts a duplicate.
+4. Add responsive hosted device selection/status/request screens. Start with bounded study requests, citations, proposed local tasks, status, cancel and exact human task acceptance. Show selected workspace/source/relay/model processing and approval scope. Any new source selection still needs local human consent. Phone controls cannot change executables, shell flags, data roots or provider capabilities.
+5. Normalize agent/native approvals into exact pending review requests. Authenticate phone decisions, bind account/device/session/job/native request/payload/source revisions/expiry, and preserve native host restrictions. Recheck grants around asynchronous results. Consequential external actions and broad computer control remain disabled until their own action/host release gates.
+6. Handle asleep/offline/stale device, limits, stream gaps, cancellation, revoke and unknown outcomes. Resume delivery by event cursor, authenticate every artifact read, expire unsent jobs and retained relay content. Require relay-processing consent before the phone transmits a prompt for enqueue/storage, then revalidate it before local work, result upload and phone delivery. Disclose the trusted relay's content access; TLS is not E2E. Encryption beyond transport requires a separately reviewed implementation, key lifecycle and tests.
+
+**Deliver:** one phone-sized website request completed by its paired local computer with citations and a reviewed task, saved after restart; reconnect/cancel/revoke evidence and a clear offline state. **Acceptance:** F28-A01–A12, existing S01/S08/S09/S10, A01–A04 and R01/R03/R04/R06, plus real two-account/multi-device and authorized-host checks. A durable fake relay proves recovery mechanics; only actual phone → hosted relay → supported host → saved result proof permits the remote release claim. Keep remote and analytics consent independent. F23 can reuse this transport if installed, but typed/voice capture and selected sync remain independently releasable.
 
 ## M4 Documents, browser and career
 
@@ -167,7 +198,7 @@ Deliver: explicit compatibility matrix; F26-A06 and platform negative tests. Do 
 
 ### W22 Add voice, mobile and selected sync
 
-Dependencies: W03/W04/W07/W12; extra services/permissions explicitly approved. Typed responsive view first; optional microphone/transcription selection; transcript review; separate local/cloud processing and audio retention. Remote device access requires authenticated pairing over supported encrypted transport. Selected hosted sync uses per-user auth/revisions and excludes local university tokens.
+Dependencies: W03/W04/W07/W12; W24 is optional for reusing its remote transport, never a prerequisite for local typed capture or separately supported selected sync. Extra services/permissions explicitly approved. Typed responsive view first; optional microphone/transcription selection; transcript review; separate local/cloud processing and audio retention. Reuse F28 device pairing/transport when remote access is offered, with its exact ownership/replay/processing gates; otherwise explicitly limit this slice to its supported capture/sync mode. Selected hosted sync uses per-user auth/revisions and excludes local university tokens.
 
 Deliver: supported device capture/review and conflict/revocation results. Acceptance: F23-A01–A06 plus S01/S08/device replay gates. Do not simply bind the local service to the LAN. M6 is several independent optional releases, not one all-or-nothing platform rewrite.
 
@@ -179,4 +210,4 @@ Deliver: supported device capture/review and conflict/revocation results. Accept
 - Setup, capability matrix, migration/rollback and student-facing limitations match the code that actually ships.
 - Evidence report includes tree/version, feature/test IDs, actual/expected outcomes, redacted artifacts and remaining work. No secret/personal-data artifacts enter Git.
 
-Recommended next implementation package: W01, then W02–W07. Completing local setup and a real agent fixture bridge before personal-data onboarding is the fastest credible route to the full vision.
+The initial foundation/MCP/source slice is delivered as recorded in [implementation status](IMPLEMENTATION_STATUS.md). Complete the remaining W07/W09/W10/W11/W12 gates for reliable academic execution. W23 public setup/adoption can proceed independently after W05; optional W24 remote control waits for full durable execution and review. Adding these plans does not itself authorize implementing, configuring or deploying the hosted extensions.

@@ -1,0 +1,184 @@
+{
+  "format": "learnbridge_full_workspace_verification",
+  "date": "2026-10-03",
+  "status": "PASS_FOR_MEASURED_SLICES",
+  "synthetic_only": true,
+  "platform": {
+    "os": "macOS",
+    "architecture": "arm64",
+    "node": "22.23.2",
+    "python": "3.12.14"
+  },
+  "measured_checks": {
+    "clean_install": {
+      "passed_phases": 9,
+      "static_assets": 9,
+      "mcp_tools": 4,
+      "source_digest": "b7a8ab66e662bed9632eb09a6e287fbd72a2f21d0ba52c5a4354bfabbac9ddab",
+      "offline_cache": true,
+      "fixture_cleanup": true,
+      "source_files": 62,
+      "final_snapshot_hash_matched": true
+    },
+    "browser_backup_fresh_restore": {
+      "status": "PASS",
+      "schema_version": 3,
+      "tasks": 3,
+      "documents": 4,
+      "workspace_records": 26,
+      "runs": 1,
+      "exact_full_record_comparison": true,
+      "content_snapshot_sha256": "7b1c670a6b5b37534d052b229ea3137d3280398a27f88e0591f4ac5a2e733360",
+      "synthetic_only": true
+    },
+    "legacy_python": {
+      "syntax_files": 14,
+      "streamlit_health": "ok",
+      "authentication_gate": true,
+      "invalid_callback": true,
+      "missing_config": true,
+      "provider_calls": 0
+    },
+    "full_suite": {
+      "passed": 456,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "duration_ms": 42948.851083,
+      "command": "npm test"
+    },
+    "production_build": {
+      "status": "PASS",
+      "setup_route": "dynamic",
+      "deployment_performed": false
+    },
+    "optional_sql": {
+      "status": "PASS",
+      "postgres": "18.3 WASM",
+      "pglite": "0.5.8",
+      "assertions": 85,
+      "hash_probes": 5,
+      "synthetic_auth": true,
+      "live_supabase": false,
+      "concurrent_sessions": false,
+      "evidence": "artifacts/optional-sql-verification.json"
+    },
+    "pdf": {
+      "native_tests": 12,
+      "storage_tests": 9,
+      "runtime_http_mcp_tests": 3,
+      "actual_native_extraction": true,
+      "metadata_lists_omit_bodies": true,
+      "two_table_throw_and_SIGKILL_rollback": true,
+      "legacy_migration_checksums_preserved": true,
+      "browser_complete_partial_unavailable": true,
+      "schema_version": 4,
+      "exact_browser_fresh_root_restore": true,
+      "restored_snapshots": 2,
+      "restored_content_sha256": "f6749c963da25300d60fbe65824266787f8078f6b21fdf252121046c0d7fb756",
+      "ocr": false,
+      "platform": "macOS"
+    },
+    "core_subset": {
+      "passed": 39,
+      "failed": 0,
+      "included_in_full_suite": true
+    }
+  },
+  "browser": {
+    "fixture": "Disposable synthetic student workspace",
+    "passed_flows": [
+      "learning attempt and reviewed checkpoint",
+      "catch-up plan review and acceptance",
+      "career reviewed draft and actual practice answer",
+      "writing private-alternative acceptance/readback",
+      "meal quantity deficits and exact acceptance",
+      "expense integer-cent total",
+      "manual routine task creation",
+      "research capture/cited report/export",
+      "selected update briefing export",
+      "literal task acceptance and prerequisite checklist",
+      "Today immediate task refresh",
+      "Agent review immediate note/task selection refresh",
+      "disabled embedded-host affordance",
+      "selected PDF metadata inventory and exact text import",
+      "PDF saved physical-page citation readback",
+      "image-only PDF unavailable with no saved snapshot",
+      "mixed PDF explicit partial coverage"
+    ],
+    "responsive_pages_390px": [
+      "Today",
+      "Updates & projects",
+      "Research"
+    ],
+    "horizontal_overflow": false,
+    "console_errors": 0,
+    "screenshots": [
+      "artifacts/local-student-workspace-desktop.png",
+      "artifacts/local-student-workspace-mobile.png",
+      "artifacts/local-pdf-import-desktop.png",
+      "artifacts/local-setup-page-desktop.png",
+      "artifacts/local-setup-page-mobile.png"
+    ],
+    "markdown_file_download": "NOT_VERIFIED; exact prepared bytes/hash verified separately",
+    "public_setup": {
+      "prompt_rendered_chars": 3856,
+      "clipboard_promise_success_ui": true,
+      "manual_selection_all_prompt": true,
+      "exact_os_clipboard_bytes": "NOT_VERIFIED",
+      "measurement_default_off": true,
+      "no_horizontal_overflow_at_390px": true,
+      "console_errors": 0
+    },
+    "pdf_responsive": {
+      "observed_client_width": 813,
+      "observed_scroll_width": 813,
+      "390px_override": "NOT_VERIFIED; backend did not apply requested size"
+    }
+  },
+  "release_gates": {
+    "embedded_codex": "DISABLED; selected map override retains seven inherited MCP servers; no completed isolated selected-context turn",
+    "app_server": "DISABLED; actual effective-configuration gate SCOPE_DENIED, no model turn",
+    "claude": "NOT_VERIFIED; host not installed",
+    "live_d2l": "NOT_VERIFIED; institution/session/SSO gate",
+    "metrics": "DISABLED; disposable SQL/RLS/retention passed; production migration, live Supabase/session/concurrency, scheduled retention and collection pending",
+    "phone": "DISABLED; disposable SQL/RPC/hash checks passed; no native execution/result text or live mobile/session/scheduler verification",
+    "deployment": "NOT_PERFORMED for this build",
+    "personal_onboarding": "NOT_PERFORMED"
+  },
+  "limitations": [
+    "Tests and synthetic workflow checks do not certify every planned feature acceptance case.",
+    "Offline-cache installation on this Mac is not fresh-computer or online-download proof.",
+    "No production service configuration or new dependency was added."
+  ],
+  "source_hashes": {
+    "web/apps/local-runtime/src/server.mjs": "932af45b601988db078e6fa558e7cb49e0c57ea09f154127e809793ab174061f",
+    "web/apps/local-runtime/src/mcp.mjs": "84b1ed37cf03f7629dd17d2a2797bdfcb58b51adb1076c8afa96f478898ff1f3",
+    "web/apps/local/public/app.js": "8abcf4d32b2d9684ee39a2eb75841241e6c54c7c332587d5258c7aa01e9b5243",
+    "web/packages/local-storage/src/index.mjs": "5cd6258db8a25d050ba2957953e1e7c6d98a6b966eb51b746abdeeef4b91f170",
+    "web/packages/local-storage/src/pdf-provenance.mjs": "5ce414b7aafac2aba1bfdfd6eb740d296e2271a1447672d9d4a5a2630263de39",
+    "web/packages/local-sources/src/index.mjs": "b03c723ac53d0c0939010a6fd9a4e7e0769635bd0121a627f67684f38977ef9b",
+    "web/packages/local-sources/src/pdf-native.mjs": "b993c6e34f572e2b16e956aa53712e5533a5fd7639188c570f8f73c789510cc9",
+    "web/packages/local-sources/src/pdf-text.swift": "36bfafea390b9dadbea6b5799ccce3fbca33ada7962bc3937f2bc47b5d075b44",
+    "web/packages/core/src/remote-companion.mjs": "7752b373134cc6ed77d6e4dab716e44c036566552e3a8722477e4d17292c443a",
+    "web/apps/local-runtime/src/remote-companion.mjs": "6dfcbb33ba17eead7dcdfe2561b61ccd088f0bf4cc57fdcd9bc1ae6da34c16a1",
+    "web/apps/web/src/app/setup/page.tsx": "f0dd67faef8b6183579290fb2b8751fb5a0ebc09decbcb313cc855f70763ccee",
+    "web/apps/web/src/app/setup/SetupPrompt.tsx": "080d7d536abc61379f68a93221907136b2d38fee34e20e55ffba80b2f4b25ecb",
+    "web/apps/web/src/lib/adoption/client.mjs": "c424bf64aa9579a02e95fe20ff90c3c813aad8339ea39951442eab7ee31170d5",
+    "web/apps/web/src/lib/adoption/server.ts": "0f3fde26a18c3be51bf08c218949bbe11e6ddc3886af4be21723c63c3dc4b983",
+    "web/apps/web/src/lib/server/remote-companion.ts": "ba0f77bc9415629b207ebe555bfab9d322a41ac74c31b1d16d317b968f76875e",
+    "supabase/migrations/202610030002_adoption_metrics.sql": "0af7b880249a9b608c7d462dc4a03d4e0ffca113d64305590020edc6337e06a8",
+    "supabase/migrations/202610030003_remote_companion_foundation.sql": "501782701d3af680c8b013e0244e87a0645fe782a100ceb41c3d30be43dd89d1",
+    "supabase/tests/remote_companion_isolation.sql": "39f037b37ebd5fc1fe31366dba05567f8099aeb4a86c53352d2309a4a568a723",
+    "web/scripts/hosted-state-boundary.test.mjs": "a64874e58c3087dda74dc1f25f1ec4e5aa99e759e539b2a90bd150918d01a23d",
+    "web/scripts/local-pdf-storage.test.mjs": "e8811c055b997a6bbceb1115696c72031b5283cf33b9468113e985899f1e79be",
+    "web/scripts/source-pdf-runtime.test.mjs": "b4aa8d0ee1e468fa78a4d421d6689633ab2369bfaa084d5b03050084d7d52c8e",
+    "web/scripts/source-pdf.test.mjs": "9c5256771afd0414bc76d4f7f05932ce24d1c9bb3d18a00e9747ff7c6eaf9434",
+    "web/scripts/verify-local-install.mjs": "50dab35ac1bea0cffd205b08177807a1714c2e637d355b6e13c9855fb99f1e02"
+  },
+  "commits": {
+    "selected_pdf": "59b2871",
+    "public_setup_and_adoption": "4492a48",
+    "remote_foundation": "086bd3d"
+  }
+}

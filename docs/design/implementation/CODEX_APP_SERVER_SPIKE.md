@@ -4,6 +4,29 @@ Checked October 3, 2026. This is an implementation spike and fixture proof. **A 
 
 Root subsequently ran one authorized initialization attempt using the actual pinned official binary, an empty disposable project/storage selection and a synthetic grant. It returned **`SCOPE_DENIED`** under the effective-configuration gate. No raw configuration was logged and no thread/model turn was started. Embedded mode therefore remains unavailable on the current installation; 21 passing protocol fixtures establish behavior at the boundary, not compatibility or entitlement on that actual configuration. No permissive fallback is implemented.
 
+### Measured configuration diagnosis
+
+A subsequent bounded, read-only diagnostic on the same pinned CLI used only `initialize`, the `initialized` notification and `config/read`. It made **no account read, login, thread start, model request or MCP tool call**, and changed no host setting. The disposable diagnostic project and storage were empty. Raw configuration and stderr stayed in process memory; only fixed public setting names, structural comparisons and counts were reported. Temporary folders were removed after the owned child exited.
+
+The response **does contain the session overrides**. The selected provider, read-only sandbox, approval policy/reviewer, zero project-document budget, disabled search and disabled analytics matched the fixed launch values. The failure is therefore more specific than an inability to read launch configuration:
+
+| Measured boundary | Normal official-host configuration | Disposable empty diagnostic configuration home |
+| --- | --- | --- |
+| MCP servers besides the selected LearnBridge server | **7 inherited servers** despite `-c mcp_servers={learnbridge=...}` | 0 |
+| Required selected LearnBridge command, arguments, tool allowlist and limits | All six required fields matched | All six required fields matched |
+| Additional serialized fields on the selected MCP configuration | `enabled`, `environment_id` | `enabled`, `environment_id` |
+| Root fields outside the adapter's fixed allowlist | 71; many serialize null, false or empty defaults | 71; many serialize null, false or empty defaults |
+| Agent configuration | `enabled` is false, with six extra null/empty fields | Same disabled/default shape |
+| Opaque desktop configuration | Nonempty inherited object | Empty object |
+
+The normal configuration also retained nonempty `notify`, `hooks` and `plugins` sections. Its features included enabled public keys beyond the adapter's explicit disabled list; `network_proxy` serialized as null. These observations distinguish structural parser mismatches from actual inherited authority. A null/default-aware parser could address some structural differences, but **must not accept inherited MCP servers, hooks, plugins, instructions or provider overrides**. The selected map override merges with the host's MCP map; it does not isolate that map on this installation.
+
+The isolated-home case was a **configuration-only diagnostic**, not an authenticated setup. It did not copy or read credentials, verify subscription access or establish a working native turn. An additional isolated app-server configuration read using the current exec runner's fixed configuration settings and `--strict-config` succeeded without fixed-setting warning metadata. This proves those settings can be parsed on the pinned binary through that configuration surface; it does **not** identify or resolve the previously observed exec pre-turn error item, prove exec's complete tool catalog or justify enabling its runner.
+
+Next feasible design: use a private LearnBridge-specific official Codex configuration home, and have the student perform a **separate normal official Codex login** there. Never copy `auth.json`, tokens or credentials from another host profile. Retain strict configuration, effective-policy and exact tool-catalog gates; separately validate that profile's actual built-in exposure before an authorized synthetic source/context/proposal turn, cancellation and durable readback. No login or model request was performed by this diagnosis. Until those gates pass, native mode stays disabled and the verified external official-host MCP workflow remains the supported path.
+
+The installed binary's generated public app-server schema allows additional properties on its returned `Config` record. The pinned [official CLI configuration schema](https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/core/config.schema.json) names the reviewed public settings and selected MCP fields. Schema acceptance alone is not an isolation or entitlement guarantee.
+
 ## Scope and official source
 
 The adapter uses the official local app-server stdio protocol. Its handshake precedes thread and turn requests; native turn status determines whether generation finished. Native thread identifiers support continuation, and native server requests remain scoped to the pending thread/turn. Authentication stays with the installed official host. See [official Codex app-server documentation](https://learn.chatgpt.com/docs/app-server).

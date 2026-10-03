@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "document_kind": "design_validation_not_product_results",
+  "reviewed_at": "2026-10-03",
+  "scope": "documentation_only",
+  "validation": {
+    "status": "PASS",
+    "scope": "documentation_only",
+    "features": 29,
+    "acceptanceCases": 182,
+    "workPackages": 24,
+    "localLinks": 133,
+    "syntheticExamples": 3,
+    "productTestsExecuted": false
+  },
+  "additions": {
+    "features": [
+      "F28",
+      "F29"
+    ],
+    "work_packages": [
+      "W23",
+      "W24"
+    ],
+    "planned_acceptance_cases_added": 22,
+    "remote_runtime_status": "NOT_IMPLEMENTED",
+    "adoption_runtime_status": "NOT_IMPLEMENTED"
+  },
+  "placement": {
+    "W23": "Public setup/adoption after W05; separately opt-in local activation after full W07/W11",
+    "W24": "Optional M3 extension after full W03/W04/W07/W11/W12; not required for Local Student Core or F23 capture/sync"
+  },
+  "product_tests_executed": false,
+  "external_configuration_changed": false,
+  "telemetry_enabled": false,
+  "device_enrolled": false,
+  "deployment_performed": false,
+  "source_hashes": {
+    "docs/design/FEATURES_REMOTE_AND_ADOPTION.md": "bee2dd927f86c8af2fb05a8f4e59fe9044f6b6707ee18d2e10d412b525031fca",
+    "docs/design/FEATURE_INDEX.json": "7a5e0c2204172800a820c233c5e691c620a24440c37b5cd104244e68c52d8513",
+    "docs/design/README.md": "3d22a5538074a397880c5167e8c709b89310b8e06aff18b1901ff8d81b85484f",
+    "docs/design/ARCHITECTURE.md": "a52fb6422f56238492704c75aef198fd4cb3b1661ff57a0515ac4b793e4580fa",
+    "docs/design/CONTRACTS.md": "35a49965d514a8d5bc94d84597bce16b30b6ea666d1cca75749f3c609b18ccf3",
+    "docs/design/IMPLEMENTATION_PLAN.md": "b8af6bf3dfbd91c7c025762e9ca0c89fe7dc9e7e7322d30c25ca97a4cabe0363",
+    "docs/design/FEATURES_PRODUCTIVITY.md": "1a7fe40a82010a7078ee9a010c6b1b0db9088cbf562a652f4f8e3ec3d9c07d90",
+    "docs/design/VERIFICATION.md": "4592efad40bcec72e761d28c8df48b97f35f3d73a4a8bc666594996228cd2019",
+    "docs/design/validate-design.mjs": "6548205b46d3587d1a4551cb202e12ece61205bf03e924b7f09282f9514de0c5"
+  },
+  "limitations": [
+    "Validated document links/anchors, ID coverage, dependency references/cycles and synthetic examples only.",
+    "Planned feature predicates are not executable product evidence; live host/phone/relay/account/admin/privacy and local-consent checks remain future gates.",
+    "Official provider contracts and plan limits were reviewed for the design; recheck before implementation."
+  ]
+}
