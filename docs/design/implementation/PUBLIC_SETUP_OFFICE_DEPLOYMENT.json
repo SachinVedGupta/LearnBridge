@@ -1,0 +1,63 @@
+{
+  "format": "learnbridge_public_setup_office_deployment",
+  "observed_at": "2026-10-03T20:00:04.665Z",
+  "commit": "1b9bb4f18be840616b9a2330fcd69cce25a67f90",
+  "deployment_id": "dpl_Feu9HhxYF1BbF7FrWVFvpauBpphL",
+  "deployment_url": "https://thelearnbridge-ccfrf4ng1-sachin-guptas-projects-154b22b9.vercel.app",
+  "production_url": "https://thelearnbridge.vercel.app",
+  "target": "production",
+  "state": "READY",
+  "checks": [
+    {
+      "method": "GET",
+      "path": "/setup",
+      "status": 200,
+      "location": null,
+      "office_wording": true,
+      "measurement_off": true,
+      "html_sha256": "3129b81c98e763ea43331054fece272a4cd902b20c8258f34c420ca2f208cc6b"
+    },
+    {
+      "method": "GET",
+      "path": "/login",
+      "status": 200,
+      "location": null
+    },
+    {
+      "method": "GET",
+      "path": "/tutor",
+      "status": 307,
+      "location": "/login"
+    },
+    {
+      "method": "GET",
+      "path": "/connections",
+      "status": 307,
+      "location": "/login"
+    },
+    {
+      "method": "GET",
+      "path": "/api/remote/v1",
+      "status": 503,
+      "location": null,
+      "response_code": "REMOTE_DISABLED"
+    },
+    {
+      "method": "POST",
+      "path": "/api/adoption/events",
+      "status": 503,
+      "response_code": "COLLECTION_DISABLED"
+    }
+  ],
+  "limits": [
+    "Anonymous public setup/login and private-route guards only; no Google/provider/student/tutor authorization or content calls.",
+    "No optional migration or enable flag applied; local Office extraction remains a separate local capability."
+  ],
+  "browser": {
+    "screenshot": "artifacts/public-setup-office-production.jpg",
+    "media_type": "image/jpeg",
+    "sha256": "4cfebd12324be917ffdc6740f5cbfcd105dcfa531704bfc4de1cfb47e13f6d55",
+    "console_errors": 0,
+    "observed_updated_office_wording": true
+  }
+}
