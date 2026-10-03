@@ -9,6 +9,8 @@ import { LocalStore } from '@learnbridge/local-storage';
 import { LearnBridgeError } from '@learnbridge/core';
 import { startRuntime, LOCAL_VERSION } from './server.mjs';
 import { readControl, requestControl } from './ipc.mjs';
+import { previewAgentConfig, applyAgentConfig } from './agent-config.mjs';
+import { probeSourceCapability } from '../../../packages/local-sources/src/index.mjs';
 
 const repositoryRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 const print = value => process.stdout.write(JSON.stringify(value) + '\n');
@@ -22,7 +24,7 @@ function options(args) {
   for (let index = 0; index < args.length; index++) {
     const key = args[index];
     if (key === '--json') continue;
-    if (!['--data-root', '--port', '--output', '--backup-root'].includes(key)
+    if (!['--data-root', '--port', '--output', '--backup-root', '--destination', '--project-root', '--expected-sha256'].includes(key)
       || Object.hasOwn(result, key) || !args[index + 1] || args[index + 1].startsWith('--')) {
       throw new Error('Invalid local launcher arguments.');
     }
@@ -52,7 +54,7 @@ function offlineStatus(root, { initialize = false } = {}) {
   try {
     const checked = store.integrity();
     return { edition: 'local', version: LOCAL_VERSION, initialized: true, integrity: checked.integrity === 'ok', student_id: store.identity.student_id,
-      capabilities: { tasks: 'available', notes: 'available', mcp: 'not_installed', sources: 'not_installed', cloud: 'disabled' } };
+      capabilities: { tasks: 'available', notes: 'available', mcp: 'requires_runtime_and_host', sources: 'requires_selected_source', cloud: 'requires_reviewed_consent' } };
   } finally { store.close(); }
 }
 async function stop(root) {
@@ -93,10 +95,22 @@ async function main() {
   const config = options(args);
   if (command === 'help' || command === '--help') {
     assertOptions(config, []);
-    return print({ product: 'LearnBridge local', commands: ['setup', 'start', 'doctor', 'stop', 'backup', 'restore', 'uninstall', 'demo'],
+    return print({ product: 'LearnBridge local', commands: ['setup', 'start', 'doctor', 'stop', 'backup', 'restore', 'uninstall', 'demo', 'agent-config'],
       usage: 'node web/apps/local-runtime/src/cli.mjs <command> [--data-root <absolute path>] [--json]',
       backup: 'backup --output <new directory>', restore: 'restore --backup-root <backup directory> --data-root <new workspace>',
-      support: 'Verified macOS arm64; Linux experimental; Windows private ACLs unavailable. MCP/connected sources follow this foundation.' });
+      support: 'Verified macOS arm64; Linux experimental; Windows private ACLs unavailable. MCP requires host trust and selected sharing; local sources require .venv Python with directory-FD support.' });
+  }
+  if (command === 'agent-config') {
+    assertOptions(config, ['--data-root', '--destination', '--project-root', '--expected-sha256']);
+    const preview = previewAgentConfig({ projectRoot: config['--project-root'] || repositoryRoot, dataRoot: rootPath(config), destination: config['--destination'] });
+    if (!config['--expected-sha256']) {
+      // Existing unrelated server settings can contain secrets. Print only our
+      // newly generated entry and hashes; the complete merge stays in memory.
+      const { content, ...safePreview } = preview;
+      return print(safePreview);
+    }
+    if (config['--expected-sha256'] !== preview.expected_sha256) throw new Error('Configuration changed since preview.');
+    return print(applyAgentConfig(preview));
   }
   if (command === 'demo') {
     assertOptions(config, ['--port']);
@@ -122,7 +136,7 @@ async function main() {
     let report;
     if (initializedRoot(root) && activeControl(root)) report = await requestControl(root, 'status');
     else report = offlineStatus(root);
-    print(report);
+    print({ ...report, source_runtime: await probeSourceCapability() });
     if (!report.integrity) process.exitCode = 1;
     return;
   }

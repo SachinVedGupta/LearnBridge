@@ -12,6 +12,7 @@
     "local:setup": "npm run local:build && node web/apps/local-runtime/src/cli.mjs setup",
     "local:start": "npm run local:build && node web/apps/local-runtime/src/cli.mjs start",
     "local:doctor": "node web/apps/local-runtime/src/cli.mjs doctor",
+    "local:agents": "node web/apps/local-runtime/src/cli.mjs agent-config",
     "local:stop": "node web/apps/local-runtime/src/cli.mjs stop",
     "local:backup": "node web/apps/local-runtime/src/cli.mjs backup",
     "local:restore": "node web/apps/local-runtime/src/cli.mjs restore",

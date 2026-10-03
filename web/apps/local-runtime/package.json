@@ -4,6 +4,14 @@
   "private": true,
   "type": "module",
   "exports": "./src/server.mjs",
-  "engines": { "node": ">=22.16.0" },
-  "dependencies": { "@learnbridge/local-storage": "0.1.0", "@learnbridge/core": "0.1.0" }
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "dependencies": {
+    "@learnbridge/core": "0.1.0",
+    "@learnbridge/local-storage": "0.1.0",
+    "@modelcontextprotocol/client": "2.3.0",
+    "@modelcontextprotocol/server": "2.3.0",
+    "zod": "4.6.5"
+  }
 }

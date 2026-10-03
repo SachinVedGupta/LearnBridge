@@ -4,7 +4,7 @@
 // the request nonce is obtained from the paired runtime, never browser storage.
 const API = '/api/local/v1';
 const $ = id => document.getElementById(id);
-const state = { nonce: null, expires: null, page: 'today', filter: 'active', tasks: [], documents: [], note: null, noteDirty: false, taskDrafts: new Map(), sessionReady: false, pendingTaskCreate: null, pendingNoteCreate: null };
+const state = { nonce: null, expires: null, page: 'today', filter: 'active', tasks: [], documents: [], sources: [], sourceEntries: [], inventory: null, academicPreview: null, grants: [], proposals: [], note: null, noteDirty: false, taskDrafts: new Map(), sessionReady: false, pendingTaskCreate: null, pendingNoteCreate: null };
 let activeConfirmation = null;
 
 class ApiError extends Error {
@@ -29,7 +29,7 @@ async function request(path, { method = 'GET', body, bootstrap = false, idempote
       REVISION_CONFLICT: 'This item changed elsewhere. Your edits have been kept. Reload the saved version before trying again.',
       INVALID_INPUT: 'Check the fields and try again.',
       NOT_FOUND: 'This item is no longer available. Refresh the list to see what is saved.',
-      CONSENT_REQUIRED: 'Pair this browser with the local launcher to continue.',
+      CONSENT_REQUIRED: 'This action needs fresh permission. Review the source or sharing selection, then try again.',
       AUTH_REQUIRED: 'Your local session ended. Pair this browser again to continue.',
       PAIRING_FAILED: 'That pairing code is invalid or has expired. Use the current code from the launcher.',
       RATE_LIMITED: 'Too many attempts. Wait briefly before trying again.',
@@ -126,6 +126,7 @@ function showPair() {
   state.sessionReady = false;
   state.tasks = [];
   state.documents = [];
+  state.sources = []; state.sourceEntries = []; state.inventory = null; state.academicPreview = null; state.grants = []; state.proposals = [];
   state.note = null;
   state.noteDirty = false;
   state.taskDrafts.clear();
@@ -135,6 +136,9 @@ function showPair() {
   $('pair-screen').hidden = false;
   $('task-list').replaceChildren();
   $('note-list').replaceChildren();
+  for (const id of ['source-list', 'source-entry-list', 'inventory-list', 'grant-records', 'grant-list', 'proposal-list']) $(id).replaceChildren();
+  $('source-form').reset(); $('academic-form').reset(); $('academic-preview').textContent = ''; $('academic-preview').hidden = true; $('academic-import').hidden = true;
+  for (const id of ['source-message', 'academic-message', 'grant-message']) message(id, '');
   $('note-form').reset();
   $('new-task-form').reset();
   $('pair-code').value = '';
@@ -161,14 +165,16 @@ async function openWorkspace(session) {
   $('workspace').hidden = false;
   $('day-label').textContent = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date());
   await newNote(false);
-  const results = await Promise.allSettled([loadTasks(), loadDocuments(), loadStatus()]);
+  const results = await Promise.allSettled([loadTasks(), loadDocuments(), loadStatus(), loadSources(), loadAgentReview()]);
   const failed = results.find(result => result.status === 'rejected');
   if (failed) message('global-message', failed.reason.message, true);
+  renderGrantSelection();
   $('main').focus();
 }
 
 function navigate(page) {
-  if (!['today', 'notes', 'setup'].includes(page)) return;
+  if (!['today', 'notes', 'sources', 'agents', 'setup'].includes(page)) return;
+  if (page === 'agents') renderGrantSelection();
   state.page = page;
   for (const section of document.querySelectorAll('.page')) section.hidden = section.id !== `page-${page}`;
   for (const button of document.querySelectorAll('.nav-item')) {
@@ -513,6 +519,143 @@ $('logout-button').addEventListener('click', async event => {
     } catch (error) { message('global-message', error.message, true); }
   });
 });
+async function loadSources() {
+  const data = await request('/sources');
+  state.sources = data.items; state.sourceEntries = data.entries;
+  $('source-list').replaceChildren(); $('source-entry-list').replaceChildren();
+  for (const source of state.sources) {
+    const row = element('article', 'review-row');
+    row.append(element('h3', '', source.label), element('p', 'field-help', `${source.state} · revision ${source.revision}`));
+    if (source.state === 'active') row.append(taskAction(source, 'Review file list', async () => {
+      if (!await confirmAction(`List file names and sizes in “${source.label}”? No file bodies will be read.`, { title: 'Review folder inventory', confirmLabel: 'List files' })) return;
+      const result = await request(`/sources/${source.id}/inventory`, { method: 'POST', body: {} });
+      state.inventory = result.inventory; renderInventory();
+    }, 'secondary compact'), taskAction(source, 'Revoke folder', async () => {
+      if (!await confirmAction('Revoke new reads and agent access to snapshots from this source? Existing local snapshots and backups are retained.', { title: 'Revoke source', confirmLabel: 'Revoke' })) return;
+      await request(`/sources/${source.id}/revoke`, { method: 'POST', body: { expected_revision: source.revision } });
+      state.inventory = null; $('inventory-list').replaceChildren(); await loadSources();
+    }, 'danger compact'));
+    $('source-list').append(row);
+  }
+  for (const entry of state.sourceEntries) {
+    const row = element('article', 'review-row');
+    row.append(element('h3', '', entry.title), element('p', 'hash-text', `SHA-256 ${entry.sha256}`));
+    row.append(taskAction(entry, 'Read saved snapshot', async () => {
+      const result = await request(`/source-entries/${entry.id}`);
+      row.querySelector('pre')?.remove(); row.append(element('pre', 'source-text', result.entry.text));
+    }, 'secondary compact'));
+    $('source-entry-list').append(row);
+  }
+  if (!state.sourceEntries.length) $('source-entry-list').append(element('p', 'field-help', 'No text imported yet.'));
+}
+function renderInventory() {
+  const saved = state.inventory;
+  $('inventory-list').replaceChildren();
+  if (!saved) return;
+  const inventory = saved.inventory;
+  $('inventory-list').append(element('h3', '', 'Review these files'), element('p', 'field-help', 'Only explicit Import reads a file body. Imports are capped at 48,000 bytes each in this dashboard. Excluded formats and secret paths are never offered.'));
+  $('inventory-list').append(element('p', 'field-help', `${inventory.counts.entriesVisited} items checked · ${inventory.counts.eligibleFiles} supported files · ${inventory.counts.excludedEntries} excluded · ${inventory.counts.totalBytes.toLocaleString()} eligible bytes. Coverage: ${inventory.coverage.state}.`));
+  const exclusionNames = { secret: 'credential paths', symlink: 'symbolic links', special: 'special files', unsupportedType: 'unsupported formats', hardlink: 'hard links', depth: 'depth limit', permission: 'permission denied', changed: 'changed files' };
+  const exclusions = Object.entries(inventory.exclusions).filter(([, count]) => count).map(([key, count]) => `${count} ${exclusionNames[key] || key}`);
+  if (exclusions.length) $('inventory-list').append(element('p', 'field-help', `Excluded: ${exclusions.join(', ')}.`));
+  if (inventory.coverage.reasons.length) $('inventory-list').append(element('p', 'field-help', 'This list is incomplete. Narrow the folder or review unavailable permissions before treating it as full coverage.'));
+  for (const entry of inventory.entries) {
+    const row = element('div', 'review-row');
+    row.append(element('p', '', `${entry.relativePath} · ${entry.snapshot?.size ?? entry.size ?? '?'} bytes`));
+    row.append(taskAction(entry, 'Import', async () => {
+      if (!await confirmAction(`Read and save the text of “${entry.relativePath}” locally? This does not allow model processing.`, { title: 'Import selected text', confirmLabel: 'Import this file' })) return;
+      await request(`/sources/${saved.source_id}/import`, { method: 'POST', body: { inventory_id: saved.id, entry_id: entry.id } });
+      await loadSources(); message('source-message', 'Selected snapshot saved locally. Review it before allowing agent sharing.');
+    }, 'secondary compact'));
+    $('inventory-list').append(row);
+  }
+}
+async function loadAgentReview() {
+  const [grants, proposals] = await Promise.all([request('/agent-grants'), request('/task-proposals')]);
+  state.grants = grants.items; state.proposals = proposals.items;
+  $('grant-list').replaceChildren(); $('proposal-list').replaceChildren();
+  for (const grant of state.grants) {
+    const row = element('article', 'review-row');
+    row.append(element('h3', '', `${grant.destination} · ${grant.state}`), element('p', 'field-help', `Grant ${grant.id}\nExpires ${new Date(grant.expires_at).toLocaleString()} · ${grant.used_bytes}/${grant.max_bytes} bytes used`));
+    if (grant.state === 'active') row.append(taskAction(grant, 'Revoke sharing', async () => {
+      await request(`/agent-grants/${grant.id}/revoke`, { method: 'POST', body: { expected_revision: grant.revision } });
+      await loadAgentReview(); message('grant-message', 'Sharing revoked for future reads. Previously shared text may remain in the host’s conversation.');
+    }, 'danger compact'));
+    $('grant-list').append(row);
+  }
+  for (const proposal of state.proposals) {
+    const row = element('article', 'review-row');
+    row.append(element('h3', '', proposal.payload.title), element('p', 'field-help', `${proposal.destination} · ${proposal.state} · ${deadlineLabel({ deadline: proposal.payload.deadline })}`), element('p', '', proposal.payload.reason || 'No reason supplied.'), element('p', 'hash-text', `Payload SHA-256 ${proposal.payload_hash}`));
+    if (proposal.state === 'awaiting_review') for (const action of ['accept', 'reject']) row.append(taskAction(proposal, action === 'accept' ? 'Accept task' : 'Reject', async () => {
+      if (action === 'accept' && !await confirmAction(`Add exactly this local task: “${proposal.payload.title}”? ${deadlineLabel({ deadline: proposal.payload.deadline })}.`, { title: 'Accept reviewed proposal', confirmLabel: 'Add local task' })) return;
+      await request(`/task-proposals/${proposal.id}/${action}`, { method: 'POST', body: { expected_revision: proposal.revision, payload_hash: proposal.payload_hash } });
+      await loadAgentReview(); await loadTasks(); message('grant-message', action === 'accept' ? 'Reviewed task saved. No connected app was changed.' : 'Proposal rejected.');
+    }, action === 'accept' ? 'primary compact' : 'quiet compact'));
+    $('proposal-list').append(row);
+  }
+  if (!state.proposals.length) $('proposal-list').append(element('p', 'field-help', 'No proposals yet. Your agent can suggest a next step through the LearnBridge MCP bridge.'));
+}
+function renderGrantSelection() {
+  $('grant-records').replaceChildren();
+  for (const [kind, records] of [['tasks', state.tasks], ['documents', state.documents], ['source_entries', state.sourceEntries]]) for (const record of records) {
+    const label = element('label', 'record-choice'); const checkbox = element('input');
+    checkbox.type = 'checkbox'; checkbox.value = record.id; checkbox.dataset.kind = kind; checkbox.dataset.revision = record.revision;
+    label.append(checkbox, element('span', '', `${record.title} · ${kind.replace('_', ' ')} · revision ${record.revision}`));
+    $('grant-records').append(label);
+  }
+  if (!$('grant-records').childElementCount) $('grant-records').append(element('p', 'field-help', 'You can allow an empty selection for task proposals, or first add a note or selected source.'));
+}
+$('source-form').addEventListener('submit', event => {
+  event.preventDefault(); busy(event.submitter, async () => {
+    const body = { path: $('source-path').value, label: $('source-label').value.trim() };
+    if (!await confirmAction(`Register “${body.label}” at ${body.path}? LearnBridge will verify this folder’s identity. Its file list and text require separate choices.`, { title: 'Choose local folder', confirmLabel: 'Register folder' })) return;
+    await request('/sources', { method: 'POST', body }); $('source-form').reset(); await loadSources();
+    message('source-message', 'Folder registered. Choose Review file list to inspect metadata.');
+  }).catch(error => message('source-message', error.message, true));
+});
+$('grant-form').addEventListener('submit', event => {
+  event.preventDefault(); busy(event.submitter, async () => {
+    const expected = { tasks: [], documents: [], source_entries: [] };
+    for (const checkbox of $('grant-records').querySelectorAll('input:checked')) expected[checkbox.dataset.kind].push({ id: checkbox.value, revision: Number(checkbox.dataset.revision) });
+    const body = { destination: $('agent-destination').value, task_ids: expected.tasks.map(item => item.id), document_ids: expected.documents.map(item => item.id), source_entry_ids: expected.source_entries.map(item => item.id), expected_records: expected, max_bytes: Number($('grant-budget').value), expires_in_minutes: Number($('grant-minutes').value) };
+    const titles = [...$('grant-records').querySelectorAll('input:checked')].map(node => node.parentNode.textContent).join('; ');
+    if (!await confirmAction(`Allow ${body.destination} to process ${titles || 'no existing records (task proposals only)'}? Total budget ${body.max_bytes} UTF-8 bytes; expires in ${body.expires_in_minutes} minutes. Your host’s model service receives only this reviewed selection.`, { title: 'Review agent sharing', confirmLabel: 'Allow selected sharing' })) return;
+    const result = await request('/agent-grants', { method: 'POST', body }); await loadAgentReview();
+    message('grant-message', `Sharing saved. Tell your agent to use grant ${result.grant.id}.`);
+  }).catch(error => message('grant-message', error.message, true));
+});
+$('academic-form').addEventListener('submit', event => {
+  event.preventDefault(); busy(event.submitter, async () => {
+    state.academicPreview = null; $('academic-import').hidden = true;
+    const result = await request('/academic/preview', { method: 'POST', body: { export: JSON.parse($('academic-export').value), selected_course_ids: $('academic-courses').value.split(',').map(value => value.trim()).filter(Boolean) } });
+    state.academicPreview = result.preview_id; renderAcademicPreview(result.snapshot); $('academic-preview').hidden = false; $('academic-import').hidden = false;
+    message('academic-message', 'Preview only. Check course selection and uncertain deadlines before saving.');
+  }).catch(error => message('academic-message', error.message, true));
+});
+function renderAcademicPreview(snapshot) {
+  const panel = $('academic-preview'); panel.replaceChildren();
+  panel.append(element('h3', '', `${snapshot.institution.name} · reviewed import`), element('p', 'field-help', `Selected courses: ${snapshot.selected_course_ids.join(', ')}. ${snapshot.assignments.length} assignments, ${snapshot.announcements.length} announcements, ${snapshot.materials.length} materials. This export does not prove a live connection or complete university coverage.`));
+  for (const course of snapshot.courses) panel.append(element('p', '', course.title));
+  for (const assignment of snapshot.assignments) {
+    const row = element('div', 'review-row');
+    row.append(element('h3', '', assignment.title), element('p', 'field-help', `${deadlineLabel(assignment)}${assignment.deadline?.precision === 'unknown' && assignment.deadline.original ? ` · Source says: ${assignment.deadline.original}` : ''}`));
+    if (assignment.description) row.append(element('p', '', assignment.description));
+    panel.append(row);
+  }
+  for (const item of [...snapshot.announcements, ...snapshot.materials]) {
+    const row = element('div', 'review-row'); row.append(element('h3', '', item.title), element('p', '', item.body || '')); panel.append(row);
+  }
+  const details = element('details'); details.append(element('summary', '', 'Exact normalized snapshot'), element('pre', 'source-text', JSON.stringify(snapshot, null, 2))); panel.append(details);
+}
+$('academic-import').addEventListener('click', event => busy(event.currentTarget, async () => {
+  const previewId = state.academicPreview;
+  if (!previewId || !await confirmAction('Save exactly the reviewed academic snapshot as a local note? No live D2L connection or task is created.', { title: 'Save reviewed export', confirmLabel: 'Save snapshot' })) return;
+  await request('/academic/import', { method: 'POST', body: { preview_id: previewId } }); await loadDocuments();
+  message('academic-message', 'Reviewed snapshot saved in Notes. Agent sharing is a separate choice.');
+}).catch(error => message('academic-message', error.message, true)));
+$('refresh-sources').addEventListener('click', event => busy(event.currentTarget, loadSources).catch(error => message('source-message', error.message, true)));
+$('refresh-agents').addEventListener('click', event => busy(event.currentTarget, async () => { await Promise.all([loadTasks(), loadDocuments(), loadSources(), loadAgentReview()]); renderGrantSelection(); }).catch(error => message('grant-message', error.message, true)));
+
 window.addEventListener('beforeunload', event => { if (state.sessionReady && hasUnsavedChanges()) { event.preventDefault(); event.returnValue = ''; } });
 $('confirmation-cancel').addEventListener('click', () => resolveConfirmation(false));
 $('confirmation-accept').addEventListener('click', () => resolveConfirmation(true));

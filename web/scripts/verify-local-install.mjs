@@ -13,6 +13,7 @@ const ALLOWLIST = Object.freeze([
   'package.json', 'web/package.json', 'web/package-lock.json',
   'web/apps/api/package.json', 'web/apps/web/package.json', 'web/packages/shared/package.json',
   'web/packages/core/package.json', 'web/packages/local-storage/package.json',
+  'web/packages/local-sources/package.json', 'web/packages/local-academic/package.json',
   'web/apps/local-runtime/package.json', 'web/apps/local/package.json',
   'web/packages/core/src/index.mjs', 'web/packages/core/src/contracts.mjs',
   'web/packages/core/src/errors.mjs', 'web/packages/core/src/legacy-state.mjs',
@@ -20,6 +21,9 @@ const ALLOWLIST = Object.freeze([
   'web/packages/local-storage/src/index.mjs',
   'web/apps/local-runtime/src/server.mjs', 'web/apps/local-runtime/src/cli.mjs',
   'web/apps/local-runtime/src/policy.mjs', 'web/apps/local-runtime/src/ipc.mjs',
+  'web/apps/local-runtime/src/agent-config.mjs', 'web/apps/local-runtime/src/mcp.mjs',
+  'web/packages/local-sources/src/index.mjs',
+  'web/packages/local-academic/src/index.mjs',
   'web/apps/local/build.mjs', 'web/apps/local/public/index.html',
   'web/apps/local/public/app.js', 'web/apps/local/public/styles.css',
 ]);
@@ -43,7 +47,8 @@ const report = {
   limitations: [
     'A clean disposable source copy installed from the existing offline npm cache; not a new computer or an online-download test.',
     'Only this recorded OS, architecture and Node runtime were exercised.',
-    'Task/note persistence, static build and CLI lifecycle only; real MCP hosts, provider OAuth and personal onboarding are separate gates.',
+    'Task/note persistence, static build, CLI lifecycle and actual SDK stdio discovery; real hosts, provider OAuth and personal onboarding are separate gates.',
+    'No fresh Python environment is copied or installed; selected-file acquisition requires a suitable project .venv and is verified separately.',
   ],
 };
 let parent;
@@ -257,6 +262,17 @@ async function main() {
   });
   const restored = await phase('FI08_INDEPENDENT_PROCESS_VERIFIES_RESTORED_RECORDS', async () => readBack(restoreRoot));
   assert.deepEqual(restored, saved);
+  await phase('FI09_FRESH_OFFICIAL_SDK_STDIO_DISCOVERY', async () => {
+    const result = await jsonChild(process.execPath, ['--input-type=module', '--eval', `
+      import {Client} from '@modelcontextprotocol/client';
+      import {StdioClientTransport} from '@modelcontextprotocol/client/stdio';
+      const client=new Client({name:'clean-install-synthetic-verifier',version:'1'});
+      const transport=new StdioClientTransport({command:'/usr/bin/env',args:['-i','PATH=/usr/bin:/bin',process.execPath,${JSON.stringify(join(copiedWeb, 'apps/local-runtime/src/mcp.mjs'))},'--data-root',${JSON.stringify(dataRoot)},'--destination','codex'],stderr:'pipe'});
+      try { await client.connect(transport); process.stdout.write(JSON.stringify({tools:(await client.listTools()).tools.map(value=>value.name).sort()})); }
+      finally { await client.close(); }
+    `], { cwd: copiedWeb });
+    assert.deepEqual(result.tools, ['learnbridge_context', 'learnbridge_propose_task', 'learnbridge_status']);
+  });
   report.observed = { tasks: 1, documents: 1, document_content_sha256: saved.content_sha256,
     exact_records_survive_new_process: true, exact_records_survive_fresh_root_restore: true,
     static_assets_built_and_hash_matched: 3 };

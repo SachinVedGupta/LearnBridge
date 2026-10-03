@@ -13,7 +13,7 @@
     "dev": "npm -w @assignment-ai/shared run build && npm -w @assignment-ai/web run dev -- --hostname 127.0.0.1 --port 3200",
     "start": "npm -w @assignment-ai/web run start -- --hostname 127.0.0.1 --port 3200",
     "test": "node --test scripts/*.test.mjs",
-    "test:local": "node --test scripts/local-*.test.mjs",
+    "test:local": "node --test scripts/local-*.test.mjs scripts/agent-*.test.mjs scripts/source-*.test.mjs scripts/academic-*.test.mjs",
     "build:website": "npm -w @assignment-ai/shared run build && npm -w @assignment-ai/web run build"
   },
   "devDependencies": {

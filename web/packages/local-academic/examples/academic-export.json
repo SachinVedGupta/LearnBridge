@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "institution": { "name": "Synthetic University", "origin": "https://courses.example.edu", "timezone": "America/Toronto" },
+  "account_ref": "synthetic-student",
+  "retrieved_at": "2026-10-03T00:00:00Z",
+  "courses": [{ "source_id": "101", "title": "Synthetic software course", "code": "DEMO101" }],
+  "assignments": [{ "source_id": "assignment-1", "course_id": "101", "title": "Explain a recursive base case", "description": "Write down your questions and explain the concept in your own words.", "due": "Friday evening" }],
+  "announcements": [{ "source_id": "announcement-1", "course_id": "101", "title": "Synthetic tutorial", "body": "Bring one question about recursion." }],
+  "materials": [{ "source_id": "topic-1", "course_id": "101", "title": "Synthetic reading", "body": "A recursive solution reduces the problem and has a base case.", "type": "text" }]
+}

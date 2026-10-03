@@ -2,10 +2,10 @@
 * { box-sizing: border-box; }
 body { margin: 0; }
 [hidden] { display: none !important; }
-button, input, textarea { font: inherit; }
+button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: wait; opacity: .65; }
-input, textarea { display: block; width: 100%; border: 1px solid #cdd8cf; border-radius: 9px; background: var(--white); color: var(--ink); padding: 11px 12px; }
+input, textarea, select { display: block; width: 100%; border: 1px solid #cdd8cf; border-radius: 9px; background: var(--white); color: var(--ink); padding: 11px 12px; }
 input::placeholder, textarea::placeholder { color: #818c85; }
 input:focus, textarea:focus { border-color: var(--green); outline: 3px solid #cfe2d3; outline-offset: 1px; }
 button:focus-visible, a:focus-visible { outline: 3px solid #b3d4bb; outline-offset: 3px; }
@@ -22,6 +22,18 @@ p { line-height: 1.6; }
 .brand-mark { display: grid; place-items: center; width: 32px; height: 33px; border-radius: 9px; color: white; background: var(--green); font-family: Georgia, serif; font-size: 23px; }
 .eyebrow { font-size: 10px; font-weight: 750; letter-spacing: 1.6px; color: var(--muted); margin-bottom: 12px; }
 .button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 10px 15px; border: 1px solid transparent; border-radius: 8px; min-height: 40px; font-size: 13px; font-weight: 600; text-decoration: none; }
+.source-panel { margin-top: 22px; }
+.review-row { border-top: 1px solid var(--line); padding: 18px 0; overflow-wrap: anywhere; }
+.review-row .button { margin-right: 8px; }
+.source-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; max-height: 300px; overflow: auto; background: var(--paper); padding: 12px; }
+#academic-preview { overflow-wrap: anywhere; font-size: 13px; max-height: 500px; overflow: auto; background: var(--paper); padding: 16px; margin: 16px 0; border-radius: 8px; }
+#source-form, #grant-form, #academic-form { display: grid; gap: 10px; }
+#source-form label, #grant-form label, #academic-form label { margin: 6px 0 0; }
+fieldset { min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+legend { color: var(--muted); font-size: 12px; }
+.record-choice { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; font-size: 12px; }
+.record-choice input { width: auto; margin-top: 3px; }
+.record-choice span { overflow-wrap: anywhere; }
 .primary { color: var(--white); background: var(--green); }
 .primary:hover { background: var(--green-dark); }
 .secondary { background: var(--white); border-color: #cfdbd0; color: var(--green); }

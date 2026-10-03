@@ -34,6 +34,8 @@
         <nav class="navigation" aria-label="Main">
           <button class="nav-item" type="button" data-page="today" aria-current="page"><span aria-hidden="true">◷</span> Today</button>
           <button class="nav-item" type="button" data-page="notes"><span aria-hidden="true">▤</span> Notes</button>
+          <button class="nav-item" type="button" data-page="sources"><span aria-hidden="true">⊕</span> Sources</button>
+          <button class="nav-item" type="button" data-page="agents"><span aria-hidden="true">↔</span> Agent &amp; review</button>
           <button class="nav-item" type="button" data-page="setup"><span aria-hidden="true">◇</span> Setup &amp; capabilities</button>
         </nav>
         <div class="sidebar-bottom">
@@ -49,7 +51,7 @@
         <div id="global-message" class="notice" role="status" aria-live="polite" hidden></div>
 
         <section id="page-today" class="page" aria-labelledby="today-title">
-          <div class="page-heading"><div><h1 id="today-title">Make room for what matters.</h1><p>Capture a next step. Keep your notes close. Work at your pace.</p></div><span class="pill">Manual tasks</span></div>
+          <div class="page-heading"><div><h1 id="today-title">Make room for what matters.</h1><p>Capture a next step. Keep your notes close. Work at your pace.</p></div><span class="pill">Local tasks</span></div>
           <div class="summary-grid" aria-label="Task overview">
             <div class="summary-card"><span class="summary-label">Still to do</span><strong id="pending-count">0</strong><span>one step at a time</span></div>
             <div class="summary-card"><span class="summary-label">Due today</span><strong id="today-count">0</strong><span>based on your date</span></div>
@@ -99,11 +101,34 @@
           </div>
         </section>
 
+        <section id="page-sources" class="page" aria-labelledby="sources-title" hidden>
+          <div class="page-heading"><div><h1 id="sources-title">Bring in what’s useful.</h1><p>Choose a folder, review its file list, then import only the text you want.</p></div><button id="refresh-sources" class="button secondary" type="button">Refresh sources</button></div>
+          <section class="panel"><h2>Choose a text or Markdown folder</h2><p class="field-help">Use a specific course or project folder. File lists contain names and sizes; no content is read until you select Import. Secret files, links and dependency folders are excluded. There is no full laptop scan.</p>
+            <form id="source-form"><label for="source-label">Folder label</label><input id="source-label" required maxlength="200" placeholder="e.g. Biology notes"><label for="source-path">Full folder path on this computer</label><input id="source-path" required maxlength="2000" placeholder="/Users/you/Documents/Course notes" autocomplete="off"><button class="button primary" type="submit">Review folder</button></form>
+            <div id="source-list"></div><div id="inventory-list"></div><p id="source-message" class="notice" role="status" hidden></p>
+          </section>
+          <section class="panel source-panel"><h2>Your imported snapshots</h2><p class="field-help">Imports are saved locally as exact versions. Sharing them with an agent is a separate choice in Agent &amp; review.</p><div id="source-entry-list"></div></section>
+          <section class="panel source-panel"><h2>Avenue / D2L export</h2><p class="field-help">Paste a LearnBridge academic export and choose course IDs to preview it. This does not sign in to your university. Live D2L access is a separate local setup; never paste passwords, cookies or tokens here.</p>
+            <form id="academic-form"><label for="academic-courses">Course IDs to include, separated by commas</label><input id="academic-courses" required maxlength="1000"><label for="academic-export">Academic export JSON</label><textarea id="academic-export" rows="6" required maxlength="256000" spellcheck="false"></textarea><button class="button secondary" type="submit">Preview academic export</button></form>
+            <div id="academic-preview" hidden></div><button id="academic-import" class="button primary" type="button" hidden>Save reviewed snapshot as a note</button><p id="academic-message" class="notice" role="status" hidden></p>
+          </section>
+        </section>
+
+        <section id="page-agents" class="page" aria-labelledby="agents-title" hidden>
+          <div class="page-heading"><div><h1 id="agents-title">Work with your agent.</h1><p>Share selected context with Codex or Claude, then review what it proposes.</p></div><button id="refresh-agents" class="button secondary" type="button">Refresh review queue</button></div>
+          <section class="panel"><h2>Share selected context</h2><p class="field-help">Your chosen host may send this context to its model service under your subscription and account settings. LearnBridge does not supply a model or copy credentials. Changes to selected records require fresh consent.</p>
+            <form id="grant-form"><label for="agent-destination">Agent destination</label><select id="agent-destination"><option value="codex">Codex</option><option value="claude">Claude</option></select><fieldset id="grant-selection"><legend>Records to share</legend><div id="grant-records"></div></fieldset><label for="grant-budget">Total context budget (UTF-8 bytes)</label><input id="grant-budget" type="number" min="1000" max="256000" value="48000" required><label for="grant-minutes">Expires in (minutes)</label><input id="grant-minutes" type="number" min="1" max="480" value="60" required><button class="button primary" type="submit">Review and allow sharing</button></form>
+            <p id="grant-message" class="notice" role="status" hidden></p><div id="grant-list"></div>
+          </section>
+          <section class="panel source-panel"><h2>Proposed tasks</h2><p class="field-help">The agent’s proposal stays here until you accept its exact content. Accepting creates a local task; it does not change a connected app.</p><div id="proposal-list"></div></section>
+          <section class="panel source-panel"><h2>Connect your existing agent</h2><p class="field-help">Run <code>npm run local:agents -- --destination codex</code> (or <code>claude</code>) in the repository to preview project-only settings. Follow the setup guide to apply the reviewed preview and approve MCP in your host. Existing subscriptions remain with their official apps.</p></section>
+        </section>
+
         <section id="page-setup" class="page" aria-labelledby="setup-title" hidden>
           <div class="page-heading"><div><h1 id="setup-title">Know what’s ready.</h1><p>A useful workspace starts with clear boundaries.</p></div><button id="refresh-status" class="button secondary" type="button">Refresh status</button></div>
           <section class="panel" aria-labelledby="capabilities-title"><div class="panel-heading"><h2 id="capabilities-title">Capabilities</h2><span class="pill">This installation</span></div><div id="capability-list" class="capability-list"></div></section>
           <div class="secondary-grid">
-            <section class="panel small-panel"><p class="eyebrow">SOURCES</p><h2>Your context, your choice</h2><p>File discovery, D2L and app connections are not configured by this dashboard. No laptop, browser history or cloud account is scanned automatically.</p><p class="inline-status">Source onboarding is not implemented in this foundation.</p></section>
+            <section class="panel small-panel"><p class="eyebrow">SOURCES</p><h2>Your context, your choice</h2><p>Choose specific text folders and academic exports in Sources. Review imported snapshots before sharing with an agent. No laptop, browser history or cloud account is scanned automatically.</p><button class="button secondary" type="button" data-page="sources">Review sources</button></section>
             <section class="panel small-panel"><p class="eyebrow">PROFILE</p><h2>Start with confirmed facts</h2><p>A reviewed student profile is planned. Your tasks and notes do not automatically become claims about who you are or how you learn.</p><p class="inline-status">Profile review is not implemented in this foundation.</p></section>
           </div>
           <section class="panel privacy-panel"><h2>What this browser can access</h2><p>Pairing allows this browser to manage this installation’s tasks and notes until the local session expires or you disconnect it. The pairing code is single-use, and the session is held in an HTTP-only cookie.</p><p id="session-expiry" class="field-help"></p><p>No personal content or authentication token is stored in browser local storage.</p></section>
