@@ -1,0 +1,669 @@
+{
+  "schema_version": "0.1.0",
+  "document_kind": "design_traceability_not_product_results",
+  "reviewed_at": "2026-10-02",
+  "implementation_tests_executed": false,
+  "features": [
+    {
+      "id": "F01",
+      "name": "Setup and diagnostics",
+      "specification": "FEATURES_FOUNDATION.md",
+      "acceptance_ids": [
+        "F01-A01",
+        "F01-A02",
+        "F01-A03",
+        "F01-A04",
+        "F01-A05"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W01",
+        "W02",
+        "W03",
+        "W04",
+        "W05"
+      ]
+    },
+    {
+      "id": "F02",
+      "name": "Reviewed student profile and memory",
+      "specification": "FEATURES_FOUNDATION.md",
+      "acceptance_ids": [
+        "F02-A01",
+        "F02-A02",
+        "F02-A03",
+        "F02-A04",
+        "F02-A05"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W08"
+      ]
+    },
+    {
+      "id": "F03",
+      "name": "Controlled source discovery",
+      "specification": "FEATURES_FOUNDATION.md",
+      "acceptance_ids": [
+        "F03-A01",
+        "F03-A02",
+        "F03-A03",
+        "F03-A04",
+        "F03-A05",
+        "F03-A06",
+        "F03-A07",
+        "F03-A08",
+        "F03-A09",
+        "F03-A10",
+        "F03-A11",
+        "F03-A12",
+        "F03-A13",
+        "F03-A14",
+        "F03-A15",
+        "F03-A16",
+        "F03-A17",
+        "F03-A18"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W08"
+      ]
+    },
+    {
+      "id": "F04",
+      "name": "Today view and actionable tasks",
+      "specification": "FEATURES_FOUNDATION.md",
+      "acceptance_ids": [
+        "F04-A01",
+        "F04-A02",
+        "F04-A03",
+        "F04-A04",
+        "F04-A05",
+        "F04-A06"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W12"
+      ]
+    },
+    {
+      "id": "F05",
+      "name": "Calendar and workload planning",
+      "specification": "FEATURES_FOUNDATION.md",
+      "acceptance_ids": [
+        "F05-A01",
+        "F05-A02",
+        "F05-A03",
+        "F05-A04",
+        "F05-A05",
+        "F05-A06"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W12",
+        "W18"
+      ]
+    },
+    {
+      "id": "F06",
+      "name": "Course and D2L synchronization",
+      "specification": "FEATURES_ACADEMIC.md",
+      "acceptance_ids": [
+        "F06-A01",
+        "F06-A02",
+        "F06-A03",
+        "F06-A04",
+        "F06-A05",
+        "F06-A06",
+        "F06-A07",
+        "F06-A08"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W09"
+      ]
+    },
+    {
+      "id": "F07",
+      "name": "Course library and source retrieval",
+      "specification": "FEATURES_ACADEMIC.md",
+      "acceptance_ids": [
+        "F07-A01",
+        "F07-A02",
+        "F07-A03",
+        "F07-A04",
+        "F07-A05",
+        "F07-A06"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W10"
+      ]
+    },
+    {
+      "id": "F08",
+      "name": "Learning tutor and progress checkpoints",
+      "specification": "FEATURES_ACADEMIC.md",
+      "acceptance_ids": [
+        "F08-A01",
+        "F08-A02",
+        "F08-A03",
+        "F08-A04",
+        "F08-A05",
+        "F08-A06"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W13"
+      ]
+    },
+    {
+      "id": "F09",
+      "name": "Catch-up plans and exam preparation",
+      "specification": "FEATURES_ACADEMIC.md",
+      "acceptance_ids": [
+        "F09-A01",
+        "F09-A02",
+        "F09-A03",
+        "F09-A04",
+        "F09-A05"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W13"
+      ]
+    },
+    {
+      "id": "F10",
+      "name": "Writing workspace and reviewed revisions",
+      "specification": "FEATURES_ACADEMIC.md",
+      "acceptance_ids": [
+        "F10-A01",
+        "F10-A02",
+        "F10-A03",
+        "F10-A04",
+        "F10-A05",
+        "F10-A06"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W14"
+      ]
+    },
+    {
+      "id": "F11",
+      "name": "Document and artifact production",
+      "specification": "FEATURES_ACADEMIC.md",
+      "acceptance_ids": [
+        "F11-A01",
+        "F11-A02",
+        "F11-A03",
+        "F11-A04",
+        "F11-A05",
+        "F11-A06",
+        "F11-A07"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W14"
+      ]
+    },
+    {
+      "id": "F12",
+      "name": "Unified inbox and communications",
+      "specification": "FEATURES_PRODUCTIVITY.md",
+      "acceptance_ids": [
+        "F12-A01",
+        "F12-A02",
+        "F12-A03",
+        "F12-A04",
+        "F12-A05"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W17",
+        "W18"
+      ]
+    },
+    {
+      "id": "F13",
+      "name": "Research and personal knowledge",
+      "specification": "FEATURES_PRODUCTIVITY.md",
+      "acceptance_ids": [
+        "F13-A01",
+        "F13-A02",
+        "F13-A03",
+        "F13-A04"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W17",
+        "W18"
+      ]
+    },
+    {
+      "id": "F14",
+      "name": "Internship discovery and shortlist",
+      "specification": "FEATURES_PRODUCTIVITY.md",
+      "acceptance_ids": [
+        "F14-A01",
+        "F14-A02",
+        "F14-A03",
+        "F14-A04",
+        "F14-A05"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W16"
+      ]
+    },
+    {
+      "id": "F15",
+      "name": "Application preparation and reviewed actions",
+      "specification": "FEATURES_PRODUCTIVITY.md",
+      "acceptance_ids": [
+        "F15-A01",
+        "F15-A02",
+        "F15-A03",
+        "F15-A04",
+        "F15-A05",
+        "F15-A06"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W16"
+      ]
+    },
+    {
+      "id": "F16",
+      "name": "Career practice and follow-up",
+      "specification": "FEATURES_PRODUCTIVITY.md",
+      "acceptance_ids": [
+        "F16-A01",
+        "F16-A02",
+        "F16-A03",
+        "F16-A04"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W16"
+      ]
+    },
+    {
+      "id": "F17",
+      "name": "Projects, repositories, and teams",
+      "specification": "FEATURES_PRODUCTIVITY.md",
+      "acceptance_ids": [
+        "F17-A01",
+        "F17-A02",
+        "F17-A03",
+        "F17-A04",
+        "F17-A05"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W18"
+      ]
+    },
+    {
+      "id": "F18",
+      "name": "Meals, pantry, and groceries",
+      "specification": "FEATURES_PRODUCTIVITY.md",
+      "acceptance_ids": [
+        "F18-A01",
+        "F18-A02",
+        "F18-A03",
+        "F18-A04"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W20"
+      ]
+    },
+    {
+      "id": "F19",
+      "name": "Routines, focus, and wellbeing planning",
+      "specification": "FEATURES_PRODUCTIVITY.md",
+      "acceptance_ids": [
+        "F19-A01",
+        "F19-A02",
+        "F19-A03",
+        "F19-A04"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W20"
+      ]
+    },
+    {
+      "id": "F20",
+      "name": "Budget and student administration",
+      "specification": "FEATURES_PRODUCTIVITY.md",
+      "acceptance_ids": [
+        "F20-A01",
+        "F20-A02",
+        "F20-A03",
+        "F20-A04"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W20"
+      ]
+    },
+    {
+      "id": "F21",
+      "name": "Campus, transit, and travel preparation",
+      "specification": "FEATURES_PRODUCTIVITY.md",
+      "acceptance_ids": [
+        "F21-A01",
+        "F21-A02",
+        "F21-A03",
+        "F21-A04"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W20"
+      ]
+    },
+    {
+      "id": "F22",
+      "name": "Opt-in monitoring and recurring workflows",
+      "specification": "FEATURES_PRODUCTIVITY.md",
+      "acceptance_ids": [
+        "F22-A01",
+        "F22-A02",
+        "F22-A03",
+        "F22-A04",
+        "F22-A05",
+        "F22-A06"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W19"
+      ]
+    },
+    {
+      "id": "F23",
+      "name": "Voice capture, mobile companion, and optional sync",
+      "specification": "FEATURES_PRODUCTIVITY.md",
+      "acceptance_ids": [
+        "F23-A01",
+        "F23-A02",
+        "F23-A03",
+        "F23-A04",
+        "F23-A05",
+        "F23-A06"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W22"
+      ]
+    },
+    {
+      "id": "F24",
+      "name": "Integration and workflow extension system",
+      "specification": "FEATURES_FOUNDATION.md",
+      "acceptance_ids": [
+        "F24-A01",
+        "F24-A02",
+        "F24-A03",
+        "F24-A04",
+        "F24-A05"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W02",
+        "W06"
+      ]
+    },
+    {
+      "id": "F25",
+      "name": "Existing agent execution",
+      "specification": "FEATURES_FOUNDATION.md",
+      "acceptance_ids": [
+        "F25-A01",
+        "F25-A02",
+        "F25-A03",
+        "F25-A04",
+        "F25-A05",
+        "F25-A06"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W06",
+        "W07",
+        "W11"
+      ]
+    },
+    {
+      "id": "F26",
+      "name": "Browser and computer assistance",
+      "specification": "FEATURES_FOUNDATION.md",
+      "acceptance_ids": [
+        "F26-A01",
+        "F26-A02",
+        "F26-A03",
+        "F26-A04",
+        "F26-A05",
+        "F26-A06",
+        "F26-A07"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W15",
+        "W21"
+      ]
+    },
+    {
+      "id": "F27",
+      "name": "Durable workflows and reviewed actions",
+      "specification": "FEATURES_FOUNDATION.md",
+      "acceptance_ids": [
+        "F27-A01",
+        "F27-A02",
+        "F27-A03",
+        "F27-A04",
+        "F27-A05",
+        "F27-A06",
+        "F27-A07"
+      ],
+      "status": "SPECIFIED_NOT_IMPLEMENTATION_EVIDENCE",
+      "implementation_packages": [
+        "W07"
+      ]
+    }
+  ],
+  "work_packages": [
+    {
+      "id": "W01",
+      "required_dependencies": [],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W02",
+      "required_dependencies": [
+        "W01"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W03",
+      "required_dependencies": [
+        "W02"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W04",
+      "required_dependencies": [
+        "W03"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W05",
+      "required_dependencies": [
+        "W03",
+        "W04"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W06",
+      "required_dependencies": [
+        "W04",
+        "W05"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W07",
+      "required_dependencies": [
+        "W03",
+        "W04",
+        "W06"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W08",
+      "required_dependencies": [
+        "W04",
+        "W07"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W09",
+      "required_dependencies": [
+        "W02",
+        "W04",
+        "W07",
+        "W08"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W10",
+      "required_dependencies": [
+        "W08"
+      ],
+      "optional_dependencies": [
+        "W09"
+      ]
+    },
+    {
+      "id": "W11",
+      "required_dependencies": [
+        "W06",
+        "W07",
+        "W10"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W12",
+      "required_dependencies": [
+        "W07",
+        "W10"
+      ],
+      "optional_dependencies": [
+        "W09",
+        "W11"
+      ]
+    },
+    {
+      "id": "W13",
+      "required_dependencies": [
+        "W10",
+        "W11",
+        "W12"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W14",
+      "required_dependencies": [
+        "W03",
+        "W07",
+        "W10",
+        "W11"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W15",
+      "required_dependencies": [
+        "W02",
+        "W04",
+        "W07"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W16",
+      "required_dependencies": [
+        "W08",
+        "W11",
+        "W14",
+        "W15"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W17",
+      "required_dependencies": [
+        "W08",
+        "W11"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W18",
+      "required_dependencies": [
+        "W07",
+        "W12",
+        "W14",
+        "W15",
+        "W17"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W19",
+      "required_dependencies": [
+        "W07",
+        "W12",
+        "W16",
+        "W17"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W20",
+      "required_dependencies": [
+        "W08",
+        "W12",
+        "W14"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W21",
+      "required_dependencies": [
+        "W15"
+      ],
+      "optional_dependencies": []
+    },
+    {
+      "id": "W22",
+      "required_dependencies": [
+        "W03",
+        "W04",
+        "W07",
+        "W12"
+      ],
+      "optional_dependencies": []
+    }
+  ]
+}

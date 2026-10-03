@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "scope": "documentation_only",
+  "features": 27,
+  "acceptanceCases": 160,
+  "workPackages": 22,
+  "localLinks": 81,
+  "syntheticExamples": 3,
+  "productTestsExecuted": false
+}

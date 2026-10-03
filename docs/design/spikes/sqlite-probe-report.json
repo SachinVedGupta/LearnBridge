@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "purpose": "W02 synthetic SQLite dependency feasibility, not production storage",
+  "generatedAt": "2026-10-03T02:00:20.834Z",
+  "environment": {
+    "node": "v22.23.2",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "isolation": {
+    "syntheticOnly": true,
+    "temporaryRootRemoved": true,
+    "realStudentRootUsed": false,
+    "networkUsed": false,
+    "dependenciesInstalled": false
+  },
+  "summary": {
+    "passed": 14,
+    "failed": 0
+  },
+  "limitations": [
+    "node:sqlite remains experimental in the tested Node 22 release",
+    "Only the current OS/runtime combination is tested",
+    "No production repository, local daemon locking, HTTP policy, secrets store or auth integration is tested",
+    "Capacity failure uses SQLite max_page_count, not a genuinely full filesystem",
+    "Attachments are immutable synthetic files; coordinated production export locking is not implemented"
+  ],
+  "results": [
+    {
+      "id": "SQL01",
+      "name": "Installed runtime, STRICT tables and WAL",
+      "status": "PASS",
+      "evidence": {
+        "sqliteVersion": "3.51.3",
+        "journal": "wal",
+        "nativeCompilerRequiredForThisProbe": false
+      },
+      "durationMs": 29
+    },
+    {
+      "id": "SQL02",
+      "name": "Transaction migration and idempotent repeat",
+      "status": "PASS",
+      "evidence": {
+        "schemaVersion": 1,
+        "migrationRows": 1
+      },
+      "durationMs": 8
+    },
+    {
+      "id": "SQL03",
+      "name": "Failed migration rolls back schema, data and version",
+      "status": "PASS",
+      "evidence": {
+        "noPartialSchema": true,
+        "noPartialRows": true,
+        "schemaVersion": 1
+      },
+      "durationMs": 3
+    },
+    {
+      "id": "SQL04",
+      "name": "Killed migration process leaves no committed partial state",
+      "status": "PASS",
+      "evidence": {
+        "interruptedBy": "SIGKILL",
+        "recoveredSchemaVersion": 1,
+        "integrity": "ok"
+      },
+      "durationMs": 29
+    },
+    {
+      "id": "SQL05",
+      "name": "Persisted synthetic task read in a new process",
+      "status": "PASS",
+      "evidence": {
+        "differentProcessRead": true,
+        "revision": 3
+      },
+      "durationMs": 35
+    },
+    {
+      "id": "SQL06",
+      "name": "Three cross-process stale-revision writes commit once",
+      "status": "PASS",
+      "evidence": {
+        "writers": 3,
+        "successfulCommits": 1,
+        "detectedStaleWrites": 2,
+        "finalRevision": 1
+      },
+      "durationMs": 43
+    },
+    {
+      "id": "SQL07",
+      "name": "Writer contention rejects safely and later recovers",
+      "status": "PASS",
+      "evidence": {
+        "busyRejected": true,
+        "noPartialWrite": true,
+        "retryAfterReleaseSucceeded": true
+      },
+      "durationMs": 2
+    },
+    {
+      "id": "SQL08",
+      "name": "Foreign keys and SQL parameter binding",
+      "status": "PASS",
+      "evidence": {
+        "orphanRejected": true,
+        "userTextStayedData": true
+      },
+      "durationMs": 1
+    },
+    {
+      "id": "SQL09",
+      "name": "Scoped FTS5 retrieval and transactional lineage deletion",
+      "status": "PASS",
+      "evidence": {
+        "scopeQueryExcludedOther": true,
+        "revokedSourceChunksAndSearchGoneAfterReopen": true
+      },
+      "durationMs": 4
+    },
+    {
+      "id": "SQL10",
+      "name": "Online database snapshot plus immutable attachment manifest",
+      "status": "PASS",
+      "evidence": {
+        "pages": 6,
+        "snapshotRevision": 7,
+        "liveRevision": 8,
+        "attachmentHashesMatched": true
+      },
+      "durationMs": 4
+    },
+    {
+      "id": "SQL11",
+      "name": "Restore synthetic snapshot into a fresh root and verify manifest",
+      "status": "PASS",
+      "evidence": {
+        "freshRootRestore": true,
+        "rows": 1,
+        "revision": 7,
+        "attachmentHashesMatched": true
+      },
+      "durationMs": 2
+    },
+    {
+      "id": "SQL12",
+      "name": "Corrupted candidate is rejected without changing original",
+      "status": "PASS",
+      "evidence": {
+        "candidateRejected": true,
+        "originalHashUnchanged": true
+      },
+      "durationMs": 0
+    },
+    {
+      "id": "SQL13",
+      "name": "SQLite capacity failure preserves committed rows",
+      "status": "PASS",
+      "evidence": {
+        "sqliteCapacityFailureInjected": true,
+        "committedRows": 1,
+        "integrity": "ok",
+        "realFilesystemDiskFullNotTested": true
+      },
+      "durationMs": 3
+    },
+    {
+      "id": "SQL14",
+      "name": "Explicit POSIX fixture permissions",
+      "status": "PASS",
+      "evidence": {
+        "rootMode": "0700",
+        "explicitlySetDatabaseMode": "0600",
+        "productionAclEnforcementNotTested": true
+      },
+      "durationMs": 0
+    }
+  ]
+}

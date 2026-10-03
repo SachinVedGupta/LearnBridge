@@ -1,0 +1,39 @@
+{
+  "document_kind": "synthetic_design_example_not_test_results",
+  "runtime_implemented": false,
+  "schema_version": "0.1.0",
+  "suite_version": "planned-core-0.1",
+  "source_tree_digest": null,
+  "execution": {"performed": false, "edition": "local", "platform": "fixture_platform", "provider_versions": [], "started_at": null},
+  "results": [
+    {
+      "feature_id": "F04",
+      "test_id": "F04-A02",
+      "kind": "repository_fixture",
+      "required": true,
+      "status": "NOT_IMPLEMENTED",
+      "input_fixture_hash": null,
+      "observed": null,
+      "assertions": [
+        {"predicate": "tasks_with_proposal_identity", "expected": 1, "actual": null},
+        {"predicate": "present_after_restart", "expected": true, "actual": null}
+      ],
+      "evidence": [],
+      "limitations": ["Illustrates report fields only; no implementation or test execution exists"]
+    },
+    {
+      "feature_id": "F25",
+      "test_id": "A01",
+      "kind": "live_agent",
+      "required": true,
+      "status": "BLOCKED",
+      "input_fixture_hash": null,
+      "observed": null,
+      "assertions": [{"predicate": "official_agent_completed_turn_with_fixture_tool_result", "expected": true, "actual": null}],
+      "evidence": [],
+      "limitations": ["Synthetic example has no selected agent, authorized session or runtime"]
+    }
+  ],
+  "release": {"eligible": false, "claims_supported": [], "blocking_results": ["F04-A02", "A01"]},
+  "privacy": {"contains_real_student_data": false, "secrets_included": false, "automatic_upload_allowed": false}
+}

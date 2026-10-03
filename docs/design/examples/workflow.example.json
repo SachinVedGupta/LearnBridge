@@ -1,0 +1,45 @@
+{
+  "document_kind": "synthetic_design_example",
+  "runtime_implemented": false,
+  "schema_version": "0.1.0",
+  "recipe_id": "fixture-course-day-plan",
+  "recipe_version": "0.1.0",
+  "mode": "fixture_only",
+  "production_access_allowed": false,
+  "purpose": "Import synthetic course evidence and save one student-reviewed local next step",
+  "feature_ids": ["F04", "F06", "F07", "F27"],
+  "required_capabilities": ["fixture.course.read", "local.context.index", "local.today.rank", "local.task.propose", "local.task.apply", "local.task.read_back"],
+  "inputs": {
+    "course_ref": "fixture-course-001",
+    "date": "2026-10-02",
+    "timezone": "America/Toronto",
+    "clock": "2026-10-02T13:00:00Z"
+  },
+  "grants": {
+    "source_read": "fixture-local-read-001",
+    "model_processing": null,
+    "external_writes": [],
+    "allowed_source_refs": ["fixture-course-001"]
+  },
+  "budget": {"tool_calls": 12, "source_pages": 5, "read_bytes": 100000, "elapsed_seconds": 60, "model_requests": 0},
+  "steps": [
+    {"id": "refresh", "operation": "fixture.course.read", "checkpoint_after_commit": true},
+    {"id": "index", "operation": "local.context.index", "checkpoint_after_commit": true},
+    {"id": "rank", "operation": "local.today.rank", "deterministic": true},
+    {"id": "propose", "operation": "local.task.propose", "source_refs_required": true},
+    {"id": "review", "operation": "human.review", "execution_surface": "human_ui_only", "exact_payload_required": true, "student_action_required": true},
+    {"id": "save", "operation": "local.task.apply", "idempotency_key": "fixture-reviewed-task-001"},
+    {"id": "verify", "operation": "local.task.read_back", "after_restart_required": true}
+  ],
+  "action_policy": {"default_external_action": "deny", "model_may_approve": false, "payload_change_invalidates_review": true},
+  "recovery": {"cancel_stops_new_calls": true, "resume_requires_grant_revalidation": true, "budgets_do_not_reset": true, "unknown_external_outcome": "reconcile_before_retry"},
+  "success_predicates": [
+    {"name": "source_coverage", "expected": "complete_for_fixture_scope"},
+    {"name": "accepted_task_count_for_idempotency_key", "expected": 1},
+    {"name": "task_source_ref", "expected": "fixture-course-001"},
+    {"name": "task_present_after_restart", "expected": true},
+    {"name": "external_write_count", "expected": 0},
+    {"name": "model_request_count", "expected": 0}
+  ],
+  "required_evidence": ["fixture_source_hash", "scope_receipt", "human_review_receipt", "repository_read_back", "tool_action_ledger", "restart_assertion"]
+}

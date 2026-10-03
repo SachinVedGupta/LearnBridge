@@ -1,0 +1,209 @@
+{
+  "schema_version": 1,
+  "work_package": "W01",
+  "scope": "shared_core_and_synthetic_migration_prerequisites",
+  "generated_at": "2026-10-03T02:04:02.154Z",
+  "user_date": "2026-10-02",
+  "timezone": "America/Toronto",
+  "git": {
+    "base_commit": "65916b58b7ecf7038a0581de3b04fac1675e966b",
+    "uncommitted": true,
+    "commit_or_push_performed": false
+  },
+  "environment": {
+    "node": "v22.23.2",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "status": "PASS",
+  "release_claim": "Foundation slice only; M1 local product is not complete.",
+  "checks": [
+    {
+      "id": "W01-CORE",
+      "command": "npm run test:core",
+      "status": "PASS",
+      "tests": 39,
+      "pass": 39,
+      "fail": 0,
+      "skipped": 0,
+      "evidence_type": "synthetic_contract_and_file_fixtures"
+    },
+    {
+      "id": "W01-DEMO",
+      "command": "npm run demo:core",
+      "status": "PASS",
+      "report": {
+        "schema_version": 1,
+        "kind": "core_contract_fixture_round_trip",
+        "status": "PASS",
+        "evidence_type": "synthetic_fixture",
+        "platform": "darwin",
+        "counts": {
+          "tasks": 1,
+          "documents": 1,
+          "document_revisions": 1
+        },
+        "assertions": {
+          "validated_before_write": true,
+          "verified_in_fresh_process": true,
+          "records_equal_after_restart": true,
+          "content_hash_matches": true,
+          "revision_immutable": true,
+          "private_file_modes": true,
+          "child_environment_allowlisted": true,
+          "cleanup_complete": true
+        },
+        "limitations": [
+          "W01 contract/file round-trip only; no production repository, SQLite, runtime, accounts or cloud providers."
+        ]
+      }
+    },
+    {
+      "id": "HOSTED-REGRESSION",
+      "command": "npm test",
+      "status": "PASS",
+      "tests": 56,
+      "pass": 56,
+      "fail": 0,
+      "skipped": 0,
+      "composition": {
+        "core_cases": 39,
+        "hosted_state_boundary_cases": 3,
+        "existing_oauth_provider_cases": 14
+      },
+      "evidence_type": "core_fixtures_and_hosted_handler_provider_fixtures"
+    },
+    {
+      "id": "HOSTED-BUILD",
+      "command": "npm run build",
+      "status": "PASS",
+      "exit_code": 0,
+      "builds": [
+        "shared TypeScript",
+        "legacy Express API TypeScript",
+        "Next.js hosted website"
+      ],
+      "evidence_type": "actual_compilation"
+    },
+    {
+      "id": "PORT-TYPES",
+      "command": "web/node_modules/.bin/tsc --noEmit --strict --skipLibCheck --module NodeNext --target ES2022 web/packages/core/src/ports.d.mts",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence_type": "declaration_compilation"
+    },
+    {
+      "id": "WORKSPACE-INSTALL",
+      "command": "npm --prefix web install --ignore-scripts --offline",
+      "status": "PASS",
+      "exit_code": 0,
+      "third_party_dependencies_added": 0,
+      "internal_workspace_links_added": 1
+    },
+    {
+      "id": "CORE-EXPORTS",
+      "command": "Import @learnbridge/core from web workspace",
+      "status": "PASS",
+      "observed_exports": [
+        "createTask",
+        "migrateHostedTasks",
+        "assertEditionIdentity"
+      ]
+    },
+    {
+      "id": "W02-SQLITE-SPIKE",
+      "command": "node docs/design/spikes/sqlite-probe.mjs",
+      "status": "PASS",
+      "passed": 14,
+      "failed": 0,
+      "evidence_type": "real_sqlite_synthetic_temporary_databases",
+      "report": "../spikes/sqlite-probe-report.json"
+    }
+  ],
+  "coverage": [
+    {
+      "area": "F01 setup, F04 migration, F24 extension, F25 adapter, F27 workflow",
+      "level": "prerequisite_only",
+      "full_feature_acceptance_complete": false
+    },
+    {
+      "area": "S08 hosted boundary",
+      "level": "handler_fixture_partial",
+      "live_two_student_sessions_verified": false
+    },
+    {
+      "area": "S09 processing permission",
+      "level": "pure_precondition_only",
+      "running_mcp_content_boundary_verified": false
+    },
+    {
+      "area": "R01/R02/R05 storage",
+      "level": "primitive_probe_only",
+      "production_storage_verified": false
+    }
+  ],
+  "planned_feature_acceptance_cases_completed": 0,
+  "remaining": [
+    {
+      "id": "W02-STABLE-DRIVER",
+      "status": "NOT_IMPLEMENTED",
+      "reason": "Pinned better-sqlite3 trial requires owner approval before production dependency change."
+    },
+    {
+      "id": "W02-STATIC-LOCAL-UI",
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "W03-PRIVATE-REPOSITORIES",
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "W04-PAIRING-POLICY",
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "W05-LOCAL-DASHBOARD",
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "W06-OFFICIAL-MCP-WORKFLOW",
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "LIVE-HOSTED-TWO-ACCOUNTS",
+      "status": "SKIP",
+      "reason": "No hosted application change or live account testing in this foundation slice."
+    },
+    {
+      "id": "WINDOWS-LINUX-SUPPORT",
+      "status": "SKIP",
+      "reason": "Only current macOS arm64 environment was tested; Windows ACLs require a separate implementation/probe."
+    }
+  ],
+  "limitations": [
+    "No local daemon, private student repository, dashboard installation or existing-subscription workflow is delivered yet.",
+    "Validators do not authenticate owners/receipts or resolve actual source scope.",
+    "Migration returns a private plan and backup; it does not persist, merge or execute a rollback.",
+    "JSON demo files are disposable fixtures, not the production storage format.",
+    "SQLite uses the experimental built-in Node interface only for feasibility; max_page_count simulates capacity failure, not a truly full filesystem.",
+    "No personal data scan, real provider account/tool execution, AI request, cloud configuration or deployment was performed."
+  ],
+  "source_sha256": {
+    "package.json": "f6dee209f3e35a694201f13c663a126f545dccf2a32d7acb52363efb0420fd85",
+    "web/package-lock.json": "0adf456527e183e40a37810d0fe4260e7ad656285f29ec670cf8b2a6d9a70e5c",
+    "web/packages/core/package.json": "a6a4d15601ee2f2e9da941240be60156323b21ecbe2f778cb8887b917f611f2e",
+    "web/packages/core/src/index.mjs": "fa482fc346c089c05a7b1f0b3ce477c57db653df041415ff69608415776517e8",
+    "web/packages/core/src/contracts.mjs": "b1d486e4e0ae7997d0e6c95fc97f9ac11997216386c1471e1cbd27296ccea952",
+    "web/packages/core/src/errors.mjs": "99ed31dc15f91cb02d0862903cf94ea77892f4635265be12299e9f63ab3d5ef0",
+    "web/packages/core/src/legacy-state.mjs": "6e804586a940a84d655f99801f67e9d20aa6af6c34eb096468a7d3d6d8f8df28",
+    "web/packages/core/src/ports.mjs": "132c62560a93f29087b47e22a5d9f71f0b26fd057475ae66315dae6b38bad0e8",
+    "web/packages/core/src/ports.d.mts": "699de01c12054977b617023c91a3b4e0224efd1c41ad8569c5d48375f3b8a3cd",
+    "web/packages/core/examples/fixture-demo.mjs": "918ea6a2203559ecc4f0d63d919950aa26f01b38ea43bf30c7dd74e4e99b3e7b",
+    "web/scripts/core-contracts.test.mjs": "470d0b8664d77f9d90aafdf278b5452dfa1176b798d72af1560007ee7c25b33e",
+    "web/scripts/core-ports.test.mjs": "4eaea9614ffd40c895159b1a0159468aac79ac41b34e207566e143acbdcc31cb",
+    "web/scripts/core-demo.test.mjs": "4aba130f01992ff88d5ba63d2049a74bdb8e0e39e80f9cf812a314d0f9182deb",
+    "web/scripts/legacy-state.test.mjs": "18eb8fbe3e93d45c65e446535a48f4a1369bb6b947ff3ff77515d2e1d90ed439",
+    "web/scripts/hosted-state-boundary.test.mjs": "a7ec40cd96c8046d4d70de6d4bd75be98de1e47196437a17bfbdbbab80336465",
+    "docs/design/spikes/sqlite-probe.mjs": "2146f490c69597560a35c427d70fa9627c976db0cca4a561420587570c46481e"
+  }
+}

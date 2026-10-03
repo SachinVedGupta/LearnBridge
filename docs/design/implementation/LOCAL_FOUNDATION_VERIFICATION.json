@@ -1,0 +1,239 @@
+{
+  "schema_version": 1,
+  "work_slice": "W03-W05 initial local foundation",
+  "status": "PASS_WITH_EXPLICIT_SCOPE",
+  "recorded_at": "2026-10-03T02:52:07.789Z",
+  "evidence_type": "real SQLite, loopback HTTP, child processes and actual browser; synthetic records only",
+  "git": {
+    "base_commit": "65916b58b7ecf7038a0581de3b04fac1675e966b",
+    "changes_committed": false,
+    "pushed": false,
+    "deployed": false
+  },
+  "environment": {
+    "node": "v22.23.2",
+    "platform": "darwin",
+    "arch": "arm64",
+    "macos": "26.5.1",
+    "driver": "better-sqlite3 13.0.3",
+    "sqlite": "3.53.4"
+  },
+  "scope": {
+    "implemented": [
+      "Manual task CRUD and completion/date preservation",
+      "Multiple text notes, immutable versions, hashes and local FTS",
+      "Expected revisions, persisted create idempotency and owner-bound import journals",
+      "Private managed SQLite root and one-writer crash recovery",
+      "Paired loopback dashboard and nonce/Host/Origin/session checks",
+      "setup/start/doctor/stop/demo/backup/fresh restore/uninstall commands",
+      "Coherent online backup, fresh-root validation and safe shutdown"
+    ],
+    "personal_data_scanned": false,
+    "cloud_settings_changed": false,
+    "model_calls": false,
+    "global_agent_config_changed": false
+  },
+  "checks": [
+    {
+      "command": "npm test",
+      "status": "PASS",
+      "tests": 111,
+      "pass": 111,
+      "fail": 0,
+      "skip": 0,
+      "duration_ms": 4393.129792,
+      "local_tests": 55,
+      "local_breakdown": {
+        "storage": 21,
+        "http": 17,
+        "lifecycle": 12,
+        "diagnostics_ipc": 5
+      },
+      "other_contract_hosted_tests": 56
+    },
+    {
+      "command": "npm run build",
+      "status": "PASS",
+      "scope": "Existing hosted shared/API/Next production build; no deployment or live account test"
+    },
+    {
+      "command": "npm run local:build",
+      "status": "PASS",
+      "static_assets": 3
+    },
+    {
+      "command": "git diff --check",
+      "status": "PASS"
+    }
+  ],
+  "clean_copy_install": {
+    "schema_version": 1,
+    "suite": "local-clean-copy-offline-install-v1",
+    "evidence_type": "synthetic_fixture",
+    "status": "PASS",
+    "environment": {
+      "node": "v22.23.2",
+      "platform": "darwin",
+      "arch": "arm64",
+      "installed_driver": "13.0.3",
+      "sqlite": "3.53.4",
+      "child_node": "v22.23.2"
+    },
+    "scope": {
+      "copied_previous_node_modules": false,
+      "copied_environment_files": false,
+      "copied_personal_data": false,
+      "cloud_configuration_supplied": false,
+      "offline_cache_used": true,
+      "package_lifecycle_hooks_disabled": true
+    },
+    "phases": [
+      {
+        "id": "FI01_EXPLICIT_CLEAN_SOURCE_COPY",
+        "status": "PASS",
+        "duration_ms": 29
+      },
+      {
+        "id": "FI02_FRESH_LOCKED_OFFLINE_INSTALL",
+        "status": "PASS",
+        "duration_ms": 3961
+      },
+      {
+        "id": "FI03_BUILD_STATIC_DASHBOARD",
+        "status": "PASS",
+        "duration_ms": 25
+      },
+      {
+        "id": "FI04_CLOUD_FREE_SETUP_AND_DOCTOR",
+        "status": "PASS",
+        "duration_ms": 106
+      },
+      {
+        "id": "FI05_NEW_PROCESS_CREATES_SYNTHETIC_RECORDS",
+        "status": "PASS",
+        "duration_ms": 44
+      },
+      {
+        "id": "FI06_FRESH_PROCESS_READS_EXACT_SAVED_RECORDS",
+        "status": "PASS",
+        "duration_ms": 44
+      },
+      {
+        "id": "FI07_CLI_BACKUP_AND_FRESH_ROOT_RESTORE",
+        "status": "PASS",
+        "duration_ms": 115
+      },
+      {
+        "id": "FI08_INDEPENDENT_PROCESS_VERIFIES_RESTORED_RECORDS",
+        "status": "PASS",
+        "duration_ms": 45
+      }
+    ],
+    "limitations": [
+      "A clean disposable source copy installed from the existing offline npm cache; not a new computer or an online-download test.",
+      "Only this recorded OS, architecture and Node runtime were exercised.",
+      "Task/note persistence, static build and CLI lifecycle only; real MCP hosts, provider OAuth and personal onboarding are separate gates."
+    ],
+    "source": {
+      "file_count": 25,
+      "source_digest": "48a9ea3e8bab344bde0bd562e67e5f4801737d9cef0d99428250d15d230d87bc",
+      "lock_sha256": "43e346d54e71d6fbe74c2729615f84b2e36f3665d5ed8a0f9252944227174ac5"
+    },
+    "observed": {
+      "tasks": 1,
+      "documents": 1,
+      "document_content_sha256": "6b3753692a884de653b1ad19639c7a1b4912c63fb3db43d13d610e742dbbb3d2",
+      "exact_records_survive_new_process": true,
+      "exact_records_survive_fresh_root_restore": true,
+      "static_assets_built_and_hash_matched": 3
+    },
+    "fixture_cleanup": true
+  },
+  "browser": {
+    "status": "PASS",
+    "host": "Codex in-app browser",
+    "synthetic_fixture": true,
+    "assertions": [
+      "Initial unpaired page shows no private workspace",
+      "Launcher code pairs browser and loads real local capabilities",
+      "Task create/date/completion/edit show revisions 1/2/3",
+      "Note create and edit show exact Unicode and stored SHA-256; pasted markup remains text",
+      "Two tabs saving the same note revision produce a conflict without replacing the unsaved draft",
+      "In-app confirmation cancellation preserves the draft; explicit reload shows current content/hash/sidebar revision",
+      "Delete cancellation preserves the saved note",
+      "Browser refresh bootstraps a valid session",
+      "Real process stop/restart invalidates the session; new pairing reads retained task and note",
+      "Disconnect clears private editor DOM; other tab reload requires pairing",
+      "390px viewport has document width 390px; temporary override reset"
+    ],
+    "final_independent_storage_read": {
+      "status": "PASS",
+      "fresh_process_read": true,
+      "task_revision": 3,
+      "note_revision": 4,
+      "note_sha256": "466c800e742b0f5104fdbc547d4de04c536d2ad07a9d31687914fec2927721e9",
+      "immutable_versions": 4
+    },
+    "fixture_cleanup": true,
+    "artifacts": [
+      "artifacts/local-foundation/dashboard.png",
+      "artifacts/local-foundation/verified-note.png",
+      "artifacts/local-foundation/conflict.png",
+      "artifacts/local-foundation/mobile-note.png"
+    ],
+    "preview": {
+      "edition": "disposable synthetic demo",
+      "origin": "http://127.0.0.1:62599",
+      "paired_browser_open": true
+    }
+  },
+  "recovery_observations": {
+    "incomplete_authenticated_body_shutdown_ms": 1790.859916,
+    "partial_body_not_committed": true,
+    "backup_shutdown_overlap_observed": true,
+    "restored_notes": 32,
+    "bytes_per_note": 512000,
+    "exact_text_and_sha256_verified": true
+  },
+  "limits": [
+    "Initial foundation only, not full M1 or the 27-feature product catalogue.",
+    "No official local MCP bridge, Codex/Claude subscription workflow, grants/source ingestion, reviewed profile, D2L, provider linking, AI tutoring, computer control or durable action orchestration in the local edition.",
+    "Verified macOS arm64/Node22.23.2 only. Linux experimental; Windows rejected pending native ACL/control support.",
+    "Fresh-copy installation used existing offline npm cache with lifecycle hooks disabled; not a new computer or online registry-download proof.",
+    "One paired workspace per browser profile; loopback-port cookie names currently collide. Independent server sessions prevent data crossing.",
+    "POSIX private modes and local IPC trust the same OS user; storage/control metadata is not encrypted or a sandbox.",
+    "Deleting notes removes active/search results but historical text and backups remain. Physical purge is not implemented.",
+    "Disk capacity exhaustion was simulated at SQLite page limits; physical full-disk, power-loss and large-scale performance gates remain.",
+    "A crash in the short lock-recovery critical section can leave a guard requiring inspection; uncertain/reused control PIDs fail closed.",
+    "Hosted regression evidence is fixture/build coverage, not fresh live two-student/provider authorization."
+  ],
+  "source_sha256": {
+    "package.json": "302f9b1877d064cefdc3670c355b485b44f826055fcf07e270bd247697cb2fee",
+    "web/package.json": "d687025612a3d51497f3000011217633b4ec8059a575eb7f45548362a67194a1",
+    "web/package-lock.json": "43e346d54e71d6fbe74c2729615f84b2e36f3665d5ed8a0f9252944227174ac5",
+    "web/packages/core/package.json": "a6a4d15601ee2f2e9da941240be60156323b21ecbe2f778cb8887b917f611f2e",
+    "web/packages/core/src/contracts.mjs": "b1d486e4e0ae7997d0e6c95fc97f9ac11997216386c1471e1cbd27296ccea952",
+    "web/packages/core/src/errors.mjs": "99ed31dc15f91cb02d0862903cf94ea77892f4635265be12299e9f63ab3d5ef0",
+    "web/packages/core/src/index.mjs": "fa482fc346c089c05a7b1f0b3ce477c57db653df041415ff69608415776517e8",
+    "web/packages/core/src/legacy-state.mjs": "6e804586a940a84d655f99801f67e9d20aa6af6c34eb096468a7d3d6d8f8df28",
+    "web/packages/core/src/ports.mjs": "132c62560a93f29087b47e22a5d9f71f0b26fd057475ae66315dae6b38bad0e8",
+    "web/packages/core/src/ports.d.mts": "699de01c12054977b617023c91a3b4e0224efd1c41ad8569c5d48375f3b8a3cd",
+    "web/packages/local-storage/package.json": "5da79f987aa6b477a43e5772336966c4aa52cfc732030c27cc9f8ff3cb9962fe",
+    "web/packages/local-storage/src/index.mjs": "1d8a989b4bd8cfdc6ce810ce3c7731f5a3c6bf9484cd3689fafc44551d9f37fc",
+    "web/apps/local-runtime/package.json": "3f4882579ca87ef0c74e14eeef3197b7e4a7da14241a8cf10b37831b2f6ef221",
+    "web/apps/local-runtime/src/cli.mjs": "728350a9862d17ddffda1cdbab5cc7f38f88898fc23c46d8dc7abe0dce21d661",
+    "web/apps/local-runtime/src/ipc.mjs": "b4347b2bc97bdfa4fd761fc197b52d382daf3a01c615bc84949f8ff5b964d4a2",
+    "web/apps/local-runtime/src/policy.mjs": "6c053f4f6aba51f5d8f76bc149ca9c34628a75a69c686bad547a176cd338f703",
+    "web/apps/local-runtime/src/server.mjs": "8d9a4fe8bb9a847bb900b4f71e11bf9fd76efb8b39af5e12e890385a0c2145c0",
+    "web/apps/local/package.json": "3b3735a81d688e9e117fcff504c664f43416f3e83443b57499e4b1b18e5a609e",
+    "web/apps/local/build.mjs": "5697e28e494244e18bd88f8adb6ea8a528aaa8b58abcc3cb4538cbc1e7401729",
+    "web/apps/local/public/index.html": "1b64c9454b8bdad70b5684a050841c9a2d2d073a59abd01c86adbcf6d808b32a",
+    "web/apps/local/public/app.js": "baf715ab69661604e3e40a69f86a981fcff0e42f7796dcba9304a57e3366329b",
+    "web/apps/local/public/styles.css": "d26a4cd42b35d90816d17e02fe30561e12371491be0561bb0716401f828afd65",
+    "web/scripts/local-storage.test.mjs": "62decbdff355d1c6299cb470dec4c5153cf16d364e3d39be1b3b6c311bc981a4",
+    "web/scripts/local-runtime.test.mjs": "95a7d7132de6db7440a58c16b6e0f542ef70fc8a801b6fc2e77b4454c29ee6b2",
+    "web/scripts/local-lifecycle.test.mjs": "e877137a4d6d654691a93ad4252e55e5d12ebb93c248a12a8a0406d81885bb27",
+    "web/scripts/local-diagnostics.test.mjs": "8275d8dd0bc9bbf2f0705846844ced9d80933bc7c19fb515f667259d4c2ffeaf",
+    "web/scripts/verify-local-install.mjs": "eeec0029857d6211792bc8700cfd49a2feda9fd6e0789cc0e5719ea82b2f98ab"
+  }
+}

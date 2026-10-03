@@ -1,0 +1,186 @@
+{
+  "specVersion": "0.1.0",
+  "documentKind": "synthetic_fixture_only",
+  "runtimeImplemented": false,
+  "productionAccessAllowed": false,
+  "features": ["F02", "F03"],
+  "milestone": "M0",
+  "student": {
+    "id": "fixture-student-001",
+    "displayName": "Example Student",
+    "identityState": "confirmed_in_fixture",
+    "identityEvidence": "fixture-local-ui-confirmation-001"
+  },
+  "run": {
+    "id": "fixture-onboarding-001",
+    "mode": "fixture",
+    "purpose": "Review synthetic course and career context to propose a student profile",
+    "state": "awaiting_student",
+    "phase": "profile_review",
+    "scopeRevision": 2,
+    "scopeFingerprint": "fixture-scope-v2",
+    "startedAt": "2026-10-02T12:00:00Z",
+    "cancelRequested": false,
+    "resumeRequiresRevalidation": true
+  },
+  "sources": [
+    {
+      "id": "fixture-source-school",
+      "kind": "local_folder",
+      "root": "${FIXTURE_ROOT}/approved/school",
+      "canonicalRootRequired": true,
+      "followSymlinks": false,
+      "selection": {"subpaths": ["course-a"], "extensions": [".md", ".pdf"]},
+      "inventorySnapshotId": "fixture-inventory-school-v1",
+      "versionCheckRequiredBeforeRead": true
+    },
+    {
+      "id": "fixture-source-drive",
+      "kind": "fake_cloud_collection",
+      "adapter": "fixture-drive",
+      "accountId": "fixture-account-001",
+      "accountDisplay": "example.student@example.invalid",
+      "identityConfirmedByStudent": true,
+      "collectionIds": ["fixture-course-folder"],
+      "documentIds": ["fixture-doc-syllabus"],
+      "selectionMode": "intersection",
+      "collectionMembershipVerificationRequired": true,
+      "inventorySnapshotId": "fixture-inventory-drive-v1",
+      "dateWindow": {"from": "2026-09-01", "to": "2026-12-31"},
+      "attachmentsEnabled": false
+    },
+    {
+      "id": "fixture-source-memory-export",
+      "kind": "user_selected_agent_export",
+      "root": "${FIXTURE_ROOT}/approved/exports",
+      "selection": {"files": ["student-selected-memory.json"]},
+      "privateAgentStateAccessAllowed": false,
+      "followSymlinks": false
+    }
+  ],
+  "grants": [
+    {
+      "id": "fixture-consent-metadata-001",
+      "revision": 2,
+      "kind": "metadata_inventory",
+      "state": "granted_in_fixture",
+      "scopeRevision": 2,
+      "sourceIds": ["fixture-source-school", "fixture-source-drive", "fixture-source-memory-export"],
+      "allowedMetadata": ["type", "name", "size", "modifiedAt", "opaqueReference"],
+      "bodyReadAllowed": false,
+      "remoteDisclosureAllowed": false,
+      "grantedBy": "fixture-student-001",
+      "grantedAt": "2026-10-02T12:01:00Z",
+      "expiresAt": "2026-10-02T13:01:00Z"
+    },
+    {
+      "id": "fixture-consent-local-read-001",
+      "revision": 1,
+      "kind": "local_content_read",
+      "state": "granted_in_fixture",
+      "scopeRevision": 2,
+      "sourceIds": ["fixture-source-school", "fixture-source-drive"],
+      "inventorySnapshotIds": ["fixture-inventory-school-v1", "fixture-inventory-drive-v1"],
+      "purpose": "Extract selected synthetic syllabus and timetable",
+      "remoteDisclosureAllowed": false,
+      "grantedBy": "fixture-student-001",
+      "grantedAt": "2026-10-02T12:05:00Z",
+      "expiresAt": "2026-10-02T13:05:00Z"
+    },
+    {
+      "id": "fixture-consent-remote-001",
+      "revision": 1,
+      "kind": "remote_model_processing",
+      "state": "declined_in_fixture",
+      "processor": {"provider": "none", "executionMode": "none", "paidFallbackAllowed": false},
+      "sourceIds": [],
+      "profileFieldIds": [],
+      "payloadPreviewRequired": true,
+      "allowedPayloadBytes": 0,
+      "remoteRequestsAllowed": 0
+    },
+    {
+      "id": "fixture-consent-recurring-001",
+      "kind": "recurring_refresh",
+      "state": "not_requested",
+      "sourceIds": [],
+      "newSourceExpansionAllowed": false
+    }
+  ],
+  "forbidden": {
+    "secretReadsAllowed": false,
+    "cookieAndAuthStoreReadsAllowed": false,
+    "osVaultReadsAllowed": false,
+    "clipboardReadsAllowed": false,
+    "browserHistoryReadsAllowed": false,
+    "externalWritesAllowed": false,
+    "excludedCategories": ["credentials", "cookies", "tokens", "session_exports", "os_vaults", "agent_private_state", "dependency_and_build_cache"],
+    "excludedPatterns": ["**/.env", "**/.env.*", "**/.git/**", "**/node_modules/**", "**/cookies*", "**/*token*", "**/*secret*"],
+    "excludedRoots": ["${FIXTURE_ROOT}/excluded", "${FIXTURE_ROOT}/unselected"],
+    "archiveExtractionAllowed": false,
+    "executableContentAllowed": false
+  },
+  "budget": {
+    "maxFiles": 50,
+    "maxTotalBytes": 10000000,
+    "maxBytesPerFile": 1000000,
+    "maxDirectoryDepth": 4,
+    "maxProviderPages": 3,
+    "maxApiRequests": 8,
+    "maxElapsedSeconds": 60,
+    "maxExtractedCharacters": 100000,
+    "maxRemotePayloadBytes": 0,
+    "maxModelRequests": 0,
+    "stopBeforeExceeding": true,
+    "resumeResetsBudget": false
+  },
+  "coverage": [
+    {"sourceId": "fixture-source-school", "status": "complete", "itemsInventoried": 2, "itemsExtracted": 2, "checkedAt": "2026-10-02T12:06:00Z"},
+    {"sourceId": "fixture-source-drive", "status": "partial", "pagesRead": 3, "morePagesAvailable": true, "reason": "page_budget_reached", "checkedAt": "2026-10-02T12:06:30Z"},
+    {"sourceId": "fixture-source-memory-export", "status": "blocked", "reason": "local_content_consent_missing", "itemsExtracted": 0}
+  ],
+  "profileCandidates": [
+    {
+      "fieldId": "timezone",
+      "value": "America/Toronto",
+      "state": "confirmed",
+      "provenance": {"method": "student_entry", "evidenceId": "fixture-review-timezone-001", "reviewedBy": "fixture-student-001", "reviewedAt": "2026-10-02T12:07:00Z"}
+    },
+    {
+      "fieldId": "course_enrollments",
+      "value": ["Fixture Course A"],
+      "state": "proposed",
+      "provenance": {"method": "local_deterministic_extraction", "sourceId": "fixture-source-school", "sourceVersion": "fixture-syllabus-v1", "location": "syllabus.md:2", "retrievedAt": "2026-10-02T12:06:00Z"},
+      "authoritativeUseAllowed": false
+    },
+    {
+      "fieldId": "graduation_date",
+      "state": "conflicting",
+      "alternatives": [{"value": "2027-05", "evidenceId": "fixture-evidence-a"}, {"value": "2028-05", "evidenceId": "fixture-evidence-b"}],
+      "authoritativeUseAllowed": false
+    }
+  ],
+  "retention": {
+    "managedStorageOnly": true,
+    "credentialsInExportsAllowed": false,
+    "forgetRequiresLineagePurge": true,
+    "purgeCategories": ["source_copies", "extracted_text", "chunks_and_embeddings", "search_indexes", "summaries", "profile_fields", "derived_tasks_and_plans", "generated_artifacts", "caches", "agent_context_exports", "previews", "run_payloads", "logs", "backups"],
+    "externalCopiesMayRequireSeparateDeletion": true,
+    "unverifiedPurgeCanReportComplete": false,
+    "completeMeans": "verified_managed_logical_purge_and_backup_disposition",
+    "forensicSsdErasureGuaranteed": false
+  },
+  "fixtureAssertions": {
+    "canaries": ["LB_FIXTURE_EXCLUDED_SECRET_01", "LB_FIXTURE_OUTSIDE_SCOPE_01", "LB_FIXTURE_SYMLINK_ESCAPE_01"],
+    "forbiddenBodyReadCount": 0,
+    "remotePayloadCount": 0,
+    "overallCoverageStatus": "partial",
+    "onboardingCanClaimAllSourcesChecked": false,
+    "blockedOrUnsupportedCountsAsPass": false,
+    "unverifiedInFlightOutcomeState": "unknown_outcome",
+    "acceptanceIds": ["F03-A01", "F03-A02", "F03-A03", "F03-A04", "F03-A05", "F03-A06", "F03-A07", "F03-A08", "F03-A09", "F03-A10", "F03-A11", "F03-A12", "F03-A13", "F03-A14", "F03-A15", "F03-A16", "F03-A17", "F03-A18"],
+    "swapAfterCheckMayReadUnselectedBody": false,
+    "extractionMustUseVerifiedHandle": true,
+    "realDataAccessAllowed": false
+  }
+}

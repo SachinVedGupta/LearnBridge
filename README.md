@@ -4,7 +4,29 @@
 
 LearnBridge is a web app for students that brings together AI tutoring, course planning, assignment drafting, and personal productivity tools. The goal is to give each student one private workspace for learning across the apps they already use.
 
-## What works today
+## Local student workspace
+
+The local foundation now provides a private dashboard for manual tasks and plain-text notes, with revision checks, restart persistence, backups and fresh-workspace restore. It runs on this computer without Supabase, Composio or AI API keys. The public website remains available as a separate edition.
+
+Requires Node.js **22.16 or newer**. macOS arm64 is the verified foundation target; Linux is experimental and Windows local storage is not supported yet.
+
+```sh
+npm run setup
+npm run local:setup
+npm run local:start
+```
+
+Open the loopback address shown by the launcher, normally `http://127.0.0.1:3210`, and enter its single-use pairing code. For a disposable sample workspace, use `npm run local:demo`. Read [local setup, backup and recovery](docs/LOCAL_SETUP.md) for commands and boundaries.
+
+The next product direction connects this workspace to each student's existing Codex or Claude Code setup, with Avenue/D2L, browser and document tools, controlled onboarding, study support and internship workflows. **The local MCP bridge, source connections, student profile and agent orchestration are not built yet.** Pairing the dashboard does not connect an AI or scan your files.
+
+Read the [local student assistant blueprint](docs/LOCAL_FIRST_VISION.md) for the feature catalogue, architecture, audited integration choices, and implementation acceptance checks.
+
+The [detailed design and implementation guide](docs/design/README.md) specifies 27 features, controlled onboarding, shared contracts, a staged build plan and objective verification. Give your coding agent [SETUP_LEARNBRIDGE.md](SETUP_LEARNBRIDGE.md) as its setup entry point. It distinguishes the implemented foundation from the remaining plan.
+
+See [implementation status](docs/design/IMPLEMENTATION_STATUS.md) and the [local foundation verification report](docs/design/implementation/LOCAL_FOUNDATION_VERIFICATION.json) for measured evidence and remaining gates. Deleting a local note removes it from active views and search; historical text may remain in the local database and backups. Selective physical erasure is not implemented.
+
+## Public website
 
 - Student sign-in and private, account-isolated task and draft storage.
 - AI tutor and reviewed writing suggestions, subject to the deployed service configuration and usage limits.
@@ -19,9 +41,9 @@ The tutor creates a short-lived Composio session for the signed-in student and t
 
 LearnBridge is under active development. D2L/Brightspace still needs an institution-approved integration. Check the live Connections page and the [hosting and verification notes](docs/HOSTING.md) for current provider limitations and release status.
 
-## Run locally
+## Develop the hosted website locally
 
-Requires Node.js 22 or newer.
+This starts the cloud-backed website development edition on port 3200. It is separate from the private local dashboard above. Requires Node.js 22.16 or newer for this workspace.
 
 ```sh
 npm run setup
@@ -35,6 +57,10 @@ Open http://127.0.0.1:3200. Use `npm run dev` for development. Copy `web/apps/we
 ## Project structure
 
 - `web/apps/web`: student website and server APIs.
+- `web/apps/local`: static private-workspace dashboard.
+- `web/apps/local-runtime`: loopback service and setup/control commands.
+- `web/packages/core`: edition-independent data contracts and hosted-task migration planner.
+- `web/packages/local-storage`: private SQLite tasks, notes, revisions and backups.
 - `web/packages/shared`: shared tutor and editor contracts.
 - `supabase`: database migration and student-isolation test.
 - `web/scripts`: provider and OAuth boundary tests.
