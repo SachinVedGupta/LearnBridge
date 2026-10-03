@@ -122,3 +122,62 @@ node --test web/scripts/academic-adapter.test.mjs web/scripts/academic-mcp.test.
 ```
 
 The second suite uses the installed official MCP SDK client/server and a real stdio child process with invented data. It verifies discovery, selected-course reads, blocked tools, missing/expired sessions, output bounds, timeout/cancellation, late-response rejection, environment isolation and child shutdown. Its server has no network or filesystem operations. These are protocol and policy checks, not institution compatibility evidence.
+
+## Course retrieval recipes
+
+`src/library.mjs` adds a pure, JSON-serializable library recipe. The runtime must obtain the selected snapshots/text through its reviewed source controls and persist the resulting recipe in its own versioned transaction. These functions establish data integrity and selection boundaries; a supplied hash or course list is not proof of human consent.
+
+```js
+import { buildAcademicLibrary, searchAcademicLibrary, resolveAcademicCitation } from './src/library.mjs';
+
+const library = buildAcademicLibrary({
+  snapshots: [reviewedAcademicSnapshot],
+  selectedCourseIds: ['781264'],
+  texts: [],
+  revokedSourceIds: [],
+});
+const result = searchAcademicLibrary(library, {
+  query: 'recursion base case', courseIds: ['781264'], limit: 5,
+});
+const evidence = resolveAcademicCitation(library, {
+  source_id: result.results[0].source_id,
+  version_hash: result.results[0].version_hash,
+  chunk_id: result.results[0].chunk_id,
+  courseIds: ['781264'],
+});
+```
+
+For selected files, `texts` records are `{source_id,version_hash,course_id,title,format,parser_version,retrieved_at,text}`. Text/Markdown format requires the SHA-256 of exact UTF-8 `text` as `version_hash`. `pdf_text` instead takes `pages:[{physical_page,printed_label?,text}]` and the reviewed original-file hash; the caller owns actual extraction and original-file integrity. This module neither opens nor parses PDFs. Unsupported OCR/office formats fail explicitly. Empty extracted text produces `text_unavailable`, with no searchable empty-success chunks.
+
+All snapshots in one recipe must share an account and institution. Hashes and normalized row hashes are checked before indexing. Historical versions are retained, current search uses only the most recently retrieved version, and exact old citations remain marked `historical`. Passing a revoked source ID excludes all its versions and chunks from this new recipe. Rebuild and replace any previously stored recipe/caches in the host's same revocation transaction; this pure module cannot purge an old stored copy or backup. Source text is always labelled untrusted.
+
+Chunk locators identify text line ranges, Markdown section/line ranges, or PDF physical pages and optional separately retained printed labels. Long lines use exact JavaScript UTF-16 character offsets within that line; chunks never split a Unicode scalar. Retrieval applies hard course selection before deterministic whole-token ranking. Queries may not widen the recipe's selection. Snapshot coverage is labelled `source_reported`; narrowed query counts are unknown when the recipe lacks a per-course coverage breakdown. A reported complete snapshot is not independent proof of complete institutional coverage.
+
+Input/output recipes are bounded to 4 MB, 100 snapshots, 2,000 selected text records, 1,000 declared PDF pages per record and 6,000-byte text chunks. The host should use smaller operational budgets and durable chunk storage for large libraries. No embeddings, cloud processing, network requests or automatic model reads occur.
+
+## Deterministic Today and catch-up previews
+
+`src/planning.mjs` exports `rankToday`, `planStudyWork` and `nextPracticeReview`.
+
+```js
+import { rankToday, planStudyWork } from './src/planning.mjs';
+
+const today = rankToday({ tasks: reviewedTasks, now: '2026-10-03T12:00:00Z', timezone: 'America/Toronto' });
+const proposal = planStudyWork({
+  tasks: reviewedTasks,
+  now: '2026-10-03T12:00:00Z', timezone: 'America/Toronto',
+  horizonEnd: '2026-10-04T00:00:00Z',
+  availability: [{ start: '2026-10-03T13:00:00Z', end: '2026-10-03T17:00:00Z' }],
+  busy: [], pinnedBlocks: [], maxDailyMinutes: 180, bufferMinutes: 10,
+});
+```
+
+Tasks use core task fields, with optional `manual_priority` (0–5), `pinned` and `estimate_confidence` (`student|source|agent_estimate|unknown`). Today excludes completed/cancelled/deleted tasks and orders overdue, manually pinned, due-today, then other dated work; equal priorities/deadlines use stable IDs. Unknown source deadlines appear in review. Intentionally undated manual tasks have their own list.
+
+Planning accepts explicit offset/Z instants for availability, busy blocks, `now` and `horizonEnd`; a timezone-less local time is rejected. Horizons are at most 90 days. It merges overlapping availability, subtracts commitments and buffers, splits available intervals at actual local-day boundaries, and schedules known effort greedily within daily capacity and prerequisite order. Spring/fall DST uses elapsed minutes, not wall-clock arithmetic. A date-only deadline remains a date; its local calendar day bounds the planning preview, without altering the original record into a fabricated due instant.
+
+The output stays `state: proposal`, includes task revisions/source references and an input fingerprint, and reports unscheduled minutes, unknown effort, blocked prerequisites and conflicts. Busy calendars and original tasks are never modified. Pinned blocks remain fixed even when a changed deadline or prerequisite creates an explicit review conflict. A pinned block whose duration differs from declared effort is not silently treated as task completion. A partial plan may contain useful blocks; `all_known_work_fits` is false while any unresolved work/conflict remains. Accepting a plan and idempotently creating tasks belongs to the host's review/storage implementation; this module does not implement acceptance or external calendar writes.
+
+`nextPracticeReview({attempted_at,correct,previous_correct_streak?,rule_version?})` returns the versioned `practice-cadence/1` schedule: correct streaks use 1, 3, 7, 14, then 30 elapsed 24-hour days; an incorrect attempt resets the streak and schedules one day. Store each attempt independently before using its returned streak. This deterministic reminder policy never creates a global mastery claim.
+
+Domain verification: `node --test web/scripts/academic-library.test.mjs web/scripts/academic-planning.test.mjs` from the repository root. The library benchmark uses 30 synthetic exact markers and checks 30/30 retrieval/citation matches; it does not establish natural-language academic quality or actual PDF extraction. Live institution reads, original-file extraction, storage revocation/forget, idempotent plan acceptance, UI and student usefulness require their own end-to-end gates.
