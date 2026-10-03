@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "receipt_kind": "historical_public_setup_deployment",
+  "recorded_at": "2026-10-03T19:45:27Z",
+  "source": {
+    "repository": "https://github.com/SachinVedGupta/LearnBridge",
+    "commit": "cd2c78bb97461c8d6b6998a68d2965571d57ba54",
+    "commit_time": "2026-10-03T15:17:26-04:00",
+    "commit_subject": "docs: record verified student workflows, setup and remaining release gates",
+    "scope": "Exact verified commit deployed by the parent integration task. Later working-tree changes are not covered by this receipt."
+  },
+  "deployment": {
+    "platform": "Vercel",
+    "application": "Next.js hosted web app",
+    "official_cli_version": "62.2.0",
+    "embedded_build_cli_version": "62.1.0",
+    "id": "dpl_EujJp21eXQx9X73Rky3NyjmT66sz",
+    "target": "production",
+    "ready_state": "READY",
+    "production_url": "https://thelearnbridge.vercel.app",
+    "deployment_url": "https://thelearnbridge-qxjkzptt2-sachin-guptas-projects-154b22b9.vercel.app",
+    "inspector_url": "https://vercel.com/sachin-guptas-projects-154b22b9/thelearnbridge/EujJp21eXQx9X73Rky3NyjmT66sz",
+    "log_evidence": {
+      "source": "Official CLI log captured by the parent integration task; temporary local log is not a portable repository artifact.",
+      "sha256": "d3c18929dc6ce695609180bee31e6097f42ab96e2d7d59bd570944c1552463f1"
+    }
+  },
+  "anonymous_http_recheck": {
+    "observed_at": "2026-10-03T19:45:21.654Z",
+    "method": "Public HTTPS requests with redirects disabled and no authentication or cookies supplied.",
+    "checks": [
+      {
+        "method": "GET",
+        "path": "/setup",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/login",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/tutor",
+        "status": 307,
+        "location": "/login"
+      },
+      {
+        "method": "GET",
+        "path": "/connections",
+        "status": 307,
+        "location": "/login"
+      },
+      {
+        "method": "GET",
+        "path": "/api/remote/v1",
+        "status": 503,
+        "response_code": "REMOTE_DISABLED"
+      }
+    ]
+  },
+  "parent_observed_smoke_checks": {
+    "observed_on": "2026-10-03",
+    "exact_observation_time": null,
+    "source": "Deployment and browser checks reported by the parent integration task, not independently repeated as authenticated operations by this receipt writer.",
+    "checks": [
+      {
+        "method": "GET",
+        "path": "/setup",
+        "status": 200,
+        "versioned_setup_prompt_present": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/adoption/events",
+        "status": 503,
+        "response_code": "COLLECTION_DISABLED"
+      }
+    ],
+    "setup_browser_console_errors": 0,
+    "screenshot": {
+      "path": "artifacts/public-setup-production.jpg",
+      "actual_media_type": "image/jpeg",
+      "filename_extension_note": "Captured JPEG bytes are saved with a matching .jpg extension.",
+      "bytes": 333731,
+      "width": 1272,
+      "height": 2721,
+      "sha256": "1e9f0f156d588c9436c248f69eef25acb4b5bdc04ac9134026ad60162624db77"
+    }
+  },
+  "limits": [
+    "This receipt records a historical deployment, not a promise that the production alias still points to this deployment after future releases.",
+    "Public HTTP and setup browser checks do not prove Google OAuth, connected provider operations, AI tutor generation, student account persistence or paid model availability.",
+    "Copy-prompt success and public setup access are not installation counts. Exact clipboard readback was not verified by the deployment browser checks.",
+    "Optional remote companion and adoption collection endpoints were observed disabled. Their migrations were not applied to production by this deployment.",
+    "Selected-file import and student workflow tests are local verification; this receipt does not assert that a phone can invoke a local Codex or Claude host.",
+    "The Word and PowerPoint import wording being prepared for the next verified commit is not part of the exact deployed commit recorded here.",
+    "No private account reads, authentication attempts, credential values or production configuration are included in this receipt."
+  ]
+}

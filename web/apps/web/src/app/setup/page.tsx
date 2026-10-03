@@ -31,7 +31,7 @@ export default function SetupPage() {
         <section className="rounded-2xl border border-teal-300/25 bg-slate-900/60 p-6" aria-labelledby="local-heading">
           <p className="text-sm text-teal-300">Local edition</p>
           <h2 id="local-heading" className="mt-2 text-2xl font-semibold text-white">Keep a private workspace</h2>
-          <p className="mt-3 leading-7 text-slate-300">Save tasks and notes locally, import selected text or Markdown, and review tasks proposed through your Codex or Claude MCP bridge.</p>
+          <p className="mt-3 leading-7 text-slate-300">Keep tasks and notes locally, plan study sessions, prepare reviewed drafts and manage student routines from selected sources or details you enter. Import selected text, Markdown, supported PDF text, Word (.docx) paragraphs and PowerPoint (.pptx) slide text, then review changes proposed through your Codex or Claude MCP bridge.</p>
           <a href="#agent-setup-heading" className="mt-5 inline-block rounded-lg bg-teal-300 px-4 py-3 font-semibold text-slate-950 hover:bg-teal-200">Set up with your agent</a>
           <p className="mt-3 text-sm leading-6 text-slate-400">Basic tasks and notes need no cloud service keys. Your agent uses its own official account and permissions.</p>
         </section>
@@ -45,7 +45,9 @@ export default function SetupPage() {
         <ul className="mt-4 list-disc space-y-3 pl-5 leading-7 text-slate-300">
           <li>Node.js 22.16 or newer and npm. The setup agent checks your installed versions.</li>
           <li>macOS arm64 is the verified target. Linux is experimental; Windows local storage is not supported yet.</li>
-          <li>For selected text imports, a project Python environment with the required file-safety support. The agent can check or create the project environment without changing global Python.</li>
+          <li>Selected file imports need the project Python environment and its file-safety support. The agent checks the prerequisites without changing global Python. Word (.docx) and PowerPoint (.pptx) imports extract text with the project importer; legacy Office files, macros, passwords and external links are not supported.</li>
+          <li>PDF text extraction additionally needs macOS PDFKit and the supported Swift toolchain. PDF imports are limited to 4 MB and 200 pages; Word and PowerPoint imports are limited to 4 MB and 1,000 sections. Each imported file can save at most 48 KB of extracted text. Larger files need a smaller selected file or text export.</li>
+          <li>Review the original for diagrams, images, formatting and omitted content. These imports provide text with source references; they do not reproduce Office layouts or perform OCR on scanned PDFs.</li>
           <li>Agent features need an installed official Codex or Claude Code host, its normal account access and your host approvals. A model subscription is separate from LearnBridge; there is no automatic paid API fallback.</li>
         </ul>
       </section>
