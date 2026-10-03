@@ -89,7 +89,7 @@ export async function startControl({ root, origin, onCommand, onAgentCommand }) 
           result = await onCommand(input.command, input.data);
         } else {
           const destination = destinations.find(value => secretEqual(input.token, agentTokens.get(value)));
-          if (!destination || !onAgentCommand || !['status', 'context', 'propose_task'].includes(input.command)) fail();
+          if (!destination || !onAgentCommand || !['status', 'context', 'propose_task', 'propose_document'].includes(input.command)) fail();
           result = await onAgentCommand(destination, input.command, input.data);
         }
         socket.end(JSON.stringify({ ok: true, result }) + '\n');

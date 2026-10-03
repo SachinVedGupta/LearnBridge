@@ -6,6 +6,20 @@ const API = '/api/local/v1';
 const $ = id => document.getElementById(id);
 const state = { nonce: null, expires: null, page: 'today', filter: 'active', tasks: [], documents: [], sources: [], sourceEntries: [], inventory: null, academicPreview: null, grants: [], proposals: [], note: null, noteDirty: false, taskDrafts: new Map(), sessionReady: false, pendingTaskCreate: null, pendingNoteCreate: null };
 let activeConfirmation = null;
+let hostPoll;
+Object.assign(state, { profiles: [], snapshots: [], plans: [], runs: [], profileContextPreview: null, today: null });
+const extensionUIs = new Map();
+async function loadExtension(page) {
+  if (!['career', 'learning', 'life', 'writing', 'research', 'productivity'].includes(page)) return;
+  const nonce = state.nonce;
+  if (!extensionUIs.has(page)) {
+    const module = await import(`/${page}.js`);
+    if (!state.sessionReady || state.nonce !== nonce) return;
+    const mount = { career: module.mountCareerUI, learning: module.mountLearningUI, life: module.mountLifeUI, writing: module.mountWritingUI, research: module.mountResearchUI, productivity: module.mountProductivityUI }[page];
+    extensionUIs.set(page, mount({ root: $(`${page}-workspace`), request, element, busy, confirmAction, message }));
+  }
+  await extensionUIs.get(page).refresh();
+}
 
 class ApiError extends Error {
   constructor(status, code, message) { super(message); this.status = status; this.code = code; }
@@ -124,9 +138,15 @@ function showPair() {
   resolveConfirmation(false);
   state.nonce = null;
   state.sessionReady = false;
-  state.tasks = [];
+  clearTimeout(hostPoll); state.hostRequest = null; $('host-turn-form').reset(); $('host-turn-list').replaceChildren(); $('host-turn-grant').replaceChildren(); $('host-capability').textContent = ''; message('host-turn-message', '');
+  state.tasks = []; state.today = null;
   state.documents = [];
   state.sources = []; state.sourceEntries = []; state.inventory = null; state.academicPreview = null; state.grants = []; state.proposals = [];
+  state.profiles = []; state.snapshots = []; state.plans = []; state.runs = []; state.profileContextPreview = null; $('profile-export').hidden = true;
+  for (const module of extensionUIs.values()) module.reset();
+  for (const id of ['profile-list', 'profile-context-choices', 'course-snapshots', 'course-choices', 'course-results', 'plan-list', 'workflow-list']) $(id).replaceChildren();
+  for (const id of ['profile-context', 'course-citation', 'workflow-detail']) { $(id).textContent = ''; $(id).hidden = true; }
+  $('profile-form').reset(); $('course-search-form').reset(); $('plan-form').reset(); $('academic-library-import').hidden = true;
   state.note = null;
   state.noteDirty = false;
   state.taskDrafts.clear();
@@ -165,7 +185,7 @@ async function openWorkspace(session) {
   $('workspace').hidden = false;
   $('day-label').textContent = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date());
   await newNote(false);
-  const results = await Promise.allSettled([loadTasks(), loadDocuments(), loadStatus(), loadSources(), loadAgentReview()]);
+  const results = await Promise.allSettled([loadTasks(), loadDocuments(), loadStatus(), loadSources(), loadAgentReview(), loadCourses(), loadPlanning(), loadProfile()]);
   const failed = results.find(result => result.status === 'rejected');
   if (failed) message('global-message', failed.reason.message, true);
   renderGrantSelection();
@@ -173,8 +193,7 @@ async function openWorkspace(session) {
 }
 
 function navigate(page) {
-  if (!['today', 'notes', 'sources', 'agents', 'setup'].includes(page)) return;
-  if (page === 'agents') renderGrantSelection();
+  if (!['today', 'notes', 'sources', 'agents', 'setup', 'courses', 'planning', 'profile', 'career', 'learning', 'life', 'writing', 'research', 'productivity'].includes(page)) return;
   state.page = page;
   for (const section of document.querySelectorAll('.page')) section.hidden = section.id !== `page-${page}`;
   for (const button of document.querySelectorAll('.nav-item')) {
@@ -182,12 +201,16 @@ function navigate(page) {
     else button.removeAttribute('aria-current');
   }
   message('global-message', '');
+  const refresh = { today: loadTasks, notes: loadDocuments, courses: loadCourses, planning: loadPlanning, profile: loadProfile,
+    agents: async () => { await Promise.all([loadTasks(), loadDocuments(), loadSources(), loadAgentReview()]); renderGrantSelection(); } }[page];
+  if (refresh) refresh().catch(error => message('global-message', error.message, true));
+  if (['career', 'learning', 'life', 'writing', 'research', 'productivity'].includes(page)) loadExtension(page).catch(error => message('global-message', error.message, true));
 }
 
 async function loadTasks() {
-  const data = await request('/tasks');
+  const [data, today] = await Promise.all([request('/tasks'), request('/today')]);
   if (!Array.isArray(data.items)) throw new ApiError(0, 'INVALID_RESPONSE', 'The saved task list could not be read. Try refreshing.');
-  state.tasks = data.items;
+  state.tasks = data.items; state.today = today;
   renderTasks();
 }
 
@@ -202,15 +225,12 @@ function taskAction(task, label, action, className = 'quiet compact') {
 function renderTasks() {
   const active = state.tasks.filter(task => task.status !== 'completed' && task.status !== 'cancelled');
   $('pending-count').textContent = active.length;
-  $('today-count').textContent = active.filter(task => deadlineDate(task) === localDate()).length;
+  $('today-count').textContent = state.today?.ordered.filter(task => task.ranking_reason === 'due_today').length ?? active.filter(task => deadlineDate(task) === localDate()).length;
   $('completed-count').textContent = state.tasks.filter(task => task.status === 'completed').length;
   const shown = state.tasks.filter(task => state.filter === 'all' || (state.filter === 'completed' ? task.status === 'completed' : task.status !== 'completed' && task.status !== 'cancelled'));
-  shown.sort((a, b) => {
-    const aDate = deadlineDate(a); const bDate = deadlineDate(b);
-    const aBucket = a.status === 'completed' ? 3 : aDate && aDate < localDate() ? 0 : aDate ? 1 : 2;
-    const bBucket = b.status === 'completed' ? 3 : bDate && bDate < localDate() ? 0 : bDate ? 1 : 2;
-    return aBucket - bBucket || (aDate || '').localeCompare(bDate || '') || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id);
-  });
+  const ordered = state.today ? [...state.today.ordered, ...state.today.review, ...state.today.undated] : [];
+  const ranking = new Map(ordered.map((task, index) => [task.id, { ...task, index }]));
+  shown.sort((a, b) => (ranking.get(a.id)?.index ?? Number.MAX_SAFE_INTEGER) - (ranking.get(b.id)?.index ?? Number.MAX_SAFE_INTEGER) || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
   $('task-list').replaceChildren();
   if (!shown.length) {
     const empty = element('div', 'empty-state');
@@ -238,10 +258,13 @@ function renderTasks() {
     const copy = element('div', 'task-text');
     const dueDate = deadlineDate(task);
     copy.append(element('p', 'task-title', task.title), element('p', `task-meta${dueDate && dueDate < localDate() && task.status !== 'completed' ? ' task-overdue' : ''}`, `${deadlineLabel(task)} · Revision ${task.revision}`));
+    const rank = ranking.get(task.id);
+    const reasons = { overdue: 'Due date has passed', manually_pinned: 'You pinned this task', due_today: 'Due today', dated: 'Upcoming dated work', deadline_needs_review: 'Confirm the source deadline', intentionally_undated: 'You left this without a due date' };
+    if (rank?.revision === task.revision) copy.append(element('p', 'field-help', `${reasons[rank.ranking_reason]} · ${rank.estimate_status === 'needs_effort' ? 'Add a time estimate for planning' : `${task.effort_minutes} minutes estimated`}`));
     const actions = element('div', 'task-row-actions');
     actions.append(taskAction(task, 'Edit', async () => {
       if (state.taskDrafts.has(task.id)) return;
-      state.taskDrafts.set(task.id, { title: task.title, date: task.deadline?.precision === 'date' ? task.deadline.date : '', dirty: false, base: task });
+      state.taskDrafts.set(task.id, { title: task.title, date: task.deadline?.precision === 'date' ? task.deadline.date : '', effort: task.effort_minutes ?? '', dirty: false, base: task });
       renderTasks();
       document.querySelector(`[data-task-id="${task.id}"] input`)?.focus();
     }), taskAction(task, 'Delete', async () => {
@@ -286,18 +309,21 @@ function taskEditForm(task, row) {
   const dateGroup = element('div', 'input-group');
   const dateLabel = element('label', '', 'Due date'); dateLabel.htmlFor = `task-due-${task.id}`;
   const date = element('input'); date.id = dateLabel.htmlFor; date.type = 'date'; date.value = draft.date;
-  const updateDraft = () => { draft.title = title.value; draft.date = date.value; draft.dirty = draft.title !== draft.base.title || draft.date !== (draft.base.deadline?.precision === 'date' ? draft.base.deadline.date : ''); };
-  title.addEventListener('input', updateDraft); date.addEventListener('input', updateDraft);
+  const effortGroup = element('div', 'input-group'); const effortLabel = element('label', '', 'Estimated minutes'); effortLabel.htmlFor = `task-effort-${task.id}`;
+  const effort = element('input'); effort.id = effortLabel.htmlFor; effort.type = 'number'; effort.min = '1'; effort.max = '144000'; effort.value = draft.effort; effortGroup.append(effortLabel, effort);
+  const updateDraft = () => { draft.title = title.value; draft.date = date.value; draft.effort = effort.value; draft.dirty = draft.title !== draft.base.title || draft.date !== (draft.base.deadline?.precision === 'date' ? draft.base.deadline.date : '') || String(draft.effort) !== String(draft.base.effort_minutes ?? ''); };
+  title.addEventListener('input', updateDraft); date.addEventListener('input', updateDraft); effort.addEventListener('input', updateDraft);
   titleGroup.append(titleLabel, title); dateGroup.append(dateLabel, date);
   const actions = element('div', 'task-edit-actions');
   const save = element('button', 'button primary compact', 'Save changes'); save.type = 'submit';
   const cancel = element('button', 'button quiet compact', 'Cancel'); cancel.type = 'button';
   cancel.addEventListener('click', () => { state.taskDrafts.delete(task.id); renderTasks(); });
-  actions.append(save, cancel); form.append(titleGroup, dateGroup, actions);
+  actions.append(save, cancel); form.append(titleGroup, dateGroup, effortGroup, actions);
   form.addEventListener('submit', event => {
     event.preventDefault();
     busy(save, async () => {
       const body = { expected_revision: draft.base.revision, title: title.value.trim() };
+      if (String(effort.value) !== String(draft.base.effort_minutes ?? '')) body.effort_minutes = effort.value ? Number(effort.value) : null;
       if (date.value !== (draft.base.deadline?.precision === 'date' ? draft.base.deadline.date : '')) body.deadline = deadlineFromInput(date.value);
       try {
         await request(`/tasks/${encodeURIComponent(task.id)}`, { method: 'PATCH', body });
@@ -471,7 +497,7 @@ $('new-task-form').addEventListener('submit', event => {
   message('task-create-message', '');
   busy(event.submitter, async () => {
     try {
-      const body = { title, deadline: deadlineFromInput(date) };
+      const body = { title, deadline: deadlineFromInput(date), effort_minutes: $('new-task-effort').value ? Number($('new-task-effort').value) : null };
       await request('/tasks', { method: 'POST', body, idempotencyKey: createAttempt('task', body) });
       state.pendingTaskCreate = null;
       if ($('new-task-title').value.trim() === title && $('new-task-due').value === date) $('new-task-form').reset();
@@ -571,7 +597,7 @@ function renderInventory() {
   }
 }
 async function loadAgentReview() {
-  const [grants, proposals] = await Promise.all([request('/agent-grants'), request('/task-proposals')]);
+  const [grants, proposals, turns] = await Promise.all([request('/agent-grants'), request('/task-proposals'), request('/host-turns')]);
   state.grants = grants.items; state.proposals = proposals.items;
   $('grant-list').replaceChildren(); $('proposal-list').replaceChildren();
   for (const grant of state.grants) {
@@ -594,7 +620,33 @@ async function loadAgentReview() {
     $('proposal-list').append(row);
   }
   if (!state.proposals.length) $('proposal-list').append(element('p', 'field-help', 'No proposals yet. Your agent can suggest a next step through the LearnBridge MCP bridge.'));
+  const selected = $('host-turn-grant').value; $('host-turn-grant').replaceChildren();
+  for (const grant of state.grants.filter(grant => grant.destination === 'codex' && grant.state === 'active' && Date.parse(grant.expires_at) > Date.now())) {
+    const option = element('option', '', `Codex selection · ${grant.id.slice(0, 8)} · ${grant.used_bytes}/${grant.max_bytes} bytes`); option.value = grant.id; $('host-turn-grant').append(option);
+  }
+  if ([...$('host-turn-grant').options].some(option => option.value === selected)) $('host-turn-grant').value = selected;
+  $('host-capability').textContent = turns.capability.detail; $('host-turn-submit').disabled = turns.capability.state === 'unavailable' || !$('host-turn-grant').options.length;
+  $('host-turn-list').replaceChildren();
+  for (const turn of turns.items) {
+    const row = element('article', 'review-row'); row.append(element('h3', '', `Codex · ${turn.data.state.replaceAll('_', ' ')}`), element('p', 'field-help', new Date(turn.created_at).toLocaleString()));
+    if (turn.data.visibility === 'withheld_scope_changed') row.append(element('p', 'field-help', 'This selection changed, expired or was revoked. Its cached reply is withheld. Review fresh context before a new request.'));
+    else { if (turn.data.prompt) row.append(element('p', '', turn.data.prompt)); if (turn.data.text) row.append(element('pre', 'source-text', turn.data.text)); }
+    if (turn.data.error_code) row.append(element('p', 'field-help', `Host result: ${turn.data.error_code}. Check official host access and the reviewed selection. Interrupted requests are never replayed automatically.`));
+    if (['queued', 'running'].includes(turn.data.state)) row.append(taskAction(turn, 'Stop this request', async () => { await request(`/host-turns/${turn.id}/cancel`, { method: 'POST', body: { expected_revision: turn.revision } }); await loadAgentReview(); }, 'danger quiet compact'));
+    if (turn.data.progress.length || turn.data.tool_receipts.length) { const details = element('details'); details.append(element('summary', '', 'Tool progress and verification receipts'), element('pre', 'source-text', JSON.stringify({ progress: turn.data.progress, receipts: turn.data.tool_receipts }, null, 2))); row.append(details); }
+    $('host-turn-list').append(row);
+  }
+  clearTimeout(hostPoll); if (turns.items.some(turn => ['queued', 'running'].includes(turn.data.state))) { const nonce = state.nonce; hostPoll = setTimeout(() => { if (state.sessionReady && state.nonce === nonce) loadAgentReview().catch(error => message('host-turn-message', error.message, true)); }, 2000); }
 }
+function hostRetryKey(body) { const fingerprint = JSON.stringify(body); if (state.hostRequest?.fingerprint !== fingerprint) state.hostRequest = { fingerprint, key: crypto.randomUUID() }; return state.hostRequest.key; }
+$('host-turn-form').addEventListener('submit', event => {
+  event.preventDefault(); busy(event.submitter, async () => {
+    const body = { grant_id: $('host-turn-grant').value, prompt: $('host-turn-prompt').value, confirmed: true };
+    if (!await confirmAction(`Send this exact request to your official Codex host using selection ${body.grant_id.slice(0, 8)}?\n\n${body.prompt}`, { title: 'Review Codex request', confirmLabel: 'Send this request' })) return;
+    const result = await request('/host-turns', { method: 'POST', body, idempotencyKey: hostRetryKey(body) }); state.hostRequest = null;
+    await loadAgentReview(); message('host-turn-message', `Request ${result.item.data.state.replaceAll('_', ' ')}. Any proposed changes appear in the task or writing review queue.`);
+  }).catch(error => message('host-turn-message', error.message, true));
+});
 function renderGrantSelection() {
   $('grant-records').replaceChildren();
   for (const [kind, records] of [['tasks', state.tasks], ['documents', state.documents], ['source_entries', state.sourceEntries]]) for (const record of records) {
@@ -626,9 +678,9 @@ $('grant-form').addEventListener('submit', event => {
 });
 $('academic-form').addEventListener('submit', event => {
   event.preventDefault(); busy(event.submitter, async () => {
-    state.academicPreview = null; $('academic-import').hidden = true;
+    state.academicPreview = null; $('academic-import').hidden = true; $('academic-library-import').hidden = true;
     const result = await request('/academic/preview', { method: 'POST', body: { export: JSON.parse($('academic-export').value), selected_course_ids: $('academic-courses').value.split(',').map(value => value.trim()).filter(Boolean) } });
-    state.academicPreview = result.preview_id; renderAcademicPreview(result.snapshot); $('academic-preview').hidden = false; $('academic-import').hidden = false;
+    state.academicPreview = result.preview_id; renderAcademicPreview(result.snapshot); $('academic-preview').hidden = false; $('academic-import').hidden = false; $('academic-library-import').hidden = false;
     message('academic-message', 'Preview only. Check course selection and uncertain deadlines before saving.');
   }).catch(error => message('academic-message', error.message, true));
 });
@@ -655,6 +707,158 @@ $('academic-import').addEventListener('click', event => busy(event.currentTarget
 }).catch(error => message('academic-message', error.message, true)));
 $('refresh-sources').addEventListener('click', event => busy(event.currentTarget, loadSources).catch(error => message('source-message', error.message, true)));
 $('refresh-agents').addEventListener('click', event => busy(event.currentTarget, async () => { await Promise.all([loadTasks(), loadDocuments(), loadSources(), loadAgentReview()]); renderGrantSelection(); }).catch(error => message('grant-message', error.message, true)));
+
+async function loadCourses() {
+  state.snapshots = (await request('/courses')).items;
+  const selected = $('course-snapshot').value;
+  $('course-snapshot').replaceChildren(); $('course-snapshots').replaceChildren();
+  const placeholder = element('option', '', 'Choose a reviewed snapshot'); placeholder.value = ''; $('course-snapshot').append(placeholder);
+  for (const record of state.snapshots) {
+    const snapshot = record.data.snapshot;
+    const option = element('option', '', `${snapshot.institution.name} · ${new Date(snapshot.retrieved_at).toLocaleString()}`); option.value = record.id; $('course-snapshot').append(option);
+    const row = element('article', 'review-row');
+    row.append(element('h3', '', snapshot.institution.name), element('p', 'field-help', `${snapshot.courses.map(course => course.title).join(', ')} · ${snapshot.assignments.length} assignments · ${snapshot.materials.length} materials`));
+    const coverage = element('details'); coverage.append(element('summary', '', 'Coverage and unknown deadlines'), element('pre', 'source-text', JSON.stringify({ coverage: snapshot.coverage, warnings: snapshot.warnings }, null, 2))); row.append(coverage);
+    row.append(taskAction(record, 'Remove from active library', async () => {
+      if (!await confirmAction('Remove this snapshot from active course search? Historical versions and backups may retain it.', { title: 'Remove course snapshot', confirmLabel: 'Remove from library' })) return;
+      await request(`/courses/${record.id}`, { method: 'DELETE', body: { expected_revision: record.revision } });
+      $('course-results').replaceChildren(); $('course-citation').hidden = true; await loadCourses();
+    }, 'danger quiet compact'));
+    $('course-snapshots').append(row);
+  }
+  if (!state.snapshots.length) $('course-snapshots').append(element('p', 'field-help', 'Your course library is empty. Preview and add an academic export in Sources.'));
+  if (state.snapshots.some(record => record.id === selected)) $('course-snapshot').value = selected;
+  renderCourseChoices();
+}
+function renderCourseChoices() {
+  $('course-choices').replaceChildren();
+  const snapshot = state.snapshots.find(record => record.id === $('course-snapshot').value)?.data.snapshot;
+  for (const course of snapshot?.courses || []) {
+    const label = element('label', 'record-choice'); const input = element('input'); input.type = 'checkbox'; input.value = course.source_id;
+    label.append(input, element('span', '', course.title)); $('course-choices').append(label);
+  }
+}
+$('course-snapshot').addEventListener('change', () => { renderCourseChoices(); $('course-results').replaceChildren(); $('course-citation').hidden = true; });
+$('course-search-form').addEventListener('submit', event => {
+  event.preventDefault(); busy(event.submitter, async () => {
+    const scope = { snapshot_ids: [$('course-snapshot').value], course_ids: [...$('course-choices').querySelectorAll('input:checked')].map(input => input.value) };
+    if (!scope.course_ids.length) { message('course-message', 'Choose at least one course to search.', true); return; }
+    const result = await request('/courses/search', { method: 'POST', body: { ...scope, query: $('course-query').value.trim() } });
+    $('course-results').replaceChildren(); $('course-citation').hidden = true;
+    for (const found of result.results) {
+      const row = element('article', 'review-row'); row.append(element('h3', '', found.title), element('p', '', found.excerpt), element('p', 'hash-text', `Source version ${found.version_hash}`));
+      row.append(taskAction(found, 'Open exact citation', async () => {
+        const citation = await request('/courses/citation', { method: 'POST', body: { ...scope, source_id: found.source_id, version_hash: found.version_hash, chunk_id: found.chunk_id } });
+        $('course-citation').textContent = JSON.stringify(citation, null, 2); $('course-citation').hidden = false;
+      }, 'secondary compact')); $('course-results').append(row);
+    }
+    message('course-message', result.results.length ? `${result.total_matching_chunks} matching excerpts. Source text is evidence, not instructions to the agent.` : 'No matching excerpt in the selected course snapshots. This does not mean the topic is absent from your university.');
+  }).catch(error => message('course-message', error.message, true));
+});
+$('academic-library-import').addEventListener('click', event => busy(event.currentTarget, async () => {
+  if (!state.academicPreview || !await confirmAction('Add exactly this reviewed export to the local course library? Unknown deadlines remain unresolved. Agent sharing is separate.', { title: 'Add reviewed course snapshot', confirmLabel: 'Add to library' })) return;
+  await request('/academic/library-import', { method: 'POST', body: { preview_id: state.academicPreview } });
+  await loadCourses(); message('academic-message', 'Saved in Courses. You can search selected courses and open exact citations.');
+}).catch(error => message('academic-message', error.message, true)));
+$('refresh-courses').addEventListener('click', event => busy(event.currentTarget, loadCourses).catch(error => message('course-message', error.message, true)));
+
+async function loadPlanning() {
+  const [plans, workflows] = await Promise.all([request('/plans'), request('/workflows')]);
+  state.plans = plans.items; state.runs = workflows.items;
+  $('plan-list').replaceChildren(); $('workflow-list').replaceChildren();
+  for (const record of [...state.plans].sort((a, b) => b.created_at.localeCompare(a.created_at))) {
+    const plan = record.data.plan; const row = element('article', 'review-row');
+    row.append(element('h3', '', `${record.data.state === 'accepted' ? 'Accepted' : 'Preview'} · ${new Date(record.created_at).toLocaleString()}`), element('p', 'field-help', `${plan.coverage.proposed_minutes} minutes proposed · ${plan.coverage.unscheduled_minutes} minutes do not fit · ${plan.coverage.unknown_effort_count} tasks need estimates · ${plan.timezone}`));
+    for (const block of plan.blocks) row.append(element('p', '', `${new Date(block.start).toLocaleTimeString()}–${new Date(block.end).toLocaleTimeString()} · ${block.title} · ${block.minutes} min${block.needs_review ? ' · needs review' : ''}`));
+    for (const item of plan.unscheduled) row.append(element('p', 'field-help', `${item.title} · ${item.reason.replaceAll('_', ' ')}${item.remaining_minutes ? ` · ${item.remaining_minutes} min remaining` : ''}`));
+    if (plan.conflicts.length) row.append(element('pre', 'source-text', JSON.stringify(plan.conflicts, null, 2)));
+    if (record.data.state === 'proposal') row.append(taskAction(record, 'Accept this local plan', async () => {
+      if (!await confirmAction(`Save exactly these ${plan.blocks.length} work blocks as your accepted local plan? Unscheduled work remains visible. No connected calendar is changed.`, { title: 'Accept study plan', confirmLabel: 'Accept local plan' })) return;
+      await request(`/plans/${record.id}/accept`, { method: 'POST', body: { expected_revision: record.revision, plan_hash: plan.plan_hash } }); await loadPlanning();
+      message('plan-message', 'Accepted plan saved. You can return to it after restarting LearnBridge.');
+    }, 'primary compact'));
+    const evidence = element('details'); evidence.append(element('summary', '', 'Exact saved plan and evidence'), element('pre', 'source-text', JSON.stringify(record.data, null, 2))); row.append(evidence); $('plan-list').append(row);
+  }
+  if (!state.plans.length) $('plan-list').append(element('p', 'field-help', 'No study plans yet. Give your tasks effort estimates and choose an available time window.'));
+  for (const run of state.runs) {
+    const row = element('article', 'review-row'); row.append(element('h3', '', `${run.recipe_id} · ${run.state.replaceAll('_', ' ')}`), element('p', 'field-help', `${run.used.tool_calls}/${run.budget.tool_calls} operations · ${run.used.bytes}/${run.budget.bytes} bytes · checkpoint ${run.checkpoint?.next_step ?? 0}`));
+    if (run.error) row.append(element('p', 'field-help', `${run.error.code}: ${run.error.next_action || 'Review this workflow.'}`));
+    row.append(taskAction(run, 'View verified steps', async () => {
+      const detail = await request(`/workflows/${run.id}`); $('workflow-detail').textContent = JSON.stringify(detail, null, 2); $('workflow-detail').hidden = false;
+    }, 'secondary compact'));
+    if (['ready', 'interrupted', 'failed', 'partial'].includes(run.state) && !run.cancel_requested && run.checkpoint?.resumable) row.append(taskAction(run, 'Run / resume', async () => {
+      const result = await request(`/workflows/${run.id}/execute`, { method: 'POST', body: {} }); await loadPlanning(); message('plan-message', `Workflow ${result.run.state.replaceAll('_', ' ')}. Check its saved steps and result.`);
+    }, 'primary compact'));
+    if (!['completed', 'cancelled', 'expired'].includes(run.state)) row.append(taskAction(run, 'Cancel further work', async () => {
+      await request(`/workflows/${run.id}/cancel`, { method: 'POST', body: { expected_revision: run.revision } }); await loadPlanning();
+    }, 'danger quiet compact'));
+    $('workflow-list').append(row);
+  }
+}
+$('plan-form').addEventListener('submit', event => {
+  event.preventDefault(); busy(event.submitter, async () => {
+    const start = new Date($('plan-start').value).toISOString(); const end = new Date($('plan-end').value).toISOString();
+    const prepared = await request('/workflows', { method: 'POST', body: { recipe_id: 'plan.today', input: { availability: [{ start, end }], timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, horizonEnd: end, maxDailyMinutes: Number($('plan-limit').value), bufferMinutes: Number($('plan-buffer').value) } } });
+    await loadPlanning();
+    const result = await request(`/workflows/${prepared.run.id}/execute`, { method: 'POST', body: {} }); await loadPlanning();
+    message('plan-message', result.run.state === 'completed' ? 'Preview saved and independently verified. Review what fits and what remains before accepting.' : `Workflow ${result.run.state}. Review its progress and remaining action.`);
+  }).catch(error => message('plan-message', error.message, true));
+});
+$('refresh-planning').addEventListener('click', event => busy(event.currentTarget, loadPlanning).catch(error => message('plan-message', error.message, true)));
+
+async function loadProfile() {
+  state.profileContextPreview = null; $('profile-export').hidden = true; $('profile-context').hidden = true; $('profile-context').textContent = '';
+  state.profiles = (await request('/profile')).items;
+  $('profile-list').replaceChildren(); $('profile-context-choices').replaceChildren();
+  for (const record of state.profiles) {
+    const fact = record.data; const row = element('article', 'review-row');
+    row.append(element('h3', '', fact.field.replaceAll('_', ' ')), element('p', '', fact.value), element('p', 'field-help', `${fact.state}${record.stale ? ' · stale evidence' : ''}${record.conflict ? ' · conflicting confirmed values' : ''} · ${fact.evidence.kind.replaceAll('_', ' ')} · purposes: ${fact.purposes.join(', ')}`));
+    if (fact.state === 'candidate') for (const decision of ['confirm', 'reject']) row.append(taskAction(record, decision === 'confirm' ? 'Confirm exact fact' : 'Reject', async () => {
+      if (decision === 'confirm' && !await confirmAction(`Confirm your statement “${fact.value}” for ${fact.field.replaceAll('_', ' ')}? It stays local until you separately share context.`, { title: 'Confirm profile fact', confirmLabel: 'Confirm this fact' })) return;
+      await request(`/profile/${record.id}/review`, { method: 'POST', body: { expected_revision: record.revision, decision, fingerprint: record.fingerprint } }); await loadProfile();
+    }, decision === 'confirm' ? 'primary compact' : 'quiet compact'));
+    if (fact.state !== 'rejected') {
+      const edit = element('form', 'task-edit'); const label = element('label', '', 'Correct this statement'); const input = element('input'); input.id = `profile-correct-${record.id}`; label.htmlFor = input.id; input.value = fact.value; input.maxLength = 2000; input.required = true;
+      const save = element('button', 'button secondary compact', 'Save correction'); save.type = 'submit'; edit.append(label, input, save);
+      edit.addEventListener('submit', event => { event.preventDefault(); busy(save, async () => {
+        if (!await confirmAction(`Replace this fact with your corrected statement “${input.value}”?`, { title: 'Review corrected fact', confirmLabel: 'Save correction' })) return;
+        await request(`/profile/${record.id}/review`, { method: 'POST', body: { expected_revision: record.revision, decision: 'correct', fingerprint: record.fingerprint, value: input.value } }); await loadProfile();
+      }).catch(error => message('profile-message', error.message, true)); });
+      const details = element('details'); details.append(element('summary', '', 'Correct a value'), edit); row.append(details);
+    }
+    row.append(taskAction(record, 'Forget active fact', async () => {
+      if (!await confirmAction('Remove this fact from your active profile and context previews? Historical local revisions and backups may retain it.', { title: 'Forget active profile fact', confirmLabel: 'Remove active fact' })) return;
+      await request(`/profile/${record.id}`, { method: 'DELETE', body: { expected_revision: record.revision } }); $('profile-context').textContent = ''; $('profile-context').hidden = true; await loadProfile();
+    }, 'danger quiet compact')); $('profile-list').append(row);
+    if (fact.state === 'confirmed' && !record.stale && !record.conflict) {
+      const label = element('label', 'record-choice'); const checkbox = element('input'); checkbox.type = 'checkbox'; checkbox.value = record.id;
+      label.append(checkbox, element('span', '', `${fact.field.replaceAll('_', ' ')}: ${fact.value}`)); $('profile-context-choices').append(label);
+    }
+  }
+  if (!state.profiles.length) $('profile-list').append(element('p', 'field-help', 'No facts yet. Start with a learning preference or a goal in your own words.'));
+}
+$('profile-form').addEventListener('submit', event => {
+  event.preventDefault(); busy(event.submitter, async () => {
+    await request('/profile', { method: 'POST', body: { field: $('profile-field').value, value: $('profile-value').value } }); $('profile-form').reset(); await loadProfile(); message('profile-message', 'Candidate saved. Confirm or correct its exact value below.');
+  }).catch(error => message('profile-message', error.message, true));
+});
+$('profile-context-form').addEventListener('submit', event => {
+  event.preventDefault(); busy(event.submitter, async () => {
+    const input = { purpose: $('profile-purpose').value, allowed_ids: [...$('profile-context-choices').querySelectorAll('input:checked')].map(input => input.value) };
+    const result = await request('/profile/context', { method: 'POST', body: input });
+    state.profileContextPreview = { ...input, context_hash: result.context_hash };
+    $('profile-export').hidden = !result.items.length;
+    $('profile-context').textContent = JSON.stringify(result, null, 2); $('profile-context').hidden = false;
+  }).catch(error => message('profile-message', error.message, true));
+});
+$('profile-context-form').addEventListener('change', () => { state.profileContextPreview = null; $('profile-export').hidden = true; $('profile-context').hidden = true; $('profile-context').textContent = ''; });
+$('profile-export').addEventListener('click', event => busy(event.currentTarget, async () => {
+  const preview = state.profileContextPreview; if (!preview) return;
+  if (!await confirmAction('Save this exact purpose-limited profile as a private note? This creates a retained copy. You choose separately whether an agent may read that note.', { title: 'Save reviewed profile context', confirmLabel: 'Save private note' })) return;
+  const result = await request('/profile/export', { method: 'POST', body: preview });
+  message('profile-message', `Saved private note “${result.document.title}”. In Agent access, select that note and approve the destination before using it with Codex or Claude.`);
+}).catch(error => message('profile-message', error.message, true)));
+$('refresh-profile').addEventListener('click', event => busy(event.currentTarget, loadProfile).catch(error => message('profile-message', error.message, true)));
 
 window.addEventListener('beforeunload', event => { if (state.sessionReady && hasUnsavedChanges()) { event.preventDefault(); event.returnValue = ''; } });
 $('confirmation-cancel').addEventListener('click', () => resolveConfirmation(false));

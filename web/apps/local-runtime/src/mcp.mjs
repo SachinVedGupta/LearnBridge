@@ -26,7 +26,7 @@ async function call(command, input) {
 }
 // stdout belongs exclusively to MCP. No private content or credential is logged.
 serveStdio(() => {
-  const server = new McpServer({ name: 'learnbridge-local', version: '0.2.0' });
+  const server = new McpServer({ name: 'learnbridge-local', version: '0.3.0' });
   server.registerTool('learnbridge_status', {
     description: 'Check this local workspace and list opaque IDs of active sharing grants for this agent. No task, note or source content is exposed. Ask the human to review sharing in the dashboard if context is unavailable.',
     inputSchema: z.object({}).strict(),
@@ -48,5 +48,15 @@ serveStdio(() => {
       idempotency_key: z.string().regex(/^[A-Za-z0-9_-]{8,100}$/) }).strict(),
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   }, input => call('propose_task', input));
+  server.registerTool('learnbridge_propose_document', {
+    description: 'Return one unreviewed writing alternative based on an exact document already selected in the active sharing grant. This retains the source unchanged and creates no accepted artifact. The student must review the exact draft in Writing before accepting it. Use an idempotency key for the same proposal. Restricted graded work permits only conceptual outlines and scaffolding, never a completed answer.',
+    inputSchema: z.object({ grant_id: z.string().uuid(), source_document_id: z.string().uuid(),
+      source_revision: z.number().int().min(1), source_sha256: z.string().regex(/^[a-f0-9]{64}$/),
+      title: z.string().min(1).max(500), draft: z.string().min(1).max(10000),
+      purpose: z.enum(['study_note', 'outline', 'revision', 'general']),
+      academic_policy: z.enum(['learning_support', 'graded_scaffolding', 'not_applicable']),
+      idempotency_key: z.string().regex(/^[A-Za-z0-9_-]{8,100}$/) }).strict(),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, input => call('propose_document', input));
   return server;
 });

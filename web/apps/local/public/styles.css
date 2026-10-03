@@ -59,7 +59,7 @@ legend { color: var(--muted); font-size: 12px; }
 .sidebar .brand { margin: 0 8px; }
 .edition { margin: 18px 8px 34px; font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 7px; }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #5d8b61; }
-.navigation { display: flex; flex-direction: column; gap: 6px; }
+.navigation { display: flex; flex-direction: column; gap: 6px; min-height: 0; overflow-y: auto; }
 .nav-item { border: 0; background: transparent; text-align: left; border-radius: 9px; display: flex; gap: 13px; align-items: center; padding: 12px; color: #69756c; font-size: 13px; font-weight: 550; }
 .nav-item > span { width: 16px; font-size: 18px; line-height: 1; color: #758573; }
 .nav-item[aria-current="page"] { background: #dce8d9; color: #284b35; }
@@ -88,6 +88,11 @@ legend { color: var(--muted); font-size: 12px; }
 .task-title-input { flex: 1; }
 .input-group input[type="date"] { max-width: 175px; min-height: 43px; font-size: 12px; }
 .task-create .button { min-height: 43px; }
+.task-create .input-group { min-width: 0; }
+.task-create input[type="number"] { max-width: 115px; }
+input[type="datetime-local"] { min-width: 0; }
+.career-textarea { min-height: 100px; }
+.career-form { display: grid; gap: 12px; }
 .input-group label { font-size: 11px; }
 .optional { font-size: 10px; font-weight: 400; color: #798678; }
 .task-filters { display: flex; gap: 8px; margin: 20px 0 8px; }

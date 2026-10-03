@@ -612,6 +612,14 @@ export class LocalStore {
     return row;
   }
   /** Trusted agent broker precondition. This exposes no content and grants no new access. */
+  assertAgentGrant(input) {
+    checkedObject(input, ['destination', 'grant_id']);
+    const grant = this.#currentGrant(input.grant_id, input.destination);
+    return { id: grant.id, revision: grant.revision, destination: grant.destination,
+      expires_at: grant.expires_at, remaining_bytes: grant.max_bytes - grant.used_bytes,
+      consent_fingerprint: JSON.parse(grant.receipt_json).fingerprint };
+  }
+  /** Trusted agent broker precondition. This exposes no content and grants no new access. */
   assertAgentDocumentSelection(input) {
     checkedObject(input, ['destination', 'grant_id', 'document_id', 'revision', 'sha256']);
     checkedId(input.document_id); integer(input.revision, 1, Number.MAX_SAFE_INTEGER); sha256(input.sha256);

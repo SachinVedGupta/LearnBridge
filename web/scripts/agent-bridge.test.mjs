@@ -46,7 +46,7 @@ async function fixture(t) {
 test('MB01: real SDK discovery is narrow; poisoned environment is cleared by project launcher', async t => {
   const fx = await fixture(t), a = await fx.agent();
   const discovered = (await a.client.listTools()).tools;
-  assert.deepEqual(discovered.map(v => v.name).sort(), ['learnbridge_context', 'learnbridge_propose_task', 'learnbridge_status']);
+  assert.deepEqual(discovered.map(v => v.name).sort(), ['learnbridge_context', 'learnbridge_propose_document', 'learnbridge_propose_task', 'learnbridge_status']);
   assert(discovered.every(v => v.inputSchema.additionalProperties === false));
   const status = await a.tool('learnbridge_status'); assert.equal(status.error, false); assert.deepEqual(status.value.grants, []);
   assert(!JSON.stringify(status.value).includes(fx.root));
@@ -130,4 +130,47 @@ test('MB06: schema-valid multibyte proposals fit the bounded IPC frame without U
   const proposed = await a.tool('learnbridge_propose_task', { grant_id: grant.id, title, reason, idempotency_key: randomUUID() });
   assert.equal(proposed.error, false); assert.equal(proposed.value.payload.title, title); assert.equal(proposed.value.payload.reason, reason);
   assert.deepEqual((await fx.call('/tasks')).data.items, []);
+});
+test('MB07: actual MCP writing roundtrip preserves original, binds grant and awaits exact human review', async t => {
+  const fx = await fixture(t), agent = await fx.agent();
+  const source = (await fx.call('/documents', 'POST', { title: 'Synthetic student paragraph', content: 'A base case stops recursion.' })).data;
+  const unrelated = (await fx.call('/documents', 'POST', { title: 'Unselected synthetic paragraph', content: 'PRIVATE_UNSELECTED_WRITING_CANARY' })).data;
+  const grant = await fx.grant({ documents: [source.document] });
+  const proposal = { grant_id: grant.id, source_document_id: source.document.id, source_revision: source.document.revision,
+    source_sha256: source.sha256, title: 'Clearer base-case explanation', draft: 'A recursive function terminates when it reaches its base case.',
+    purpose: 'revision', academic_policy: 'learning_support', idempotency_key: 'legal-writing-retry-'.padEnd(100, 'x') };
+  const sent = await agent.tool('learnbridge_propose_document', proposal); assert.equal(sent.error, false, JSON.stringify(sent.value));
+  assert.equal(sent.value.state, 'awaiting_review'); assert.equal(sent.value.accepted_document, null);
+  assert.equal((await agent.tool('learnbridge_propose_document', proposal)).value.id, sent.value.id);
+  assert.equal((await agent.tool('learnbridge_propose_document', { ...proposal, draft: 'A changed draft with the same key.' })).error, true);
+  assert.equal((await fx.call(`/documents/${source.document.id}`)).data.content, source.content);
+  const queued = (await fx.call('/writing/items')).data.items; assert.equal(queued.length, 1);
+  const inspected = (await fx.call(`/writing/items/${sent.value.id}`)).data.item;
+  assert.equal(inspected.data.payload.origin, 'codex'); assert.equal(inspected.data.content_status, 'unverified_model_output');
+  assert.equal((await agent.tool('learnbridge_propose_document', { ...proposal, source_document_id: unrelated.document.id, source_sha256: unrelated.sha256, idempotency_key: randomUUID() })).error, true);
+  const claude = await fx.agent('claude'); assert.equal((await claude.tool('learnbridge_propose_document', proposal)).error, true);
+  await assert.rejects(agent.client.callTool({ name: 'learnbridge_accept_document', arguments: {} }));
+  const review = { expected_revision: sent.value.revision, payload_hash: sent.value.payload_hash };
+  assert.equal((await fx.call(`/writing/items/${sent.value.id}/accept`, 'POST', { ...review, payload_hash: '0'.repeat(64) })).status, 409);
+  const accepted = await fx.call(`/writing/items/${sent.value.id}/accept`, 'POST', review); assert.equal(accepted.status, 200);
+  assert.equal((await fx.call(`/writing/items/${sent.value.id}/accept`, 'POST', review)).data.item.data.accepted_note.id, accepted.data.item.data.accepted_note.id);
+  assert.equal((await fx.call(`/documents/${source.document.id}`)).data.content, source.content);
+  const artifact = (await fx.call(`/writing/items/${sent.value.id}/export`, 'POST', { expected_revision: accepted.data.item.revision, payload_hash: sent.value.payload_hash })).data;
+  assert.ok(artifact.text.startsWith(proposal.draft)); assert.equal(artifact.validation, 'exact_saved_text_readback');
+  const current = (await fx.call('/agent-grants')).data.items.find(item => item.id === grant.id);
+  await fx.call(`/agent-grants/${grant.id}/revoke`, 'POST', { expected_revision: current.revision });
+  assert.equal((await agent.tool('learnbridge_propose_document', proposal)).error, true);
+});
+test('MB08: stale selected documents and restricted graded answers cannot enter the writing queue', async t => {
+  const fx = await fixture(t), agent = await fx.agent();
+  const source = (await fx.call('/documents', 'POST', { title: 'Synthetic restricted outline', content: 'Describe the approach in your own words.', academic_policy: 'graded_restricted' })).data;
+  const grant = await fx.grant({ documents: [source.document] });
+  const input = { grant_id: grant.id, source_document_id: source.document.id, source_revision: source.document.revision, source_sha256: source.sha256,
+    title: 'Restricted answer', draft: 'A complete answer must not be accepted.', purpose: 'revision', academic_policy: 'not_applicable', idempotency_key: randomUUID() };
+  assert.equal((await agent.tool('learnbridge_propose_document', input)).error, true);
+  const outline = await agent.tool('learnbridge_propose_document', { ...input, purpose: 'outline', academic_policy: 'graded_scaffolding', draft: 'Start by identifying the base case.', idempotency_key: randomUUID() });
+  assert.equal(outline.error, false); assert.equal((await fx.call(`/writing/items/${outline.value.id}`)).data.item.data.academic_policy, 'graded_restricted');
+  await fx.call(`/documents/${source.document.id}`, 'PATCH', { expected_revision: source.document.revision, content: 'Changed restricted source.' });
+  assert.equal((await agent.tool('learnbridge_propose_document', { ...input, purpose: 'outline', idempotency_key: randomUUID() })).error, true);
+  assert.equal((await fx.call('/writing/items')).data.items[0].stale, true);
 });

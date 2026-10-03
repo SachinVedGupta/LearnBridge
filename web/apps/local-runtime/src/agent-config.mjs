@@ -42,7 +42,7 @@ export function previewAgentConfig({ projectRoot, dataRoot, destination }) {
     }
     if (/^\s*\[\[?\s*(?:["']?mcp_servers["']?)\s*\.\s*["']?learnbridge["']?\s*(?:\.|\])/m.test(rest)
       || /^\s*(?:mcp_servers|"mcp_servers"|'mcp_servers'|learnbridge|"learnbridge"|'learnbridge')\s*=/m.test(rest)) fail('An unmanaged LearnBridge or inline MCP configuration already exists. Review it manually.');
-    const block = `${START}\n[mcp_servers.learnbridge]\ncommand = ${JSON.stringify(config.command)}\nargs = ${JSON.stringify(config.args)}\nenabled_tools = ["learnbridge_status", "learnbridge_context", "learnbridge_propose_task"]\nstartup_timeout_sec = 15\ntool_timeout_sec = 20\n${END}\n`;
+    const block = `${START}\n[mcp_servers.learnbridge]\ncommand = ${JSON.stringify(config.command)}\nargs = ${JSON.stringify(config.args)}\nenabled_tools = ["learnbridge_status", "learnbridge_context", "learnbridge_propose_task", "learnbridge_propose_document"]\nstartup_timeout_sec = 15\ntool_timeout_sec = 20\n${END}\n`;
     managedContent = block;
     content = rest + (rest && !rest.endsWith('\n') ? '\n' : '') + block;
   } else {
