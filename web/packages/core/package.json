@@ -1,0 +1,20 @@
+{
+  "name": "@learnbridge/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Provider-independent LearnBridge domain contracts and export migration",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./contracts": "./src/contracts.mjs",
+    "./legacy-state": "./src/legacy-state.mjs",
+    "./ports": {
+      "types": "./src/ports.d.mts",
+      "default": "./src/ports.mjs"
+    }
+  },
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test ../../scripts/core-contracts.test.mjs ../../scripts/legacy-state.test.mjs ../../scripts/core-ports.test.mjs ../../scripts/core-demo.test.mjs"
+  }
+}
