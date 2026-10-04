@@ -6,7 +6,7 @@ LearnBridge is a web app for students that brings together AI tutoring, course p
 
 ## Local student workspace
 
-The local edition provides a private student dashboard with tasks, notes, reviewed profile facts, a cited course library, study plans, learning attempts, writing alternatives, research reports, career preparation, project checklists, meals and routines. Selected text/Markdown, macOS PDF, Word and PowerPoint imports preserve exact source versions and page, paragraph or slide evidence. Office text is partial and requires review of the original for visual content. Records use revision checks, restart persistence, backups and fresh-workspace restore. It runs without Supabase, Composio or AI API keys. The public website remains available as a separate edition.
+The local edition provides a private student dashboard with tasks, notes, reviewed profile facts, a cited course library, study plans, learning attempts, writing alternatives, research reports, career preparation, project checklists, meals and routines. Selected text/Markdown, macOS PDF, Word and PowerPoint imports preserve exact source versions and page, paragraph or slide evidence. Office text is partial and requires review of the original for visual content. Reviewed writing downloads as Markdown or literal Word text, with source hashes and provenance. Records use revision checks, restart persistence, backups and fresh-workspace restore. It runs without Supabase, Composio or AI API keys. The public website remains available as a separate edition.
 
 Requires Node.js **22.16 or newer**. macOS arm64 is the verified foundation target; Linux is experimental and Windows local storage is not supported yet.
 

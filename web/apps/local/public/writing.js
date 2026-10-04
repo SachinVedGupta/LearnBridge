@@ -1,5 +1,38 @@
 // Plain text only: preparation and proposals are not verified model answers.
 // Exact paired student review is required before saving an alternative or edit.
+export async function verifyWordDownload(result, record) {
+  const mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  const pin = record.data.state === 'applied_revision' ? record.data.applied_note : record.data.accepted_note;
+  const manifest = result?.manifest, provenance = manifest?.provenance;
+  const samePin = value => value?.id === pin?.id && value?.revision === pin?.revision && value?.sha256 === pin?.sha256;
+  const sources = values => Array.isArray(values) ? values.map(value => `${value.id}:${value.revision}:${value.sha256}`).sort().join('|') : null;
+  if (!pin || !['accepted', 'applied_revision'].includes(record.data.state) || result?.mime !== mime || result.encoding !== 'base64'
+    || result.validation !== 'fixed_ooxml_structure_and_exact_text_hash' || result.visual_review !== 'pending' || result.sharing !== 'not_granted'
+    || typeof result.base64 !== 'string' || result.base64.length > 682668
+    || result.base64.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(result.base64)
+    || !Number.isSafeInteger(result.byte_length) || result.byte_length < 1 || result.byte_length > 512000
+    || typeof result.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(result.sha256)
+    || typeof result.filename !== 'string' || result.filename.length > 100 || !/^(?![.-])[\p{L}\p{N}._-]+\.docx$/u.test(result.filename)
+    || manifest?.format !== 'learnbridge-word-text-artifact' || manifest.schema_version !== 1 || manifest.generator_version !== 'learnbridge_word_text.v1'
+    || manifest.normalization !== 'crlf_cr_to_lf' || manifest.original_text_sha256 !== pin.sha256
+    || manifest.rendering !== 'literal_text' || manifest.visual_review !== 'pending' || manifest.sharing !== 'not_granted'
+    || !/^[a-f0-9]{64}$/.test(manifest.normalized_text_sha256 || '')
+    || !samePin(provenance?.document) || !samePin(result.document)
+    || provenance?.writing_record?.id !== record.id || provenance.writing_record.revision !== record.revision
+    || provenance.writing_record.payload_hash !== record.data.payload_hash || provenance.writing_record.state !== record.data.state
+    || provenance.academic_policy !== record.data.academic_policy || provenance.content_status !== record.data.content_status
+    || result.content_status !== record.data.content_status
+    || sources(result.source_documents) !== sources(record.data.source_documents)
+    || sources(provenance.source_documents) !== sources(record.data.source_documents)) throw new Error('The Word download did not match this exact reviewed item. No file was prepared.');
+  const decoded = atob(result.base64);
+  if (btoa(decoded) !== result.base64 || decoded.length !== result.byte_length) throw new Error('The Word file encoding or size did not match its receipt. No file was prepared.');
+  const bytes = Uint8Array.from(decoded, value => value.charCodeAt(0));
+  if (bytes.length < 4 || bytes[0] !== 80 || bytes[1] !== 75 || bytes[2] !== 3 || bytes[3] !== 4) throw new Error('The Word file did not have the expected package format. No file was prepared.');
+  const digest = await crypto.subtle.digest('SHA-256', bytes), exactHash = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, '0')).join('');
+  if (exactHash !== result.sha256) throw new Error('The Word file hash did not match its receipt. No file was prepared.');
+  return bytes;
+}
+
 export function mountWritingUI({ root, request, element, busy, confirmAction, message }) {
   const $ = (tag, className, text) => element(tag, className, text);
   const state = { generation: 0, documents: [], items: [], current: null, selections: new Map(), retries: new Map(), downloads: new Set() };
@@ -98,6 +131,18 @@ export function mountWritingUI({ root, request, element, busy, confirmAction, me
         const bytes = new TextEncoder().encode(result.text), digest = await crypto.subtle.digest('SHA-256', bytes); if (generation !== state.generation) return; const exactHash = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, '0')).join('');
         if (bytes.byteLength !== result.byte_length || exactHash !== result.sha256 || result.mime !== 'text/markdown; charset=utf-8' || !/^[\p{L}\p{N}._-]+\.md$/u.test(result.filename)) throw new Error('The export did not match its saved text and filename. No download was prepared.');
         const url = URL.createObjectURL(new Blob([bytes], { type: result.mime })); state.downloads.add(url); const link = $('a', 'button secondary', 'Download exact saved Markdown'); link.href = url; link.download = result.filename; currentPanel.append(link); link.click(); setTimeout(() => { URL.revokeObjectURL(url); state.downloads.delete(url); link.remove(); }, 30000); notice(`Verified Markdown download prepared: ${result.filename}. ${result.warning}`);
+      }));
+      currentPanel.append($('p', 'field-help', 'Word text preserves this saved copy and its source evidence. Markdown syntax stays literal; review layout in your document app. PDF and rich document conversion are not available yet.'));
+      const word = button('Download Word text (.docx)'); currentPanel.append(word); word.addEventListener('click', () => action(word, async () => {
+        const generation = state.generation;
+        const result = await request(`/writing/items/${record.id}/export-docx`, { method: 'POST', body: exactBody(record) });
+        if (generation !== state.generation || state.current?.id !== record.id || state.current?.revision !== record.revision) return;
+        const bytes = await verifyWordDownload(result, record);
+        if (generation !== state.generation || state.current?.id !== record.id || state.current?.revision !== record.revision) return;
+        const url = URL.createObjectURL(new Blob([bytes], { type: result.mime })); state.downloads.add(url);
+        const link = $('a', 'button secondary', 'Download verified Word text'); link.href = url; link.download = result.filename;
+        currentPanel.append(link); link.click(); setTimeout(() => { URL.revokeObjectURL(url); state.downloads.delete(url); link.remove(); }, 30000);
+        notice(`Verified Word text download prepared: ${result.filename}. ${result.warning}`);
       }));
     }
   }

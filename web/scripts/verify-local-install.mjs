@@ -32,6 +32,7 @@ const ALLOWLIST = Object.freeze([
   'web/apps/local-runtime/src/life.mjs', 'web/apps/local-runtime/src/life-service.mjs',
   'web/apps/local-runtime/src/life-routes.mjs', 'web/apps/local-runtime/src/writing-service.mjs',
   'web/apps/local-runtime/src/writing-routes.mjs', 'web/apps/local-runtime/src/research-service.mjs',
+  'web/apps/local-runtime/src/word-text-artifact.mjs',
   'web/apps/local-runtime/src/research-routes.mjs', 'web/apps/local-runtime/src/productivity-service.mjs',
   'web/apps/local-runtime/src/productivity-routes.mjs',
   'web/apps/local-runtime/src/onboarding.mjs', 'web/apps/local-runtime/src/onboarding-routes.mjs',

@@ -1,0 +1,230 @@
+{
+  "format": "learnbridge_word_text_export_verification",
+  "date": "2026-10-04",
+  "status": "PASS_FOR_MEASURED_SLICE",
+  "base_commit": "d4da7d9",
+  "synthetic_only": true,
+  "platform": {
+    "os": "macOS",
+    "architecture": "arm64",
+    "node": "22.23.2",
+    "python": "3.12.14"
+  },
+  "commands": {
+    "full_suite": "npm test",
+    "export_tests": "node --test web/scripts/local-word-artifact.test.mjs web/scripts/local-word-artifact-http.test.mjs web/scripts/local-word-download.test.mjs web/scripts/local-word-download-ui.test.mjs",
+    "clean_install": "node web/scripts/verify-local-install.mjs",
+    "build": "npm run build",
+    "design": "node docs/design/validate-design.mjs"
+  },
+  "measured_checks": {
+    "full_suite": {
+      "passed": 618,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "duration_ms": 49000.261292
+    },
+    "new_export_tests": {
+      "formatter": 9,
+      "paired_http": 11,
+      "client_receipt": 16,
+      "shipped_ui_handler": 11,
+      "included_in_full_suite": true
+    },
+    "clean_install": {
+      "phases_passed": 9,
+      "file_count": 70,
+      "assets": 10,
+      "mcp_tools": 4,
+      "source_digest": "a9554c8ca81625ef6aa938605379e75dc4a85c2d4a8364b1a14bce97840c9803",
+      "lock_sha256": "c5976bc94f4b80dee27d86f80f1520145594ed6880f539874015f9bccd4a1c74",
+      "fixture_cleanup": true
+    },
+    "hosted_build": "PASS",
+    "browser": {
+      "reviewed_saved_copy": true,
+      "unreviewed_export_controls": 0,
+      "word_downloads_saved": 2,
+      "word_files_identical": true,
+      "markdown_download_saved": true,
+      "saved_files_match_service_and_exact_saved_text": true,
+      "download_watcher": "TIMEOUT: IAB waitForEvent/downloadMedia did not report downloads; actual named filesystem files were created after the corresponding UI clicks and independently read back",
+      "desktop": {
+        "width": 1280,
+        "scroll_width": 1280
+      },
+      "mobile": {
+        "width": 390,
+        "scroll_width": 390
+      },
+      "console_errors": 0,
+      "console_warnings": 0
+    },
+    "independent_package": {
+      "status": "PASS",
+      "sha256": "c873daa072d84557475a7c09abba9c476c4c4cdbae68a5edd24c47a8bbd4911c",
+      "byte_length": 8300,
+      "paragraph_count": 21,
+      "part_count": 6,
+      "normalized_text_sha256": "f7c7e539c527447bdb2f92be0ca6202c16771f693e83b597918b7b14c2565b83",
+      "external_relationships": 0
+    },
+    "browser_created_persistence": {
+      "status": "PASS",
+      "fixture": "browser-created-synthetic-writing",
+      "word_download_files": 2,
+      "word_bytes": 8300,
+      "word_sha256": "c873daa072d84557475a7c09abba9c476c4c4cdbae68a5edd24c47a8bbd4911c",
+      "markdown_bytes": 553,
+      "markdown_sha256": "f7c7e539c527447bdb2f92be0ca6202c16771f693e83b597918b7b14c2565b83",
+      "original_revision": 1,
+      "document_count": 2,
+      "grant_count": 0,
+      "workspace_snapshot_sha256": "9db97695fbe685c0305683621bef93bcb919f81a4913247711dda0904fc7f90f",
+      "restart_readback": true,
+      "fresh_backup_restore_same_word": true,
+      "manifest": {
+        "format": "learnbridge-word-text-artifact",
+        "schema_version": 1,
+        "generator_version": "learnbridge_word_text.v1",
+        "original_text_sha256": "f7c7e539c527447bdb2f92be0ca6202c16771f693e83b597918b7b14c2565b83",
+        "original_text_bytes": 553,
+        "normalized_text_sha256": "f7c7e539c527447bdb2f92be0ca6202c16771f693e83b597918b7b14c2565b83",
+        "normalized_text_bytes": 553,
+        "normalization": "crlf_cr_to_lf",
+        "paragraph_count": 21,
+        "provenance": {
+          "writing_record": {
+            "id": "b956d042-5a25-41eb-a471-79f2038b196d",
+            "revision": 2,
+            "payload_hash": "299c8c278b2ce27ba6fef7418d805a154c75c1ed03bde3158cf75b382b82d65f",
+            "state": "accepted"
+          },
+          "document": {
+            "id": "68ceedff-5ada-4430-8c0c-61f8fa53d10c",
+            "revision": 1,
+            "sha256": "f7c7e539c527447bdb2f92be0ca6202c16771f693e83b597918b7b14c2565b83"
+          },
+          "source_documents": [
+            {
+              "id": "1a21d71d-46e5-4380-b4cf-754f5a6b1caf",
+              "revision": 1,
+              "sha256": "18808a361f3e81788ee88dde85a9a8f8cecca53199cf3df507515177f352550d"
+            }
+          ],
+          "academic_policy": "learning_support",
+          "content_status": "student_reviewed_content"
+        },
+        "parts": [
+          "[Content_Types].xml",
+          "_rels/.rels",
+          "word/document.xml",
+          "word/styles.xml",
+          "word/_rels/document.xml.rels",
+          "docProps/custom.xml"
+        ],
+        "layout": {
+          "paper": "US Letter",
+          "page_twips": {
+            "width": 12240,
+            "height": 15840
+          },
+          "margin_twips": 1440,
+          "font": "Calibri",
+          "font_half_points": 22,
+          "color": "000000"
+        },
+        "limitations": [
+          "Literal text; Markdown, lists, tables and citation URLs are not interpreted or made clickable.",
+          "Structure and text preservation do not verify visual layout, pagination or font availability. Visual review remains pending.",
+          "This local file does not grant sharing or verify factual claims."
+        ],
+        "rendering": "literal_text",
+        "visual_review": "pending",
+        "sharing": "not_granted"
+      }
+    },
+    "native_readers": {
+      "python_stdlib_zip_xml": "PASS",
+      "existing_office_parser": "PASS in formatter tests including empty/final paragraphs",
+      "macos_textutil": "PASS in formatter tests with its extra final paragraph newline"
+    },
+    "visual_fixture": {
+      "actual_browser_saved_file": true,
+      "bundled_renderer": "LibreOffice to PDF to PNG through documents/render_docx.py",
+      "pages_rendered": 1,
+      "pages_inspected": 1,
+      "result": "PASS: readable literal text, Unicode, tab, blanks, citation and provenance; no clipping/overlap",
+      "general_student_visual_review": "pending"
+    },
+    "paired_http_unicode_filename_boundary": "PASS: retains complete supplementary letters within the existing UTF-16 filename budget, through real reviewed exports and client verification",
+    "design": {
+      "status": "PASS",
+      "scope": "documentation_only",
+      "features": 29,
+      "acceptance_cases": 182,
+      "work_packages": 24,
+      "local_links": 147,
+      "synthetic_examples": 3,
+      "product_tests_executed": false
+    }
+  },
+  "limits": {
+    "text_utf8_bytes": 80000,
+    "paragraphs": 1000,
+    "output_bytes": 512000,
+    "source_documents": 10
+  },
+  "source_sha256": {
+    "web/apps/local-runtime/src/word-text-artifact.mjs": "feec41787e63d148cb663f3b33c2c784e53ba92b3cf3f5f871bde41a98b5ea5d",
+    "web/apps/local-runtime/src/writing-service.mjs": "5ad3641df4929cd657f7f36213be4173feb03466777bab56d5913d53446174b5",
+    "web/apps/local-runtime/src/writing-routes.mjs": "9064667d5d5b9a6a434845b16852485dbce728816af2d81858d305af4fb637de",
+    "web/apps/local-runtime/src/server.mjs": "f6ce13a990a5b306697d423793a4a8e4eb06d0f144871b7bab8024c35efc7e6a",
+    "web/apps/local/public/writing.js": "a3ce6e433c1a44888fe86ab130c2b3751b87d9555246e8947a44a54e7ff1fbc6",
+    "web/scripts/verify-local-install.mjs": "a080a4bbeabd818a7b4f5bdabfad9c38cd55705a64c709de3437eb97b3451b0c",
+    "web/scripts/local-writing-service.test.mjs": "a22667323c3ced0216dd6565582389bbd838bda654bb77c7159cb26555d30b61",
+    "web/scripts/local-word-artifact.test.mjs": "952450fbedd3826b56a377894a4f1d4f3cd4c612f904d38e65aa3ccc094f4d59",
+    "web/scripts/local-word-artifact-http.test.mjs": "5eff31bc56170483080b59b2024cd23c9aa767f3cc52a8f7b22c0fd158283df4",
+    "web/scripts/local-word-download.test.mjs": "6f5a33f80ffa12f7f5b1bcbd5c4d92e439790678cd1cd4a3d932d0d8698552a9",
+    "web/scripts/local-word-download-ui.test.mjs": "4573d7ec20add07a02615af72b3a07a98d676a8e2146b1722a8d355f93a9480e",
+    "web/scripts/fixtures/word-artifact-verify.py": "2865ea0298b01f1c887b449bbf11b0c55d442231905c74c81b3e8f1fbd3c0045"
+  },
+  "evidence_sha256": {
+    "artifacts/local-word-export-desktop.jpg": "056bb3914737d756abffb4f80fa492e0c8e54d1bb4df735a452a50144716ac7e",
+    "artifacts/local-word-export-mobile.jpg": "7377b5dffe12fbaf1c466c26fa115296d4804c8044fbc54c63285d09829e7078",
+    "artifacts/local-word-export-rendered-page-1.png": "60f21aad0d5474e8174ccf9b3e9c36b13278762ccab4c1122973a315f4ab04bc",
+    "artifacts/word-export-clean-install-verification.json": "c023f1b9b2becb5d8414550d2ba913aec3f6441df5255f8c5e1f49d73695b6b7"
+  },
+  "changes_to_external_state": {
+    "production_dependencies": false,
+    "migration": false,
+    "provider_configuration": false,
+    "deployment": false,
+    "personal_scanning": false,
+    "host_or_model_calls": false,
+    "sharing_grants": false
+  },
+  "remaining_gates": [
+    "Literal text only; Markdown, lists, tables and URLs are not interpreted as rich formatting.",
+    "Any new student file requires its own visual and factual review; one synthetic rendered page is not universal Office compatibility.",
+    "PDF/LaTeX/full document conversion and external document writes remain unavailable.",
+    "Live embedded host, institution SSO/D2L, cloud onboarding, released phone companion and enabled telemetry remain separate gates."
+  ],
+  "fixture_cleanup": {
+    "owned_runtime_stopped": true,
+    "owned_browser_closed": true,
+    "viewport_reset": true,
+    "marked_temporary_workspace_and_backup_removed": true,
+    "expired_pairing_file_removed": true,
+    "synthetic_browser_downloads_retained_for_inspection": [
+      "Synthetic-recursion-study-note.docx",
+      "Synthetic-recursion-study-note (1).docx",
+      "Synthetic-recursion-study-note.md"
+    ]
+  },
+  "independent_review": {
+    "authorization_source_privacy_async": "No blocker found in measured slice",
+    "unicode_filename_edge": "Fixed; actual paired HTTP and shipped client regression passed"
+  }
+}

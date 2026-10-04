@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { LearnBridgeError } from '@learnbridge/core';
+import { createWordTextArtifact } from './word-text-artifact.mjs';
 
 const sha = value => createHash('sha256').update(value).digest('hex');
 const canonical = value => Array.isArray(value) ? `[${value.map(canonical).join(',')}]` : value && typeof value === 'object' ? `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}` : JSON.stringify(value);
@@ -31,7 +32,13 @@ function revision(value) { if (!Number.isSafeInteger(value) || value < 1) fail('
 function digest(value) { if (typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value)) fail('INVALID_INPUT'); return value; }
 function retryKey(value, prefix) { if (value === undefined) return null; text(value, 100); if (value.length < 8 || /[^A-Za-z0-9._:-]/.test(value)) fail('INVALID_INPUT'); return `${prefix}-${sha(value)}`; }
 function markdownEscape(value) { return value.replace(/[\\`*_{}\[\]()#+.!|<>]/g, '\\$&'); }
-function filename(title) { const value = title.normalize('NFKC').replace(/[^\p{L}\p{N}._-]+/gu, '-').replace(/^[.-]+|[.-]+$/g, '').slice(0, 80); return `${value || 'LearnBridge-artifact'}.md`; }
+function filename(title) {
+  const sanitized = title.normalize('NFKC').replace(/[^\p{L}\p{N}._-]+/gu, '-').replace(/^[.-]+|[.-]+$/g, '');
+  let value = '';
+  // Keep the existing UTF-16 length budget without splitting a Unicode letter.
+  for (const character of sanitized) { if (value.length + character.length > 80) break; value += character; }
+  return `${value || 'LearnBridge-artifact'}.md`;
+}
 function difference(before, after) {
   const a = Array.from(before), b = Array.from(after); let prefix = 0; let suffix = 0;
   while (prefix < Math.min(a.length, b.length) && a[prefix] === b[prefix]) prefix++;
@@ -74,9 +81,15 @@ export function createWritingService({ store }) {
     return `${p.draft_text}\n\n---\n\n## LearnBridge provenance\n\nReviewed alternative: ${markdownEscape(p.title)}\n\nAcademic policy: ${p.academic_policy}. Origin: ${p.origin !== 'student' ? 'agent draft, reviewed by the student; factual accuracy remains unverified' : 'student-provided draft'}.\n\n${sources}\n`;
   }
   function acceptedNote(value) { const note = store.getDocument(value.data.accepted_note.id); if (!note || note.document.revision !== value.data.accepted_note.revision || note.sha256 !== value.data.accepted_note.sha256) fail('REVISION_CONFLICT'); return note; }
+  function reviewedExport(recordId, raw) {
+    const input = safe(raw); object(input, ['expected_revision', 'payload_hash'], ['expected_revision', 'payload_hash']);
+    const value = record(recordId, ['writing_proposal']); current(value); review(value, input);
+    if (!['accepted', 'applied_revision'].includes(value.data.state) || value.revision !== input.expected_revision) fail('CONSENT_REQUIRED');
+    return { value, saved: value.data.state === 'applied_revision' ? current(value)[0] : acceptedNote(value) };
+  }
   return {
     documents() { return store.listDocuments().map(document => { const saved = store.getDocument(document.id); return { id: document.id, title: document.title, revision: document.revision, sha256: saved.sha256, academic_policy: document.academic_policy, byte_length: Buffer.byteLength(saved.text) }; }); },
-    capabilities() { return { markdown: { state: 'available', processing: 'local_text', verification: 'private_note_exact_readback' }, pdf: { state: 'unsupported', next_action: 'Use Markdown until a reviewed, bounded PDF renderer is implemented.' }, docx: { state: 'unsupported', next_action: 'Use Markdown until a reviewed, bounded DOCX renderer is implemented.' }, latex: { state: 'unsupported', next_action: 'Use Markdown until a reviewed, bounded LaTeX compiler is implemented.' }, external_writes: false }; },
+    capabilities() { return { markdown: { state: 'available', processing: 'local_text', verification: 'private_note_exact_readback' }, pdf: { state: 'unsupported', next_action: 'Use Markdown until a reviewed, bounded PDF renderer is implemented.' }, docx: { state: 'available', processing: 'local_literal_text', verification: 'fixed_ooxml_structure_and_exact_text_hash', visual_review: 'pending', limits: { text_bytes: 80000, paragraphs: 1000, output_bytes: 512000 }, next_action: 'Download Word text from an accepted draft, then review its layout in your document app. Markdown syntax stays literal.' }, latex: { state: 'unsupported', next_action: 'Use Markdown until a reviewed, bounded LaTeX compiler is implemented.' }, external_writes: false }; },
     list() {
       return store.listWorkspaceRecords({ kind: 'artifact' }).filter(value => ['writing_recipe', 'writing_proposal'].includes(value.data.format)).map(value => {
         let stale = false; try { current(value, { allowReconciliation: true }); if (value.data.state === 'accepted') acceptedNote(value); } catch (error) { if (error.code !== 'REVISION_CONFLICT') throw error; stale = true; }
@@ -140,8 +153,22 @@ export function createWritingService({ store }) {
       if (value.data.state !== 'awaiting_review' || value.revision !== input.expected_revision) fail('REVISION_CONFLICT'); return store.updateWorkspaceRecord(value.id, { expected_revision: value.revision, data: { ...value.data, state: 'rejected', review_receipt: { reviewer: store.identity.student_id, source: 'paired_local_ui', reviewed_at: new Date().toISOString(), payload_hash: value.data.payload_hash } } });
     },
     exportArtifact(recordId, raw) {
-      const input = safe(raw); object(input, ['expected_revision', 'payload_hash'], ['expected_revision', 'payload_hash']); const value = record(recordId, ['writing_proposal']); current(value); review(value, input); if (!['accepted', 'applied_revision'].includes(value.data.state) || value.revision !== input.expected_revision) fail('CONSENT_REQUIRED'); const saved = value.data.state === 'applied_revision' ? current(value)[0] : acceptedNote(value);
+      const { value, saved } = reviewedExport(recordId, raw);
       return { filename: filename(value.title), mime: 'text/markdown; charset=utf-8', text: saved.text, sha256: saved.sha256, byte_length: Buffer.byteLength(saved.text), document: saved.document, source_documents: value.data.source_documents, validation: 'exact_saved_text_readback', sharing: 'not_granted', content_status: value.data.content_status, warning: 'Markdown is stored as text. Review external links before opening it in another renderer.' };
+    },
+    exportWordArtifact(recordId, raw) {
+      const { value, saved } = reviewedExport(recordId, raw);
+      const { bytes, manifest } = createWordTextArtifact({ text: saved.text, provenance: {
+        writing_record: { id: value.id, revision: value.revision, payload_hash: value.data.payload_hash, state: value.data.state },
+        document: { id: saved.document.id, revision: saved.document.revision, sha256: saved.sha256 },
+        source_documents: value.data.source_documents.map(({ id, revision, sha256 }) => ({ id, revision, sha256 })),
+        academic_policy: value.data.academic_policy, content_status: value.data.content_status,
+      } });
+      return { filename: filename(value.title).replace(/\.md$/, '.docx'), mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        encoding: 'base64', base64: bytes.toString('base64'), byte_length: bytes.length, sha256: sha(bytes), manifest,
+        document: { ...saved.document, sha256: saved.sha256 }, source_documents: value.data.source_documents, validation: 'fixed_ooxml_structure_and_exact_text_hash',
+        sharing: 'not_granted', content_status: value.data.content_status, visual_review: 'pending',
+        warning: 'Saved text and provenance are included. Markdown syntax and URLs stay literal; line endings become LF. Review layout and factual accuracy in your document app. The downloaded copy remains until you remove it separately.' };
     },
     forget(recordId, expectedRevision) { record(recordId, ['writing_recipe', 'writing_proposal']); return store.deleteWorkspaceRecord(recordId, revision(expectedRevision)); },
   };
