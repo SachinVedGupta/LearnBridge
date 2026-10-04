@@ -1,0 +1,269 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-04T18:44:15.414Z",
+  "status": "PASS_RELEASED_CODE_AND_PUBLIC_DOCS_READ_LIVE_TRANSFER_GATES_SEPARATE",
+  "release_commit": "08b370ce3b8f449cf96fde554c83b98210f3539e",
+  "application_commit": "292fe9bcd03ee9d5b08b8077671d47824bb19304",
+  "source_files": [
+    {
+      "path": ".vercelignore",
+      "sha256": "c53e897b9b48110ef7c2f890dc698f06fcfb91189bc93883c782277b024c3b5d"
+    },
+    {
+      "path": "web/apps/web/src/app/api/cloud-onboarding/[action]/route.ts",
+      "sha256": "641ef43807a5ce79eeade1005a42693eb8edf7e73e1cbe8b25cf0ddea7038812"
+    },
+    {
+      "path": "web/apps/web/src/app/onboarding/cloud/cloud-onboarding-client.tsx",
+      "sha256": "338c7be23aa6f56ee5a65445f530db932ea81a38b2b607b5bff658cbe533a2cb"
+    },
+    {
+      "path": "web/apps/web/src/app/remote/RemoteCompanion.tsx",
+      "sha256": "8d63ccb7af18919f4ea7079fb36edb30df65cf5769581d6d5f40b3f166cee743"
+    },
+    {
+      "path": "web/apps/web/src/lib/server/cloud-onboarding-service.mjs",
+      "sha256": "574dc31e91f6b27c8b1340a6e7b97348aff92f358738664a09f949d5b3e55aed"
+    },
+    {
+      "path": "web/apps/web/src/lib/server/cloud-onboarding.ts",
+      "sha256": "4999e66833399b43a59da372fd198541bbc295837889051cebb3b0f7d0fb8d81"
+    },
+    {
+      "path": "web/apps/web/src/proxy.ts",
+      "sha256": "1c58d003c63affaf6fdd2f77e25999ecae883e964318c8433b79108a3dc26cee"
+    },
+    {
+      "path": "web/scripts/cloud-docs-link-ui.test.mjs",
+      "sha256": "70300c2071a5d069c7bf4b3e840b5b34f80751f7c47c3891747293b91f8040aa"
+    },
+    {
+      "path": "web/scripts/cloud-docs-link.test.mjs",
+      "sha256": "530b43bd8b60f374c66ffcf8b963d23b92ced1b56d0508dbd2e6fb5aa81b02b4"
+    },
+    {
+      "path": "web/scripts/cloud-download-confirmation.test.mjs",
+      "sha256": "4b35c71905d5d84b3feee92d41b60b5779f1b8776799681bf5c322c1a14b9034"
+    },
+    {
+      "path": "web/scripts/cloud-onboarding-ui.test.mjs",
+      "sha256": "c2942aa551657a99d63c789c3974c1ebcd3626972e7f6e2e49d2633710dd76a8"
+    },
+    {
+      "path": "web/scripts/connected-proxy.test.mjs",
+      "sha256": "601893b9995c970e6d4d950ae31e5f51099e8d4bd980e8ee823789f54c276182"
+    }
+  ],
+  "tests": {
+    "command": "cd web && node --test --test-concurrency=2 scripts/*.test.mjs",
+    "tests": 789,
+    "passed": 789,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "duration_ms": 70910.553083,
+    "log_sha256": "c576db87760c3158ecbf43eb4a1ad2e9ca702706472321ed98802d87be248bc7",
+    "cloud_targeted_cases": 81,
+    "private_page_proxy_cases": 4,
+    "cloud_fixture_tests_do_not_call_live_providers": true
+  },
+  "hosted_build": {
+    "command": "cd web && npm run build --workspace=@assignment-ai/web",
+    "status": "PASS",
+    "log_sha256": "df63b58c80864f2ebcfa9098e58d643afc34cc19aeccbcc938893606e9627d01",
+    "application_sources_unchanged_since_build": true
+  },
+  "prior_local_evidence": {
+    "receipt": "CONNECTED_WORKSPACE_VERIFICATION.json",
+    "snapshot_commit": "9fd8d80",
+    "source_files_rechecked": 21,
+    "source_hashes_unchanged": true,
+    "clean_allowlist_files": 86,
+    "source_digest": "769d0a24e49e08d49f7a4d773c3f96644e1e67fc644997ba69087d1c85bb6bcb",
+    "lock_sha256": "c5976bc94f4b80dee27d86f80f1520145594ed6880f539874015f9bccd4a1c74",
+    "prior_clean_install_phases": 9,
+    "prior_clean_install_status": "PASS",
+    "rerun": false,
+    "reason": "All 86 allowlisted source bytes and lockfile retain their executed clean-install hashes; this follow-up changes hosted code/tests and source upload exclusions.",
+    "actual_native_four_runtime_issued_mcp_calls": "PASS_PREVIOUS_EXECUTED_PROOF_UNCHANGED_NATIVE_SOURCES",
+    "native_backup_fresh_root_restore": "PASS_PREVIOUS_EXECUTED_PROOF"
+  },
+  "production": {
+    "deployment_id": "dpl_EFoevmNVKwmWxtUcFiCAS9CeQY1N",
+    "state": "READY",
+    "url": "https://thelearnbridge-ayj91ljua-sachin-guptas-projects-154b22b9.vercel.app",
+    "canonical_alias": "https://thelearnbridge.vercel.app",
+    "canonical_matches_deployment": true,
+    "uploaded_file_count": 272,
+    "private_or_dependency_file_pattern_matches": 0,
+    "explicit_existing_team_scope": true,
+    "packaging": "Exclude dependency/build directories themselves as well as their contents; local symlink entries are not uploaded.",
+    "final_anonymous_checks_verified_at": "2026-10-04T18:44:15.412Z"
+  },
+  "anonymous_checks": [
+    {
+      "path": "/setup",
+      "status": 200,
+      "cache_control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "location": null,
+      "code": null
+    },
+    {
+      "path": "/login",
+      "status": 200,
+      "cache_control": "public, max-age=0, must-revalidate",
+      "location": null,
+      "code": null
+    },
+    {
+      "path": "/onboarding/cloud",
+      "status": 307,
+      "cache_control": "private, no-store",
+      "location": "/login",
+      "code": null
+    },
+    {
+      "path": "/remote",
+      "status": 307,
+      "cache_control": "private, no-store",
+      "location": "/login",
+      "code": null
+    },
+    {
+      "path": "/api/healthz",
+      "status": 200,
+      "cache_control": "public, max-age=0, must-revalidate",
+      "location": null,
+      "code": null
+    },
+    {
+      "path": "/api/cloud-onboarding/accounts",
+      "status": 401,
+      "cache_control": "no-store",
+      "location": null,
+      "code": null
+    },
+    {
+      "path": "/api/remote/v1",
+      "status": 503,
+      "cache_control": "private, no-store",
+      "location": null,
+      "code": "REMOTE_DISABLED"
+    },
+    {
+      "path": "/api/remote/v1/results",
+      "status": 503,
+      "cache_control": "private, no-store",
+      "location": null,
+      "code": "REMOTE_DISABLED"
+    }
+  ],
+  "actual_cloud_fixture": {
+    "provider": "googledocs",
+    "evidence_type": "live_student_owned_synthetic_doc",
+    "title": "LearnBridge synthetic import verification (temporary)",
+    "owner_and_config_verified": true,
+    "public_account_choice_matches_checked_account": true,
+    "official_google_signin": "PASS_EXISTING_STUDENT_ACCOUNT",
+    "fixture": {
+      "schema_version": 1,
+      "evidence_type": "live_synthetic_student_owned_google_doc",
+      "stage": "verified_literal_body_and_provider_snapshot",
+      "tool_version": "20260826_00",
+      "schemas_verified": true,
+      "owned_private_active_config_checks": 6,
+      "creation_calls": 1,
+      "insertion_calls": 1,
+      "read_calls": 1,
+      "created_document_retained_before_insert": true,
+      "title_matches": true,
+      "body_exact_matches": false,
+      "expected_text_bytes": 209,
+      "expected_text_sha256": "e7c5679172eb0f48cd3f46ac51e0cc586f864dca991f9e7f48657a02a6e862fd",
+      "readback_bytes": 233,
+      "readback_sha256": "c42152e807afbef938b81141cfc21506721d59d1ea8ab8cf348add7418c2c267",
+      "sharing_changes": 0,
+      "scope_changes": 0,
+      "credential_fields_accessed": false,
+      "automatic_mutation_retries": false,
+      "existing_document_reads": 0,
+      "error": null,
+      "structured_read_calls": 1,
+      "structured_body_bytes": 210,
+      "structured_body_sha256": "106f61728bb0ea6409581522b63c5eee3ea36e4a0ee32e3443b7246c53ce6c89",
+      "literal_body_matches_inserted_plus_document_final_paragraph_linefeed": true,
+      "provider_plaintext_matches_tab_heading_and_terminal_linefeed_elision": true,
+      "provider_plaintext_body_exact_matches": false,
+      "sharing_status": "unchanged_default_not_acl_verified"
+    },
+    "credential_check_scope": "No raw connected-account credential/state fields were accessed. The configured SDK used its existing server API key normally.",
+    "public_exact_link_read": "PASS_ON_DEPLOYMENT_dpl_BiVBXh1chmoZmStjTbkAYBu2hNAh_UNCHANGED_BACKEND",
+    "public_rendered_text_matches_independent_provider_read": true,
+    "public_text_bytes": 233,
+    "public_text_sha256": "c42152e807afbef938b81141cfc21506721d59d1ea8ab8cf348add7418c2c267",
+    "source_modified_at": null,
+    "source_live_freshness": "unchecked",
+    "metadata_search": "ACCESS_TOKEN_SCOPE_INSUFFICIENT_FOR_DRIVE",
+    "notion": "SUCCESSFUL_FOCUSED_METADATA_SEARCH_ZERO_MATCHES_NO_SELECTED_BODY_PROOF",
+    "actual_browser_file_saved": false,
+    "actual_live_local_import_performed": false,
+    "synthetic_hosted_ui_blob_to_local_readback": "PASS_IN_AUTOMATED_CASES_NOT_LIVE_FILE_SAVE",
+    "download_confirmation": "IN_APP_CONSENT_REPLACED_NATIVE_PROMPT_AND_DEPLOYED",
+    "browser_blocker": "Native download click timed out; dialog API returned no handle. Later clicks/keyboard submit did not change the pairing form. User asked to unlock and dismiss the old prompt before live retest.",
+    "local_database_read_only_before_after_unchanged": true,
+    "local_counts": {
+      "tasks": 0,
+      "documents": 1,
+      "grants": 1,
+      "profile_facts": 0,
+      "cloud_import_receipts": 0
+    },
+    "temporary_fixture_retained": true
+  },
+  "configuration": {
+    "new_dependencies": false,
+    "new_oauth_scopes": false,
+    "google_cloud_configuration_changes": false,
+    "credential_copying": false,
+    "production_migration_applied": false,
+    "phone_or_adoption_flags_enabled": false
+  },
+  "live_gates": {
+    "d2l": {
+      "implemented": true,
+      "transport_and_service_cases": 36,
+      "owned_chrome_launch_observed": true,
+      "actual_authorized_course_read": false,
+      "school_sso_mfa_required": true,
+      "owned_school_browser_open_now": false,
+      "school_writes": 0
+    },
+    "phone": {
+      "implemented": true,
+      "targeted_cases": 28,
+      "disposable_postgres_assertions": 36,
+      "production_migrations_applied": false,
+      "live_session_owner_concurrency_verified": false,
+      "scheduled_retention_verified": false,
+      "physical_phone_round_trip": false,
+      "release_flags": "DISABLED"
+    },
+    "cloud": {
+      "docs_public_text_access": "PASS",
+      "actual_file_save_and_local_import": "PENDING_RESTORED_BROWSER_INTERACTION",
+      "notion_selected_page_read": "PENDING_STUDENT_SELECTION"
+    },
+    "claude": {
+      "external_mcp_bridge": "IMPLEMENTED",
+      "embedded_execution": "NOT_IMPLEMENTED_OR_ACCOUNT_VERIFIED"
+    }
+  },
+  "limitations": [
+    "789 passes include synthetic provider/host/relay fixtures; they do not certify every student account, school or device.",
+    "Real Google Docs public text access does not prove a browser saved its export or the live laptop imported it.",
+    "The provider-rendered 233-byte text contains a tab heading and elides terminal LF; literal submitted body and rendered text hashes intentionally differ.",
+    "The synthetic cloud record received one creation and one insertion; no sharing/ACL change was made, and its ACL was not independently verified.",
+    "Original source, native proof, clean installation and prior receipts remain their separately executed dated evidence.",
+    "No account-wide scan, automatic profile confirmation, model-sharing grant or phone-result upload occurred."
+  ]
+}

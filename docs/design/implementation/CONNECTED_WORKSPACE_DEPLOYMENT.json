@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-04T17:40:03.734Z",
+  "commit": "9fd8d80",
+  "deployment": {
+    "id": "dpl_HvkRAN8Szb8WvUDLLffZFzGtG1L6",
+    "target": "production",
+    "state": "READY",
+    "url": "https://thelearnbridge-omwmjeie7-sachin-guptas-projects-154b22b9.vercel.app",
+    "canonical_alias": "https://thelearnbridge.vercel.app",
+    "canonical_alias_matches_deployment": true,
+    "uploaded_files": 275,
+    "private_file_pattern_matches": 0
+  },
+  "anonymous_checks": [
+    {
+      "path": "/setup",
+      "status": 200
+    },
+    {
+      "path": "/api/healthz",
+      "status": 200
+    },
+    {
+      "path": "/api/cloud-onboarding/accounts",
+      "status": 401
+    },
+    {
+      "path": "/api/remote/v1",
+      "status": 503,
+      "code": "REMOTE_DISABLED"
+    },
+    {
+      "path": "/api/remote/v1/results",
+      "status": 503,
+      "code": "REMOTE_DISABLED"
+    }
+  ],
+  "browser": {
+    "google_signin": "PASS_EXISTING_STUDENT_ACCOUNT",
+    "signed_in_cloud_page": "PASS",
+    "eligible_docs_and_notion_choices": true,
+    "public_phone_page": "DISABLED_WITH_SETUP_LINK"
+  },
+  "cloud_diagnostic": {
+    "googledocs": {
+      "owner_authority_established": true,
+      "account_active": true,
+      "account_private": true,
+      "configured_auth_matches": true,
+      "filtered_owner_account_match": true,
+      "execute_attempted": true,
+      "stage": "tool_execute",
+      "owner_metadata_available": true,
+      "tool_successful": false,
+      "category": "insufficient_scopes",
+      "http_status": 403,
+      "reason": "ACCESS_TOKEN_SCOPE_INSUFFICIENT",
+      "google_drive_api_mentioned": true,
+      "google_docs_api_mentioned": false
+    },
+    "notion": {
+      "owner_authority_established": true,
+      "account_active": true,
+      "account_private": true,
+      "configured_auth_matches": true,
+      "filtered_owner_account_match": true,
+      "execute_attempted": true,
+      "stage": "tool_execute",
+      "owner_metadata_available": true,
+      "tool_successful": true,
+      "category": "success",
+      "response_structure": {
+        "type": "object",
+        "known_keys": [
+          "has_more",
+          "next_cursor",
+          "object",
+          "results"
+        ],
+        "other_key_count": 4,
+        "has_more": false,
+        "results_count": 0
+      }
+    }
+  },
+  "configuration": {
+    "new_dependencies": false,
+    "new_oauth_scopes": false,
+    "new_secret_transfer": false,
+    "production_db_migration": false,
+    "phone_or_adoption_flags_enabled": false
+  },
+  "limitations": [
+    "The existing student Google sign-in is proof for that account only, not every public user.",
+    "Google Docs metadata search needs separate Drive search consent; no scope changes were made.",
+    "Successful Notion searches returned zero matching pages, not personal text access.",
+    "Selected text transfer/local readback is not proved by this initial production check; an exact Docs-link follow-up is under implementation.",
+    "No phone hardware, live session isolation/concurrency or scheduled retention proof."
+  ]
+}
