@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-04T19:58:36.504Z",
+  "status": "PASS_IMPLEMENTED_BOUNDARIES",
+  "code_commit": "5c4a31b",
+  "scope": "Local McMaster browser-issued bearer authentication aligned with the audited Avenue MCP. Synthetic transport, storage and recovery evidence; real school authorization not verified.",
+  "upstream": {
+    "repository": "https://github.com/alanxue1/avenue-mcp",
+    "master_and_audited_commit": "9f996323641aba91cc0bbf2b21efd429f9a465e1",
+    "source_review_only": true,
+    "upstream_executed": false,
+    "vendored": false,
+    "auth_source": "a2l-mcp/src/auth.ts",
+    "client_source": "a2l-mcp/src/client.ts"
+  },
+  "environment": {
+    "node": "v22.23.2",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "source_hashes": {
+    "web/apps/local-runtime/src/d2l-browser.mjs": "57778c0039f55c271605f5c121e7558f66a97c8106dff9541df6aef49108b415",
+    "web/apps/local-runtime/src/d2l-service.mjs": "083de4cfaa8df52af102629c5bd827c2c6a348668cae7ee12cfb73174d46caf1",
+    "web/apps/local-runtime/src/d2l-routes.mjs": "676ab4f1d130b4525e1cb2af6777249de5c49cd8b0e810dbeb25125765acff28",
+    "web/apps/local/public/app.js": "77b7dc4c3185a743d5fd43d71d9b54587b7aa8aeb7af01193c1f1af69a2b0bd9",
+    "web/apps/local/public/d2l.js": "82440237086e8b9fe9021d7aae213cca65aa0f5820843f5b6b24c297ab0bb5f7",
+    "web/scripts/fixtures/d2l-browser-fixture.mjs": "2d114d135919786750e40dff3f935d6cfb0e79e500c12097bed92ccc6acb635b",
+    "web/scripts/fixtures/d2l-test-support.mjs": "772d16129a42567f66577e1056636c6ce591b0d62c1924478ec58b11eb2037e3",
+    "web/scripts/local-d2l-browser.test.mjs": "a61f997c1d33e7f0f55e9e4d15178a488efb5c4a25d7e84b3354a01f2afa922a",
+    "web/scripts/local-d2l-service.test.mjs": "185516f4af0c622773f71e38348013f2a15338619aeb8b18533339fa501379d2",
+    "web/scripts/local-d2l-http.test.mjs": "bbce448da848e3c0663a30e3ddf5f3084bfcf58937d9e88b24a64fcd9cdfcbc6",
+    "web/scripts/local-d2l-ui.test.mjs": "1f2fb5ae2ae4bd39ea47afd2a217a60bfc3cc978535c9fa1a88499280d8bd244"
+  },
+  "automated": {
+    "command": "cd web && node --test --test-concurrency=2 scripts/*.test.mjs",
+    "tests": 827,
+    "passed": 827,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "output_sha256": "5f8c4a17618571302e9e12f2c261d596c73595c58e0a0c979daf0da3a7acb6cc",
+    "focused_d2l": {
+      "tests": 74,
+      "browser_authentication": 50,
+      "service": 4,
+      "paired_http_sqlite": 12,
+      "ui_handlers": 8,
+      "evidence": "An independent synthetic child executes the shipped browser expression; fixtures refuse cookie-only authenticated API reads."
+    }
+  },
+  "builds": {
+    "local_dashboard": "PASS",
+    "hosted_website": "PASS",
+    "local_output_sha256": "5d66afb7eaa86628ec2bb262138ac893cfa2cc6243e8d0740b4ae835e30aa7c2",
+    "hosted_output_sha256": "b664bccfd78c09df1c10ee38efe8867fc6948f3d89fb0ff3881401b6b0837bc8"
+  },
+  "clean_install": {
+    "status": "PASS",
+    "source": {
+      "file_count": 86,
+      "source_digest": "fc4af57551b696b839db766a2a662801145207676fc71f361cdef430b02ae2e1",
+      "lock_sha256": "c5976bc94f4b80dee27d86f80f1520145594ed6880f539874015f9bccd4a1c74"
+    },
+    "phases": [
+      {
+        "id": "FI01_EXPLICIT_CLEAN_SOURCE_COPY",
+        "status": "PASS"
+      },
+      {
+        "id": "FI02_FRESH_LOCKED_OFFLINE_INSTALL",
+        "status": "PASS"
+      },
+      {
+        "id": "FI03_BUILD_STATIC_DASHBOARD",
+        "status": "PASS"
+      },
+      {
+        "id": "FI04_CLOUD_FREE_SETUP_AND_DOCTOR",
+        "status": "PASS"
+      },
+      {
+        "id": "FI05_NEW_PROCESS_CREATES_SYNTHETIC_RECORDS",
+        "status": "PASS"
+      },
+      {
+        "id": "FI06_FRESH_PROCESS_READS_EXACT_SAVED_RECORDS",
+        "status": "PASS"
+      },
+      {
+        "id": "FI07_CLI_BACKUP_AND_FRESH_ROOT_RESTORE",
+        "status": "PASS"
+      },
+      {
+        "id": "FI08_INDEPENDENT_PROCESS_VERIFIES_RESTORED_RECORDS",
+        "status": "PASS"
+      },
+      {
+        "id": "FI09_FRESH_OFFICIAL_SDK_STDIO_DISCOVERY",
+        "status": "PASS"
+      }
+    ],
+    "observed": {
+      "tasks": 1,
+      "documents": 1,
+      "document_content_sha256": "6b3753692a884de653b1ad19639c7a1b4912c63fb3db43d13d610e742dbbb3d2",
+      "exact_records_survive_new_process": true,
+      "exact_records_survive_fresh_root_restore": true,
+      "static_assets_built_and_hash_matched": 14
+    },
+    "fixture_cleanup": true,
+    "scope": "Explicit clean source copy, locked offline-cache install, process persistence/fresh-root restore and actual SDK stdio discovery on this Mac; not a fresh student computer or live school login."
+  },
+  "legacy_python": {
+    "schema_version": 1,
+    "verification": "legacy Python compatibility checks for D2L browser auth changes",
+    "performed_at": "2026-10-04T19:56:48Z",
+    "python_version": "3.12.14",
+    "service_credentials_inherited": false,
+    "dotenv_disabled": true,
+    "classroom_calendar_writes": 0,
+    "checks": {
+      "python_syntax": {
+        "passed": true,
+        "tracked_files_checked": 16,
+        "agent_and_app_files": 14,
+        "source_hashes": {
+          "authenticate.py": "2fdfb856a972c655dfe15463bf2b76d87ec0d44896a290d9fb49fc2973d5269a",
+          "oauth_web_config.py": "e783042c604e394e57a411ba6a3e299eb6f0e7f08a18ee6c3c11750b87d69cf1",
+          "streamlit_app.py": "e00bf8f5119599e1723cbee653f0ac3e41024e6c5881d1aa53bf05756ee016d7",
+          "system_root_agent/__init__.py": "0b0e0b0586e7692341d27116d5d00a0c2ece4577007c6d3f48e20377e914cdc8",
+          "system_root_agent/agent.py": "fc1b487b2c88a370520b5a8a1c99b66d57775615bb78d84acbda8a00e641d6ae",
+          "system_root_agent/subagents/__init__.py": "2bb2972b0fa43a90c61678c391fe495c8d39695ef838106f73c2346e3786460e",
+          "system_root_agent/subagents/announcement_agent/__init__.py": "a9ae75eb5b351b1940d7ca029bb902aee6333e407de225db2ebea66f03154154",
+          "system_root_agent/subagents/announcement_agent/agent.py": "1722ae363185b7063389e664f8024a1a50baf01854af1bde564a73775b3484e6",
+          "system_root_agent/subagents/announcement_agent/tools.py": "df7fe8077660e7434ac7cb473ff7c4bd595d121b99e16d0438e5a5fcfd16d5b1",
+          "system_root_agent/subagents/course_work_agent/__init__.py": "47209ec40a6612a92e2bdff838ce9d2543d6bdc64df2ccc2609cad57717e0771",
+          "system_root_agent/subagents/course_work_agent/agent.py": "be0cec30ae8079ec5fe2e81e4d8d75da1b600affc4a094ecdaad5a8f11e7c229",
+          "system_root_agent/subagents/course_work_agent/tools.py": "aec1495fccfc8c63c3b2dece41c63cddc4a56fe031ac8d82b952fe5b488dcda3",
+          "system_root_agent/subagents/data_analyzer_agent/__init__.py": "b4861c32f6f309e4fc112d8b1e1e09586628001356a5c7c2b2f46836073b53b8",
+          "system_root_agent/subagents/data_analyzer_agent/agent.py": "b0f4eb6cb3e6c95702fde18090a119db4f0c112cd83345911022fc7ff4c6d30a",
+          "system_root_agent/subagents/data_analyzer_agent/tools.py": "79531bc7945e3cc8fa0d05bb2e92d06bada0553a566d1d8b8f311ef176a5e271",
+          "test_deployment.py": "41286f8fe0e162334bb9a49581c3ec71f33b66aec163411570f9ba11952fc94d"
+        }
+      },
+      "streamlit_loopback_startup": {
+        "passed": true,
+        "health_status": 200,
+        "health_body": "ok",
+        "host": "127.0.0.1",
+        "outbound_network": "blocked by isolated sitecustomize guard"
+      },
+      "unauthenticated_gate": {
+        "passed": true,
+        "chat_inputs": 0,
+        "connect_actions": 1,
+        "exceptions": 0
+      },
+      "missing_oauth_config": {
+        "passed": true,
+        "error": "GOOGLE_CLIENT_SECRETS_JSON environment variable not set",
+        "fail_closed": true
+      },
+      "invalid_callback": {
+        "passed": true,
+        "fail_closed": true,
+        "credentials_stored": 0,
+        "uncaught_exceptions": 0,
+        "callback_attempt": "synthetic callback with OAuth configuration absent"
+      },
+      "outbound_connections_attempted": 0,
+      "private_configuration_reads_attempted": 0
+    },
+    "passed": true,
+    "check_count": 5,
+    "limits": [
+      "Legacy compatibility only; no real school login or D2L course read is performed.",
+      "OAuth missing configuration is expected to fail closed; the historical Connect button exposes the expected ValueError in AppTest.",
+      "Invalid callback uses synthetic values with OAuth configuration absent and does not establish valid configured OAuth state validation."
+    ]
+  },
+  "behavior": {
+    "official_split_host_login": true,
+    "human_sso_mfa": true,
+    "owned_private_chrome_pipe": true,
+    "observed_bearer_required": true,
+    "passive_native_methods_do_not_issue_writes": true,
+    "restricted_get_replay_with_cookies_omitted": true,
+    "current_frame_loader_session_origin_bound": true,
+    "extra_header_event_ordering_bound": true,
+    "header_observations_max": 64,
+    "header_matching_eligibility_ms": 15000,
+    "bearer_max_bytes": 8192,
+    "anonymous_versions_not_authentication": true,
+    "actual_whoami_required": true,
+    "selected_course_identity_before_after": true,
+    "clear_on_401_new_document_exit_disconnect": true,
+    "stale_inflight_results_discarded": true,
+    "reflected_token_return_denied": true,
+    "no_credential_input_cloud_forwarding_database_or_model_context": true,
+    "no_normal_browser_profile_or_saved_mcp_config_adopted": true
+  },
+  "live_gate": {
+    "status": "REQUIRES_STUDENT_SSO_MFA_AND_SELECTED_COURSE",
+    "real_school_token_observed": false,
+    "real_school_whoami_verified": false,
+    "real_selected_course_read_verified": false,
+    "real_school_writes": 0,
+    "steps": [
+      "Open local School connection and complete official Avenue SSO/MFA personally.",
+      "Choose Check my school sign-in and confirm actual school identity. If Avenue is already open but authorization is missing or expired, refresh its home page and recheck.",
+      "Select one to five exact course IDs and categories, read and inspect returned facts/coverage; save only the reviewed preview.",
+      "Verify expiry/re-authentication and disconnect in the same owned browser without university writes."
+    ]
+  },
+  "limitations": [
+    "Only the fixed McMaster profile and normal macOS Google Chrome are implemented.",
+    "Bearer/session retention is ephemeral; upstream persistent profiles and assumed 23-hour token lifetime are not copied.",
+    "No university access policy or blocked school authorization is bypassed.",
+    "Only selected course metadata, Dropbox assignment folders, announcements and returned TOC are read; no enrollment scan, submissions, grades, attachments or cloud session proxy.",
+    "A forced runtime kill can leave its temporary browser directory; later launches never adopt it.",
+    "No production dependencies, provider configuration, OAuth scopes, public school-session service or phone release flag changed."
+  ]
+}
