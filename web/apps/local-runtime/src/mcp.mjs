@@ -5,17 +5,31 @@ import * as z from 'zod/v4';
 import { requestAgentControl } from './ipc.mjs';
 
 const args = process.argv.slice(2);
-if (args.length !== 4 || args[0] !== '--data-root' || args[2] !== '--destination'
-  || !args[1].startsWith('/') || !['codex', 'claude'].includes(args[3])) {
-  process.stderr.write('LearnBridge MCP requires an explicit workspace and supported destination.\n');
+const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
+if (![4, 6, 8].includes(args.length) || args[0] !== '--data-root' || args[2] !== '--destination'
+  || !args[1].startsWith('/') || !['codex', 'claude'].includes(args[3])
+  || (args.length >= 6 && (args[4] !== '--grant-id' || !uuid.test(args[5])))
+  || (args.length === 8 && (args[6] !== '--embedded-lease' || !uuid.test(args[7])))) {
+  process.stderr.write('LearnBridge MCP requires an explicit workspace, supported destination and valid optional grant binding.\n');
   process.exit(1);
 }
 const root = args[1], destination = args[3];
+const boundGrant = args.length >= 6 ? args[5].toLowerCase() : null;
+const boundLease = args.length === 8 ? args[7].toLowerCase() : undefined;
 const ids = z.array(z.string().uuid()).max(32).optional();
 const errors = new Set(['OFFLINE', 'AUTH_REQUIRED', 'CONSENT_REQUIRED', 'SCOPE_DENIED', 'REVISION_CONFLICT', 'VERSION_MISMATCH', 'INVALID_INPUT', 'BUDGET_EXCEEDED', 'UNSUPPORTED', 'CONTROL_REJECTED']);
 async function call(command, input) {
   try {
-    const result = await requestAgentControl(root, destination, command, input);
+    // Enforce the embedded turn's selection before opening the IPC channel.
+    // External project MCP configuration retains explicit grant selection.
+    if (boundGrant && command !== 'status' && (typeof input?.grant_id !== 'string' || input.grant_id.toLowerCase() !== boundGrant)) {
+      const error = new Error('This request is outside the bound selection.'); error.code = 'SCOPE_DENIED'; throw error;
+    }
+    const result = await requestAgentControl(root, destination, command, input, boundLease === undefined ? undefined : { embeddedLease: boundLease });
+    if (boundGrant && command === 'status') {
+      if (!result || !Array.isArray(result.grants)) { const error = new Error('Invalid status metadata.'); error.code = 'VERSION_MISMATCH'; throw error; }
+      result.grants = result.grants.filter(grant => grant.id === boundGrant);
+    }
     return { content: [{ type: 'text', text: JSON.stringify(result) }] };
   } catch (error) {
     return { isError: true, content: [{ type: 'text', text: JSON.stringify({ error: {

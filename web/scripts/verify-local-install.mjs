@@ -35,6 +35,18 @@ const ALLOWLIST = Object.freeze([
   'web/apps/local-runtime/src/word-text-artifact.mjs',
   'web/apps/local-runtime/src/research-routes.mjs', 'web/apps/local-runtime/src/productivity-service.mjs',
   'web/apps/local-runtime/src/productivity-routes.mjs',
+  'web/apps/local-runtime/src/codex-adapter.mjs',
+  'web/apps/local-runtime/src/codex-profile.mjs',
+  'web/apps/local-runtime/src/cloud-onboarding.mjs',
+  'web/apps/local-runtime/src/cloud-onboarding-routes.mjs',
+  'web/apps/local-runtime/src/d2l-browser.mjs',
+  'web/apps/local-runtime/src/d2l-service.mjs',
+  'web/apps/local-runtime/src/d2l-routes.mjs',
+  'web/apps/local-runtime/src/remote-companion.mjs',
+  'web/apps/local-runtime/src/remote-results.mjs',
+  'web/apps/local-runtime/src/remote-routes.mjs',
+  'web/packages/core/src/remote-companion.mjs',
+  'web/packages/core/src/remote-results.mjs',
   'web/apps/local-runtime/src/onboarding.mjs', 'web/apps/local-runtime/src/onboarding-routes.mjs',
   'web/packages/local-sources/src/index.mjs',
   'web/packages/local-sources/src/pdf-native.mjs', 'web/packages/local-sources/src/pdf-text.swift',
@@ -48,6 +60,8 @@ const ALLOWLIST = Object.freeze([
   'web/apps/local/public/life.js', 'web/apps/local/public/writing.js',
   'web/apps/local/public/research.js', 'web/apps/local/public/productivity.js',
   'web/apps/local/public/onboarding.js',
+  'web/apps/local/public/ai.js', 'web/apps/local/public/d2l.js',
+  'web/apps/local/public/cloud-onboarding.js', 'web/apps/local/public/remote.js',
 ]);
 const PREFIX = 'learnbridge-clean-install-fixture-';
 const SOURCE_ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -217,10 +231,10 @@ async function main() {
 
   await phase('FI03_BUILD_STATIC_DASHBOARD', async () => {
     await child(process.execPath, [join(copiedWeb, 'apps/local/build.mjs')], { cwd: checkout });
-    for (const name of ['index.html', 'app.js', 'styles.css', 'career.js', 'learning.js', 'life.js', 'writing.js', 'research.js', 'productivity.js', 'onboarding.js']) {
+    for (const name of ['index.html', 'app.js', 'styles.css', 'career.js', 'learning.js', 'life.js', 'writing.js', 'research.js', 'productivity.js', 'onboarding.js', 'ai.js', 'd2l.js', 'cloud-onboarding.js', 'remote.js']) {
       assert.equal(digest(await readFile(join(copiedWeb, 'apps/local/dist', name))), digest(await readFile(join(copiedWeb, 'apps/local/public', name))));
     }
-    assert.deepEqual(await inventory(join(copiedWeb, 'apps/local/dist')), ['app.js', 'career.js', 'index.html', 'learning.js', 'life.js', 'onboarding.js', 'productivity.js', 'research.js', 'styles.css', 'writing.js']);
+    assert.deepEqual(await inventory(join(copiedWeb, 'apps/local/dist')), ['ai.js', 'app.js', 'career.js', 'cloud-onboarding.js', 'd2l.js', 'index.html', 'learning.js', 'life.js', 'onboarding.js', 'productivity.js', 'remote.js', 'research.js', 'styles.css', 'writing.js']);
   });
 
   const cli = join(copiedWeb, 'apps/local-runtime/src/cli.mjs');
@@ -297,7 +311,7 @@ async function main() {
   });
   report.observed = { tasks: 1, documents: 1, document_content_sha256: saved.content_sha256,
     exact_records_survive_new_process: true, exact_records_survive_fresh_root_restore: true,
-    static_assets_built_and_hash_matched: 10 };
+    static_assets_built_and_hash_matched: 14 };
   report.status = 'PASS';
 }
 

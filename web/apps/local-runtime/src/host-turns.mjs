@@ -11,8 +11,9 @@ const plain = (value, fields) => {
 };
 
 /** Browser-owned turns, fixed host and scope. The executor seam is trusted library code only. */
-export function createHostTurns({ store, execute = executeCodexTurn, enabled = false }) {
-  if (!store || typeof execute !== 'function' || typeof enabled !== 'boolean') denied('INVALID_INPUT');
+export function createHostTurns({ store, execute = executeCodexTurn, enabled = false, capability }) {
+  if (!store || typeof execute !== 'function' || !['boolean', 'function'].includes(typeof enabled) || (capability !== undefined && typeof capability !== 'function')) denied('INVALID_INPUT');
+  const isEnabled = () => typeof enabled === 'function' ? enabled() === true : enabled;
   const active = new Map(); let stopping = false;
   const records = () => store.listWorkspaceRecords({ kind: 'artifact' }).filter(item => item.data.format === FORMAT);
   const getRecord = id => { const item = store.getWorkspaceRecord(id); if (!item || item.data.format !== FORMAT) denied('INVALID_INPUT'); return item; };
@@ -35,7 +36,7 @@ export function createHostTurns({ store, execute = executeCodexTurn, enabled = f
     text: '', tool_receipts: [], finished_at: new Date().toISOString(), retry_requires_new_review: true });
 
   return {
-    capability: () => ({ id: 'codex_turns', state: enabled ? 'requires_host' : 'unavailable', mode: 'official_subscription_one_shot',
+    capability: () => capability ? capability() : ({ id: 'codex_turns', state: isEnabled() ? 'requires_host' : 'unavailable', mode: 'official_subscription_one_shot',
       detail: enabled ? 'A fixed Codex invocation uses a current selected grant and the official ChatGPT login. No API fallback. Proposed changes require dashboard review.'
         : 'The embedded host remains disabled until its isolated invocation passes the actual host gate. External project MCP use is available.',
       native_resume_available: false, proposals_require_review: true }),
@@ -44,7 +45,7 @@ export function createHostTurns({ store, execute = executeCodexTurn, enabled = f
     async start(input, { idempotencyKey, authorize }) {
       plain(input, ['grant_id', 'prompt', 'confirmed']);
       if (input.confirmed !== true || typeof input.prompt !== 'string' || !input.prompt.trim() || Buffer.byteLength(input.prompt) > 16000 || input.prompt.includes('\0') || typeof authorize !== 'function') denied('INVALID_INPUT');
-      if (!enabled) denied('UNSUPPORTED'); if (stopping) denied('OFFLINE');
+      if (!isEnabled()) denied('UNSUPPORTED'); if (stopping) denied('OFFLINE');
       if (typeof idempotencyKey !== 'string' || !/^[A-Za-z0-9_-]{8,100}$/.test(idempotencyKey)) denied('INVALID_INPUT');
       if (authorize() !== true) denied('CONSENT_REQUIRED');
       const grant = store.assertAgentGrant({ destination: 'codex', grant_id: input.grant_id });
@@ -81,8 +82,8 @@ export function createHostTurns({ store, execute = executeCodexTurn, enabled = f
           tool_receipts: receipts, host_version: result.host_version, error_code: result.error_code || null, finished_at: new Date().toISOString() });
       }).catch(error => {
         const current = getRecord(item.id); if (terminal.has(current.data.state)) return;
-        const code = ['UNSUPPORTED', 'AUTH_REQUIRED', 'CONSENT_REQUIRED', 'SCOPE_DENIED', 'VERSION_MISMATCH', 'OFFLINE', 'BUDGET_EXCEEDED', 'CANCELLED', 'TIMEOUT'].includes(error?.code) ? error.code : 'PROVIDER_FAILURE';
-        save(item.id, { state: controller.signal.aborted ? 'interrupted' : ['CONSENT_REQUIRED', 'SCOPE_DENIED'].includes(code) ? 'withheld' : 'failed',
+        const code = ['UNSUPPORTED', 'AUTH_REQUIRED', 'CONSENT_REQUIRED', 'SCOPE_DENIED', 'VERSION_MISMATCH', 'OFFLINE', 'BUDGET_EXCEEDED', 'CANCELLED', 'TIMEOUT','UNKNOWN_OUTCOME','RATE_LIMITED'].includes(error?.code) ? error.code : 'PROVIDER_FAILURE';
+        save(item.id, { state: controller.signal.aborted ? 'interrupted' : ['CONSENT_REQUIRED', 'SCOPE_DENIED'].includes(code) ? 'withheld' : code === 'UNKNOWN_OUTCOME' ? 'unknown_outcome' : 'failed',
           error_code: code, text: '', tool_receipts: [], finished_at: new Date().toISOString() });
       }).finally(() => active.delete(item.id));
       active.set(item.id, { operation, controller }); return view(item);

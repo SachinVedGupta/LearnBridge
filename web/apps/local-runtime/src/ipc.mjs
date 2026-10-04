@@ -6,6 +6,7 @@ import { opaqueToken, secretEqual } from './policy.mjs';
 
 const uid = () => process.getuid?.();
 const fail = () => { throw new Error('Local control channel is unavailable or unsafe.'); };
+const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 function privateDirectory(path) {
   const stat = lstatSync(path);
   if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== uid() || (stat.mode & 0o077) !== 0) fail();
@@ -82,15 +83,16 @@ export async function startControl({ root, origin, onCommand, onAgentCommand }) 
         chunks = [];
         if (lines.length !== 2 || lines[1] !== '') fail();
         const input = JSON.parse(lines[0]);
-        if (!input || Array.isArray(input) || Object.keys(input).some(key => !['token', 'command', 'data'].includes(key))) fail();
+        if (!input || Array.isArray(input) || Object.keys(input).some(key => !['token', 'command', 'data', 'embedded_lease'].includes(key))
+          || (input.embedded_lease !== undefined && (typeof input.embedded_lease !== 'string' || !UUID.test(input.embedded_lease)))) fail();
         let result;
         if (secretEqual(input.token, token)) {
-          if (!['status', 'stop', 'backup'].includes(input.command)) fail();
+          if (input.embedded_lease !== undefined || !['status', 'stop', 'backup'].includes(input.command)) fail();
           result = await onCommand(input.command, input.data);
         } else {
           const destination = destinations.find(value => secretEqual(input.token, agentTokens.get(value)));
           if (!destination || !onAgentCommand || !['status', 'context', 'propose_task', 'propose_document'].includes(input.command)) fail();
-          result = await onAgentCommand(destination, input.command, input.data);
+          result = await onAgentCommand(destination, input.command, input.data, input.embedded_lease?.toLowerCase());
         }
         socket.end(JSON.stringify({ ok: true, result }) + '\n');
       } catch (error) {
@@ -145,9 +147,10 @@ export async function startControl({ root, origin, onCommand, onAgentCommand }) 
   };
 }
 
-async function requestMetadata(metadata, command, data, { timeoutMs = 15_000 } = {}) {
+async function requestMetadata(metadata, command, data, { timeoutMs = 15_000, embeddedLease } = {}) {
   if (!metadata) throw new Error('The local runtime is not running.');
-  const frame = JSON.stringify({ token: metadata.token, command, data }) + '\n';
+  if (embeddedLease !== undefined && (typeof embeddedLease !== 'string' || !UUID.test(embeddedLease))) fail();
+  const frame = JSON.stringify({ token: metadata.token, command, data, ...(embeddedLease === undefined ? {} : { embedded_lease: embeddedLease.toLowerCase() }) }) + '\n';
   if (Buffer.byteLength(frame) > 16384) throw new Error('Local control request is too large.');
   return new Promise((resolveReply, reject) => {
     const socket = createConnection(metadata.socket);

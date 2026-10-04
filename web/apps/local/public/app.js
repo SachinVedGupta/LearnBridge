@@ -10,12 +10,12 @@ let hostPoll;
 Object.assign(state, { profiles: [], snapshots: [], plans: [], runs: [], profileContextPreview: null, today: null });
 const extensionUIs = new Map();
 async function loadExtension(page) {
-  if (!['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding'].includes(page)) return;
+  if (!['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote'].includes(page)) return;
   const nonce = state.nonce;
   if (!extensionUIs.has(page)) {
     const module = await import(`/${page}.js`);
-    if (!state.sessionReady || state.nonce !== nonce) return;
-    const mount = { career: module.mountCareerUI, learning: module.mountLearningUI, life: module.mountLifeUI, writing: module.mountWritingUI, research: module.mountResearchUI, productivity: module.mountProductivityUI, onboarding: module.mountOnboardingUI }[page];
+    if (!state.sessionReady || state.nonce !== nonce || state.page !== page) return;
+    const mount = { career: module.mountCareerUI, learning: module.mountLearningUI, life: module.mountLifeUI, writing: module.mountWritingUI, research: module.mountResearchUI, productivity: module.mountProductivityUI, onboarding: module.mountOnboardingUI, ai: module.mountAiUI, d2l: module.mountD2lUI, 'cloud-onboarding': module.mountCloudOnboardingUI, remote: module.mountRemoteUI }[page];
     if (!extensionUIs.has(page)) extensionUIs.set(page, mount({ root: $(`${page}-workspace`), request, element, busy, confirmAction, message, navigate }));
   }
   await extensionUIs.get(page).refresh();
@@ -44,6 +44,9 @@ async function request(path, { method = 'GET', body, bootstrap = false, idempote
       INVALID_INPUT: 'Check the fields and try again.',
       NOT_FOUND: 'This item is no longer available. Refresh the list to see what is saved.',
       CONSENT_REQUIRED: 'This action needs fresh permission. Review the source or sharing selection, then try again.',
+      CODEX_AUTH_REQUIRED: 'Complete ChatGPT sign-in in Local AI, then check its status.',
+      D2L_AUTH_REQUIRED: 'Complete school sign-in in the separate browser, then check your school account.',
+      D2L_AUTH_EXPIRED: 'Your school sign-in expired. Sign in again and check your school account.',
       AUTH_REQUIRED: 'Your local session ended. Pair this browser again to continue.',
       PAIRING_FAILED: 'That pairing code is invalid or has expired. Use the current code from the launcher.',
       RATE_LIMITED: 'Too many attempts. Wait briefly before trying again.',
@@ -193,7 +196,8 @@ async function openWorkspace(session) {
 }
 
 function navigate(page) {
-  if (!['today', 'notes', 'sources', 'agents', 'setup', 'courses', 'planning', 'profile', 'career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding'].includes(page)) return;
+  if (state.page === 'remote' && page !== 'remote') extensionUIs.get('remote')?.pause?.();
+  if (!['today', 'notes', 'sources', 'agents', 'setup', 'courses', 'planning', 'profile', 'career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote'].includes(page)) return;
   state.page = page;
   for (const section of document.querySelectorAll('.page')) section.hidden = section.id !== `page-${page}`;
   for (const button of document.querySelectorAll('.nav-item')) {
@@ -204,7 +208,7 @@ function navigate(page) {
   const refresh = { today: loadTasks, notes: loadDocuments, courses: loadCourses, planning: loadPlanning, profile: loadProfile,
     agents: async () => { await Promise.all([loadTasks(), loadDocuments(), loadSources(), loadAgentReview()]); renderGrantSelection(); } }[page];
   if (refresh) refresh().catch(error => message('global-message', error.message, true));
-  if (['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding'].includes(page)) loadExtension(page).catch(error => message('global-message', error.message, true));
+  if (['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote'].includes(page)) loadExtension(page).catch(error => message('global-message', error.message, true));
 }
 
 async function loadTasks() {
@@ -652,7 +656,7 @@ async function loadAgentReview() {
     const option = element('option', '', `Codex selection · ${grant.id.slice(0, 8)} · ${grant.used_bytes}/${grant.max_bytes} bytes`); option.value = grant.id; $('host-turn-grant').append(option);
   }
   if ([...$('host-turn-grant').options].some(option => option.value === selected)) $('host-turn-grant').value = selected;
-  $('host-capability').textContent = turns.capability.detail; $('host-turn-submit').disabled = turns.capability.state === 'unavailable' || !$('host-turn-grant').options.length;
+  $('host-capability').textContent = turns.capability.detail; $('host-turn-submit').disabled = !['available', 'requires_host'].includes(turns.capability.state) || !$('host-turn-grant').options.length;
   $('host-turn-list').replaceChildren();
   for (const turn of turns.items) {
     const row = element('article', 'review-row'); row.append(element('h3', '', `Codex · ${turn.data.state.replaceAll('_', ' ')}`), element('p', 'field-help', new Date(turn.created_at).toLocaleString()));

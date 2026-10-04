@@ -131,8 +131,8 @@ function lazyLoader() {
   return new Function('state', 'extensionUIs', 'loadModule', '$', 'request', 'element', 'busy', 'confirmAction', 'message', 'navigate',
     `${body.replace('await import(', 'await loadModule(')}\nreturn loadExtension;`);
 }
-test('ONUI06: racing lazy imports mount one resettable extension instance', async () => {
-  const release = deferred(), extensions = new Map(), state = { nonce: 'paired-nonce', sessionReady: true }; let mounts = 0, refreshes = 0, resets = 0;
+test('ONUI06: racing lazy imports for the current page mount one resettable extension instance', async () => {
+  const release = deferred(), extensions = new Map(), state = { nonce: 'paired-nonce', sessionReady: true, page: 'onboarding' }; let mounts = 0, refreshes = 0, resets = 0;
   const load = lazyLoader()(state, extensions, () => release.promise, () => ({}), () => {}, () => {}, () => {}, () => {}, () => {}, () => {});
   const first = load('onboarding'), second = load('onboarding');
   release.resolve({ mountOnboardingUI() { mounts++; return { refresh: async () => { refreshes++; }, reset() { resets++; } }; } });
@@ -140,9 +140,25 @@ test('ONUI06: racing lazy imports mount one resettable extension instance', asyn
   for (const extension of extensions.values()) extension.reset(); assert.equal(resets, 1);
 });
 test('ONUI07: a lazy import finishing after session reset never mounts private UI', async () => {
-  const release = deferred(), extensions = new Map(), state = { nonce: 'old-nonce', sessionReady: true }; let mounts = 0;
+  const release = deferred(), extensions = new Map(), state = { nonce: 'old-nonce', sessionReady: true, page: 'onboarding' }; let mounts = 0;
   const load = lazyLoader()(state, extensions, () => release.promise, () => ({}), () => {}, () => {}, () => {}, () => {}, () => {}, () => {});
   const pending = load('onboarding'); state.sessionReady = false; state.nonce = null;
   release.resolve({ mountOnboardingUI() { mounts++; return { refresh: async () => {} }; } }); await pending;
   assert.equal(mounts, 0); assert.equal(extensions.size, 0);
+});
+test('ONUI08: navigation away denies a stale import without preventing a later current-page load', async () => {
+  const release = deferred(), extensions = new Map(), state = { nonce: 'paired-nonce', sessionReady: true, page: 'onboarding' };
+  let imports = 0, rootLookups = 0, mounts = 0, refreshes = 0;
+  const module = { mountOnboardingUI() { mounts++; return { refresh: async () => { refreshes++; } }; } };
+  const load = lazyLoader()(state, extensions, path => {
+    assert.equal(path, '/onboarding.js');
+    return ++imports === 1 ? release.promise : Promise.resolve(module);
+  }, () => { rootLookups++; return {}; }, () => {}, () => {}, () => {}, () => {}, () => {}, () => {});
+  const pending = load('onboarding');
+  state.page = 'today'; release.resolve(module); await pending;
+  assert.equal(state.sessionReady, true); assert.equal(state.nonce, 'paired-nonce');
+  assert.equal(imports, 1); assert.equal(rootLookups, 0); assert.equal(mounts, 0); assert.equal(refreshes, 0); assert.equal(extensions.size, 0);
+
+  state.page = 'onboarding'; await load('onboarding');
+  assert.equal(imports, 2); assert.equal(rootLookups, 1); assert.equal(mounts, 1); assert.equal(refreshes, 1); assert.equal(extensions.size, 1);
 });

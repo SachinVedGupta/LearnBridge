@@ -16,12 +16,14 @@ const note=(method,params)=>send({method,params:{threadId:thread,turnId:turn,...
 const finish=(status='completed',text='Authoritative synthetic answer')=>{const item={id:'answer-item',type:'agentMessage',text};note('item/completed',{item});note('item/completed',{item});note('turn/completed',{turn:{id:turn,status,items:[item]}})};
 readline.createInterface({input:process.stdin}).on('line',line=>{const m=JSON.parse(line);if(m.id==='native-approval'){approvalDone=true;if(m.result?.decision!=='decline'&&m.result?.decision!=='cancel')process.exit(9);if(mode!=='ignoredcancel')finish('completed','Native request was declined.');return}
 if(m.method==='initialize'){send({id:m.id,result:{userAgent:'codex/0.154.0',platformFamily:'unix',platformOs:'macos',codexHome:'/PRIVATE_AUTH_LOCATION_CANARY'}});return}
-if(m.method==='config/read'){configCount++;if(mode==='extraConfigMcp')config.mcp_servers.private={command:'PRIVATE_COMMAND_CANARY'};if(mode==='hooksConfig')config.hooks={start:'PRIVATE_COMMAND_CANARY'};if(mode==='fileInstructions')config.model_instructions_file='/PRIVATE_PATH_CANARY';if(mode==='notifyConfig')config.notify=['PRIVATE_COMMAND_CANARY'];if(mode==='providerConfig')config.model_providers={openai:{base_url:'https://PRIVATE_PROVIDER_CANARY.invalid'}};if(mode==='enabledFeature')config.features.private_feature=true;if(mode==='appOverride')config.apps.private={enabled:true};if(mode==='changedConfig'&&configCount>2)config.features.hooks=true;if(mode==='missingOverrides')delete config.features;send({id:m.id,result:{config,origins:{private:{name:{type:'user',file:'/PRIVATE_CONFIG_CANARY'},version:'opaque'}},layers:null}});return}
+if(m.method==='config/read'){configCount++;if(mode==='neutralDefaults'){config.hooks=null;config.profiles={};config.agents.max_depth=null;config.features.network_proxy=null;config.mcp_servers.learnbridge.enabled=true;config.mcp_servers.learnbridge.environment_id='local';config.history={persistence:'none',max_bytes:null};config.file_opener='none';config.chatgpt_base_url='https://chatgpt.com/backend-api/'};if(mode==='extraConfigMcp')config.mcp_servers.private={command:'PRIVATE_COMMAND_CANARY'};if(mode==='hooksConfig')config.hooks={start:'PRIVATE_COMMAND_CANARY'};if(mode==='fileInstructions')config.model_instructions_file='/PRIVATE_PATH_CANARY';if(mode==='notifyConfig')config.notify=['PRIVATE_COMMAND_CANARY'];if(mode==='providerConfig')config.model_providers={openai:{base_url:'https://PRIVATE_PROVIDER_CANARY.invalid'}};if(mode==='enabledFeature')config.features.private_feature=true;if(mode==='appOverride')config.apps.private={enabled:true};if(mode==='changedConfig'&&configCount>2)config.features.hooks=true;if(mode==='missingOverrides')delete config.features;send({id:m.id,result:{config,origins:{private:{name:{type:'user',file:'/PRIVATE_CONFIG_CANARY'},version:'opaque'}},layers:null}});return}
 if(m.method==='account/read'){send({id:m.id,result:{requiresOpenaiAuth:true,account:mode==='apikey'?{type:'apiKey'}:mode==='noauth'?null:{type:'chatgpt',email:'PRIVATE_EMAIL_CANARY',planType:'pro'}}});return}
+if(m.method==='mcpServer/tool/call'){if(mode==='lostToolAck')return;send({id:m.id,result:{content:[{type:'text',text:JSON.stringify({synthetic:true})}],isError:false}});return}
 if(m.method==='mcpServerStatus/list'){catalogCount++;const tools=Object.fromEntries(['learnbridge_status','learnbridge_context','learnbridge_propose_task','learnbridge_propose_document'].map(name=>[name,{name}]));const data=[{name:'learnbridge',tools,resources:[],resourceTemplates:[],runtimeStatus:'connected'}];if(mode==='extraMcp'||(mode==='changedMcp'&&catalogCount>1))data.push({name:'PRIVATE_OTHER_CONNECTOR',tools:{private:{}},resources:[],resourceTemplates:[]});send({id:m.id,result:{data,nextCursor:null}});return}
 if(m.method==='thread/start'||m.method==='thread/resume'){if(m.params.threadId)thread=m.params.threadId;send({id:m.id,result:{thread:{id:thread},model:'fixture-model',modelProvider:'openai',approvalPolicy:'on-request',approvalsReviewer:'user',cwd:process.cwd(),sandbox:{type:mode==='unsafeSandbox'?'dangerFullAccess':'readOnly',networkAccess:false}}});return}
 if(m.method==='turn/start'){inputCount++;turn='fixture-turn-'+inputCount;note('turn/started',{turn:{id:turn,status:'inProgress',items:[]}});if(mode==='rpcError'){send({id:m.id,error:{code:-32000,message:'PRIVATE_ERROR_CANARY',data:{codexErrorInfo:'Unauthorized'}}});return}if(mode==='noStartReply')return;
 send({id:m.id,result:{turn:{id:turn,status:'inProgress',items:[]}}});
+if(mode==='finalPhase'){const commentary={id:'commentary-item',type:'agentMessage',phase:'commentary',text:'Provisional discussion is not the structured answer.'},final={id:'final-item',type:'agentMessage',phase:'final_answer',text:'{"answer":"Authoritative final"}'};note('item/completed',{item:commentary});note('item/completed',{item:final});note('turn/completed',{turn:{id:turn,status:'completed',items:[commentary,final]}});return}
 if(mode==='crash'){setTimeout(()=>process.exit(2),25);return}
 if(mode==='flood'){setTimeout(()=>process.stdout.write('x'.repeat(500000)),10);return}
 if(mode==='unknownRequest'){setTimeout(()=>send({id:'bad',method:'account/chatgptAuthTokens/refresh',params:{threadId:thread,turnId:turn}}),10);return}
@@ -155,4 +157,32 @@ test('CA20 acknowledged interrupt clears its grace timer after native completion
 test('CA21 the fourth tool allows only a bounded source-bound unreviewed document proposal', async t => {
   const valid=fixture(t,'documentProposal');await start(valid.adapter);const turn=await valid.adapter.startTurn({prompt:'Synthetic source-bound proposal'}),result=await turn.completion;assert.equal(result.status,'completed');assert.equal(result.tool_receipts.length,1);assert.equal(result.tool_receipts[0].tool,'learnbridge_propose_document');assert.equal(JSON.stringify(valid.emitted).includes('Reviewed-source synthetic outline'),false);
   for(const [mode,code] of [['oversizedDocument','INVALID_INPUT'],['wrongDocumentSource','SCOPE_DENIED']]){const {adapter}=fixture(t,mode);await start(adapter);const handle=await adapter.startTurn({prompt:'Synthetic invalid proposal'});const outcome=await handle.completion;assert.equal(outcome.status,'failed');assert.equal(outcome.error.code,code);}
+});
+
+
+test('CA22 serialized neutral native defaults pass without accepting active unknown authority', async t => {
+  const {adapter}=fixture(t,'neutralDefaults'); await start(adapter);
+  assert.equal(adapter.capabilities().state,'available');
+});
+
+
+test('CA23 stable client MCP calls use only the fixed server and validate the current grant', async t => {
+  const {adapter,requests}=fixture(t);await start(adapter);
+  const result=await adapter.callLearnBridgeTool('learnbridge_status',{});assert.equal(result.value.synthetic,true);assert.equal(result.receipt.status,'completed');
+  await assert.rejects(adapter.callLearnBridgeTool('private_arbitrary_tool',{}),{code:'SCOPE_DENIED'});
+  await assert.rejects(adapter.callLearnBridgeTool('learnbridge_context',{grant_id:'another-grant'}),{code:'SCOPE_DENIED'});
+  const calls=requests.filter(item=>item.method==='mcpServer/tool/call');assert.equal(calls.length,1);assert.deepEqual(calls[0].params,{threadId:'fixture-thread',server:'learnbridge',tool:'learnbridge_status',arguments:{}});
+});
+
+test('CA24 an unacknowledged stable MCP call closes the process with unknown outcome and never retries', async t => {
+  const {adapter,requests}=fixture(t,'lostToolAck',{options:{requestTimeoutMs:150}});await start(adapter);
+  await assert.rejects(adapter.callLearnBridgeTool('learnbridge_status',{}),{code:'UNKNOWN_OUTCOME'});
+  assert.equal(requests.filter(value=>value.method==='mcpServer/tool/call').length,1);
+  await assert.rejects(adapter.callLearnBridgeTool('learnbridge_status',{}));
+  assert.equal(requests.filter(value=>value.method==='mcpServer/tool/call').length,1);
+});
+
+test('CA25 authoritative final phase excludes preceding commentary from structured output', async t => {
+  const {adapter}=fixture(t,'finalPhase');await start(adapter);const turn=await adapter.startTurn({prompt:'Synthetic JSON output'});
+  const result=await turn.completion;assert.equal(result.status,'completed');assert.deepEqual(JSON.parse(result.text),{answer:'Authoritative final'});
 });

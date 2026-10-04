@@ -19,6 +19,12 @@ import { handleResearchRoute } from './research-routes.mjs';
 import { handleProductivityRoute } from './productivity-routes.mjs';
 import { createHostTurns } from './host-turns.mjs';
 import { createOnboardingRoutes } from './onboarding-routes.mjs';
+import { createCloudOnboardingRoutes } from './cloud-onboarding-routes.mjs';
+import { createD2lRoutes } from './d2l-routes.mjs';
+import { createCodexProfile } from './codex-profile.mjs';
+import { createRemoteRoutes } from './remote-routes.mjs';
+import { openRemoteInstance } from './remote-companion.mjs';
+import { join, dirname, basename } from 'node:path';
 import { TutoringError } from '../../../packages/local-academic/src/tutoring.mjs';
 
 export const LOCAL_VERSION = '0.3.0';
@@ -37,6 +43,10 @@ const assets = new Map([
   ['/research.js', ['research.js', 'text/javascript; charset=utf-8']],
   ['/productivity.js', ['productivity.js', 'text/javascript; charset=utf-8']],
   ['/onboarding.js', ['onboarding.js', 'text/javascript; charset=utf-8']],
+  ['/ai.js', ['ai.js', 'text/javascript; charset=utf-8']],
+  ['/d2l.js', ['d2l.js', 'text/javascript; charset=utf-8']],
+  ['/cloud-onboarding.js', ['cloud-onboarding.js', 'text/javascript; charset=utf-8']],
+  ['/remote.js', ['remote.js', 'text/javascript; charset=utf-8']],
 ]);
 const base = '/api/local/v1';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -93,13 +103,31 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
   // The launcher/HTTP/MCP surfaces never accept an adapter or executable.
   sourceAdapter = { describeRoot, inventorySource, readSelectedEntry, readSelectedPdf, readSelectedOffice, probeSourceCapability, probePdfCapability, probeOfficeCapability },
   // Trusted fixture seam only; the CLI/HTTP/MCP never accepts execution configuration.
-  hostAdapter = { enabled: false } } = {}) {
+  hostAdapter, codexProfileOptions = {}, d2lBrowserFactory,
+  remoteOptions = { enabled: process.env.LEARNBRIDGE_PHONE_ACCESS === 'true' } } = {}) {
   if (typeof dataRoot !== 'string' || !Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Invalid local runtime options.');
   const store = LocalStore.open({ root: dataRoot, repositoryRoot, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' });
   let studentWorkspace;
   let hostTurns;
   let onboardingRoutes;
-  try { store.recoverInterruptedRuns(); studentWorkspace = createStudentWorkspace(store); hostTurns = createHostTurns({ store, ...hostAdapter }); onboardingRoutes = createOnboardingRoutes({ store, studentWorkspace }); }
+  let cloudOnboardingRoutes, d2lRoutes, codexProfile, remoteRoutes;
+  const embeddedLeases = new Map();
+  try { store.recoverInterruptedRuns(); studentWorkspace = createStudentWorkspace(store);
+    codexProfile = createCodexProfile({ store, ...codexProfileOptions, leaseFactory: (grantId, authorize) => {
+      const id = randomUUID(); embeddedLeases.set(id, { grantId, authorize });
+      return { id, release: () => embeddedLeases.delete(id) };
+    } });
+    hostTurns = createHostTurns({ store, ...(hostAdapter || { enabled: true, execute: codexProfile.execute, capability: codexProfile.status }) });
+    onboardingRoutes = createOnboardingRoutes({ store, studentWorkspace });
+    cloudOnboardingRoutes = createCloudOnboardingRoutes({ store });
+    d2lRoutes = createD2lRoutes({ studentWorkspace, browserFactory: d2lBrowserFactory });
+    remoteRoutes = createRemoteRoutes({ store,
+      nativeEnabled: () => codexProfile.status().state === 'available',
+      instanceFactory: () => openRemoteInstance({ root: join(dirname(store.root), `${basename(store.root)}-remote-device`), workspaceRoot: store.root, repositoryRoot }),
+      executeStudy: ({ grant_id, prompt, authorize, idempotency_key }) => hostTurns.start({ grant_id, prompt, confirmed: true }, { authorize, idempotencyKey: idempotency_key }),
+      inspectStudy: id => hostTurns.get(id),
+      cancelStudy: id => { const item = hostTurns.get(id); return hostTurns.cancel(id, { expected_revision: item.revision }); },
+      ...remoteOptions }); }
   catch (error) { store.close(); throw error; }
   let policy;
   let control;
@@ -147,8 +175,9 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         { id: 'sources', label: 'Selected local sources', state: sourceCapability.state === 'available' ? 'available' : 'unsupported', detail: 'Explicit folder inventory and selected text/Markdown, PDF and Office imports where the format capability is available. Requires the verified private Python runtime; no automatic laptop scan.' },
         { id: 'pdf', label: 'Selected PDF handouts', state: sourceCapability.state === 'available' && pdfCapability.state === 'available' ? 'available' : 'unsupported', detail: 'macOS PDF text imports preserve physical page citations and partial coverage. Native prerequisites are checked; each selected import verifies extraction. Scans require a separate text export; no OCR or password collection.' },
         { id: 'office', label: 'Selected Word and PowerPoint handouts', state: sourceCapability.state === 'available' && officeCapability.state === 'available' ? 'available' : 'unsupported', detail: 'Selected DOCX paragraphs and PPTX presentation-order slides with exact original/text hashes. Always partial text coverage: layout, visuals and recorded omissions require review of the original. No external links, macros or passwords are used.' },
-        { id: 'academic', label: 'Avenue / D2L', state: 'requires_auth', detail: 'Reviewed academic exports are supported. Live reads need a supported institution and a separately verified local student session. No university password or token is accepted here.' },
-        { id: 'remote', label: 'Phone companion', state: 'unavailable', detail: 'The optional relay protocol is under development. This loopback dashboard does not expose the laptop or launch remote agent work.' },
+        { id: 'academic', label: 'Avenue / D2L', state: d2lRoutes.capability?.().state || 'requires_auth', detail: 'Connect a separate visible school browser, personally complete SSO, then verify your school account and select exact courses and categories before previewing read-only results.' },
+        { id: 'cloud_onboarding', label: 'Selected cloud sources', state: 'available', detail: 'Export selected Google Docs or Notion pages from your signed-in LearnBridge account, then review the exact text and reported owner before importing locally. Cloud freshness and profile facts remain subject to review.' },
+        { id: 'remote', label: 'Phone companion', state: remoteOptions.enabled ? 'requires_auth' : 'unavailable', detail: 'Optional outward HTTPS pairing, bounded local Codex requests and separately reviewed text results. Requires live relay, account, device and cleanup verification before public release. The laptop is never exposed as a public listener.' },
         { id: 'telemetry', label: 'Local usage reporting', state: 'unavailable', detail: 'Off by default. Setup, doctor, tasks and agent sharing do not report local activity or enroll measurement.' },
       ],
     };
@@ -196,7 +225,9 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
       };
       const stillAuthorized = () => {
         if (closing) throw new HttpError(503, 'OFFLINE', 'The local runtime is stopping.');
-        policy.authenticate(request, { mutation: true });
+        // Same-origin GETs do not necessarily carry an Origin header. Preserve
+        // the original request's policy when rechecking asynchronous reads.
+        policy.authenticate(request, { mutation });
       };
       const sourceOperation = async callback => {
         const controller = new AbortController();
@@ -210,6 +241,27 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         }
         finally { sourceOperations.delete(controller); response.off('close', cancel); }
       };
+      if (route.startsWith('/remote/')) {
+        noQuery(url); const result = await remoteRoutes.handle({ route, method: request.method, privateBody, session, stillAuthorized });
+        stillAuthorized(); if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/ai/')) {
+        noQuery(url);
+        if (route === '/ai/status' && request.method === 'GET') return json(response, 200, codexProfile.status());
+        if (request.method !== 'POST') methodError();
+        const body = await privateBody(['confirmed'], ['confirmed'], 4096);
+        if (body.confirmed !== true) throw new HttpError(403, 'CONSENT_REQUIRED', 'Confirm this local host action.');
+        const arguments_ = { sessionId: session.nonce, authorize: () => { stillAuthorized(); return true; } };
+        try {
+          const result = route === '/ai/connect' ? await codexProfile.connect(arguments_) : route === '/ai/check' ? await codexProfile.check(arguments_) : route === '/ai/disconnect' ? await codexProfile.disconnect(arguments_) : notFound();
+          stillAuthorized(); return json(response, 200, result);
+        } catch (error) { if (error.code === 'AUTH_REQUIRED') throw new HttpError(409, 'CODEX_AUTH_REQUIRED', 'Sign in to ChatGPT in Local AI, then check its status.'); throw error; }
+      }
+      if (route.startsWith('/d2l/') || route.startsWith('/cloud-onboarding/')) {
+        noQuery(url); const handler = route.startsWith('/d2l/') ? d2lRoutes : cloudOnboardingRoutes;
+        const result = await handler.handle({ route, method: request.method, privateBody, session });
+        stillAuthorized(); if (result) return json(response, result.status, result.data);
+      }
       if (route.startsWith('/career/')) {
         noQuery(url);
         const result = await handleCareerRoute({ route, method: request.method, privateBody, store, session,
@@ -273,6 +325,8 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         if (request.method !== 'POST') methodError();
         await privateBody([], [], 4096);
         response.setHeader('Set-Cookie', policy.logout(request));
+        cloudOnboardingRoutes.clear();
+        await Promise.allSettled([d2lRoutes.clear(), codexProfile.clear(), remoteRoutes.clear({ nonce: session.nonce })]);
         return json(response, 200, { logged_out: true });
       }
       if (route === '/status') {
@@ -573,11 +627,14 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
     policy?.clear();
     academicPreviews.clear();
     onboardingRoutes.clear();
+    cloudOnboardingRoutes.clear();
     for (const operation of sourceOperations) operation.abort();
     closePromise = (async () => {
       try {
         await studentWorkspace.runner.drain();
         await hostTurns.drain();
+        await codexProfile.stop(); await d2lRoutes.clear();
+        await remoteRoutes.clear();
         if (server.listening) {
           const stopped = new Promise(done => server.close(done));
           const drainTimeout = setTimeout(() => server.closeAllConnections(), 1500);
@@ -601,12 +658,14 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
     catch (error) { if (error.code !== 'EADDRINUSE' || port === 0) throw error; await listen(0); }
     origin = 'http://127.0.0.1:' + server.address().port;
     policy = createSessionPolicy({ origin, sessionTtlMs, pairingTtlMs });
-    control = await startControl({ root: store.root, origin, onAgentCommand: async (destination, command, data) => {
+    control = await startControl({ root: store.root, origin, onAgentCommand: async (destination, command, data, embeddedLease) => {
       if (closing) throw new HttpError(503, 'OFFLINE', 'The local runtime is stopping.');
+      const lease = embeddedLease ? embeddedLeases.get(embeddedLease) : null;
+      if (embeddedLease && (!lease || destination !== 'codex' || lease.authorize() !== true || (command !== 'status' && data?.grant_id !== lease.grantId))) throw new HttpError(403, 'CONSENT_REQUIRED', 'This embedded request no longer has its exact reviewed authority.');
       if (command === 'status') {
         if (data !== undefined) plainBody(data, []);
         return { edition: 'local', version: LOCAL_VERSION, destination, healthy: store.integrity().integrity === 'ok',
-          grants: store.listAgentGrants().filter(grant => grant.destination === destination && grant.state === 'active' && Date.parse(grant.expires_at) > Date.now())
+          grants: store.listAgentGrants().filter(grant => (!lease || grant.id === lease.grantId) && grant.destination === destination && grant.state === 'active' && Date.parse(grant.expires_at) > Date.now())
             .map(grant => ({ id: grant.id, expires_at: grant.expires_at, max_bytes: grant.max_bytes, remaining_bytes: grant.max_bytes - grant.used_bytes })),
           next_step: 'Review selected context and task proposals in the paired LearnBridge dashboard. Granting or accepting is not an MCP tool.' };
       }

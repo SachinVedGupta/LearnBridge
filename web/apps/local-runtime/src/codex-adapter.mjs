@@ -39,10 +39,11 @@ function text(value, max = 128) { if (typeof value !== 'string' || !value.length
 function nativeId(value) { text(value); if (!/^[A-Za-z0-9._:-]+$/.test(value)) fail('INVALID_INPUT'); return value; }
 function bounded(value, fallback, min, max) { const result = value ?? fallback; if (!Number.isSafeInteger(result) || result < min || result > max) fail('INVALID_INPUT'); return result; }
 function privateDirectory(value) { if (typeof value !== 'string' || !isAbsolute(value) || value.includes('\0')) fail('INVALID_INPUT'); const stat = lstatSync(value); if (!stat.isDirectory() || stat.isSymbolicLink() || (process.getuid && stat.uid !== process.getuid())) fail('SCOPE_DENIED'); return realpathSync(value); }
-function environment(binary) {
+function environment(binary, configurationHome) {
   const env = Object.fromEntries(['HOME', 'CODEX_HOME', 'LANG', 'LC_ALL', 'TMPDIR', 'TEMP', 'TMP'].filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]]));
   // Preserve the official host's auth location without opening/copying it.
   // Never forward API keys, tokens, Node injection, proxy settings or shell init.
+  if (configurationHome) env.CODEX_HOME = configurationHome;
   env.PATH = isAbsolute(binary) ? `${dirname(binary)}:/usr/bin:/bin` : process.env.PATH || '/usr/bin:/bin'; return env;
 }
 function safeCode(info) {
@@ -85,8 +86,11 @@ export async function probeCodexProtocol({ binary = 'codex', factory = spawn } =
  * Normal official ChatGPT-managed auth only. No exported raw request method.
  */
 export function createCodexAdapter(input, options = {}) {
-  object(input, ['projectRoot', 'dataRoot', 'grantId', 'model', 'authorize', 'onEvent', 'onApproval', 'persistSessions']);
-  object(options, ['binary', 'factory', 'protocolProbe', 'requestTimeoutMs', 'approvalTimeoutMs', 'limits']);
+  object(input, ['projectRoot', 'dataRoot', 'grantId', 'model', 'authorize', 'onEvent', 'onApproval', 'persistSessions', 'embeddedLease']);
+  if (input.embeddedLease !== undefined && !UUID.test(input.embeddedLease)) fail('INVALID_INPUT');
+  object(options, ['binary', 'factory', 'protocolProbe', 'requestTimeoutMs', 'approvalTimeoutMs', 'limits', 'configurationHome']);
+  const configurationHome = options.configurationHome === undefined ? undefined : privateDirectory(options.configurationHome);
+  if (configurationHome && (lstatSync(configurationHome).mode & 0o077)) fail('SCOPE_DENIED');
   const project = privateDirectory(input.projectRoot), data = privateDirectory(input.dataRoot);
   if (!UUID.test(input.grantId) || typeof input.authorize !== 'function' || (input.onEvent !== undefined && typeof input.onEvent !== 'function') || (input.onApproval !== undefined && typeof input.onApproval !== 'function') || (input.persistSessions !== undefined && typeof input.persistSessions !== 'boolean')) fail('INVALID_INPUT');
   if (input.model !== undefined) { text(input.model); if (!/^[A-Za-z0-9._-]+$/.test(input.model)) fail('INVALID_INPUT'); }
@@ -96,7 +100,7 @@ export function createCodexAdapter(input, options = {}) {
   const supplied = options.limits ?? {}; object(supplied, ['maxTurns', 'maxInputBytes', 'maxOutputBytes', 'maxEvents', 'maxToolCalls', 'maxDurationMs']);
   const limits = Object.freeze({ maxTurns: bounded(supplied.maxTurns, 3, 1, 10), maxInputBytes: bounded(supplied.maxInputBytes, 64000, 1000, 256000), maxOutputBytes: bounded(supplied.maxOutputBytes, 256000, 1000, 1_000_000), maxEvents: bounded(supplied.maxEvents, 2000, 10, 10000), maxToolCalls: bounded(supplied.maxToolCalls, 20, 1, 100), maxDurationMs: bounded(supplied.maxDurationMs, 120000, 100, 300000) });
   const scopeHash = digest({ version: VERSION, project, grant_id: input.grantId });
-  let child, initialized = false, initializing = false, threadStarting = false, turnStarting = false, closed = false, startedAt = null, threadId = null, sequence = 0, requestId = 0, turns = 0, inputBytes = 0, outputBytes = 0, stderrBytes = 0, active = null, closeTimer = null;
+  let child, connected = false, loginId = null, initialized = false, initializing = false, threadStarting = false, turnStarting = false, closed = false, startedAt = null, threadId = null, sequence = 0, requestId = 0, turns = 0, inputBytes = 0, outputBytes = 0, stderrBytes = 0, active = null, closeTimer = null;
   const pending = new Map(), answered = new Set(), serverAnswers = new Map(), approvals = new Map(), events = []; const decoder = new StringDecoder('utf8'); let lineBuffer = '';
   function authorize(phase) { const allowed = input.authorize({ phase, grant_id: input.grantId, thread_id: threadId, turn_id: active?.id ?? null, scope_hash: scopeHash, host_history: input.persistSessions === true }); if (allowed !== true) fail('CONSENT_REQUIRED'); }
   function emit(type, payload = {}) {
@@ -104,22 +108,24 @@ export function createCodexAdapter(input, options = {}) {
   }
   function write(value) { if (closed || !child?.stdin?.writable) fail('OFFLINE'); const line = JSON.stringify(value) + '\n'; if (Buffer.byteLength(line) > 80000) fail('BUDGET_EXCEEDED'); child.stdin.write(line); }
   function request(method, params) {
-    return new Promise((resolve, reject) => { const id = ++requestId; const timer = setTimeout(() => { pending.delete(id); answered.add(id); reject(error(method === 'turn/start' ? 'UNKNOWN_OUTCOME' : 'OFFLINE')); if (method === 'turn/start') fatal('UNKNOWN_OUTCOME'); }, requestTimeout); timer.unref?.(); pending.set(id, { resolve, reject, timer, method }); try { write({ id, method, params }); } catch (failure) { clearTimeout(timer); pending.delete(id); reject(failure); } });
+    return new Promise((resolve, reject) => { const id = ++requestId; const ambiguous = ['turn/start','mcpServer/tool/call'].includes(method); const timer = setTimeout(() => { pending.delete(id); answered.add(id); reject(error(ambiguous ? 'UNKNOWN_OUTCOME' : 'OFFLINE')); if (ambiguous) fatal('UNKNOWN_OUTCOME'); }, requestTimeout); timer.unref?.(); pending.set(id, { resolve, reject, timer, method }); try { write({ id, method, params }); } catch (failure) { clearTimeout(timer); pending.delete(id); reject(failure); } });
   }
   function settleTurn(status, nativeStatus, failureCode = null) {
     if (!active || active.settled) return; const turn = active; turn.settled = true; clearTimeout(turn.timer);
     if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
     for (const [id, record] of approvals) { clearTimeout(record.timer); approvals.delete(id); }
-    let textResult = [...turn.items.values()].filter(item => item.type === 'agentMessage').map(item => item.text).join('\n');
+    const messages = [...turn.items.values()].filter(item => item.type === 'agentMessage');
+    const finalMessages = messages.filter(item => item.phase === 'final_answer');
+    let textResult = (finalMessages.length ? finalMessages : messages).map(item => item.text).join('\n');
     if (status !== 'completed') textResult ||= [...turn.deltas.values()].join('');
     try { authorize('completion'); } catch { status = 'failed'; failureCode = 'CONSENT_REQUIRED'; textResult = ''; turn.receipts = []; }
     const result = { status, native_status: nativeStatus, thread_id: threadId, turn_id: turn.id, text: textResult, output_complete: status === 'completed', tool_receipts: turn.receipts, error: failureCode ? error(failureCode).toJSON() : null, checkpoint: { thread_id: threadId, scope_hash: scopeHash, persisted: input.persistSessions === true } };
     active = null; turn.resolve(result);
   }
-  function fatal(code) { if (closed) return; closed = true; initialized = false; for (const p of pending.values()) { clearTimeout(p.timer); p.reject(error(p.method === 'turn/start' ? 'UNKNOWN_OUTCOME' : code)); } pending.clear(); settleTurn(code === 'UNKNOWN_OUTCOME' ? 'unknown_outcome' : 'failed', null, code); kill(child); }
+  function fatal(code) { if (closed) return; closed = true; initialized = false; for (const p of pending.values()) { clearTimeout(p.timer); p.reject(error(['turn/start','mcpServer/tool/call'].includes(p.method) ? 'UNKNOWN_OUTCOME' : code)); } pending.clear(); settleTurn(code === 'UNKNOWN_OUTCOME' ? 'unknown_outcome' : 'failed', null, code); kill(child); }
   function inScope(params) { return !!active && params?.threadId === threadId && (!params.turnId || active.id === null || params.turnId === active.id); }
   function itemValue(item) {
-    nativeId(item.id); if (item.type === 'agentMessage') { text(item.text || ' ', limits.maxOutputBytes); return { id: item.id, type: item.type, text: item.text ?? '' }; }
+    nativeId(item.id); if (item.type === 'agentMessage') { text(item.text || ' ', limits.maxOutputBytes); if (item.phase !== undefined && item.phase !== null && !['commentary','final_answer'].includes(item.phase)) fail('VERSION_MISMATCH'); return { id: item.id, type: item.type, text: item.text ?? '', phase: item.phase ?? null }; }
     if (['userMessage', 'reasoning', 'plan', 'contextCompaction'].includes(item.type)) return { id: item.id, type: item.type };
     if (item.type !== 'mcpToolCall' || item.server !== 'learnbridge' || !TOOLS.includes(item.tool)) fail('SCOPE_DENIED');
     const args = item.arguments; if (!args || typeof args !== 'object' || Array.isArray(args)) fail('SCOPE_DENIED');
@@ -186,11 +192,12 @@ export function createCodexAdapter(input, options = {}) {
     if (Object.hasOwn(message, 'error')) p.reject(error(message.error?.code === -32601 ? 'UNSUPPORTED' : message.error?.code === -32602 ? 'INVALID_INPUT' : safeCode(message.error?.data?.codexErrorInfo)));
     else if (Object.hasOwn(message, 'result')) p.resolve(message.result); else fail('VERSION_MISMATCH');
   }
-  function mcpConfig() { return { command: '/usr/bin/env', args: ['-i', 'PATH=/usr/bin:/bin', process.execPath, BRIDGE, '--data-root', data, '--destination', 'codex'], enabled_tools: [...TOOLS], startup_timeout_sec: 15, tool_timeout_sec: 20, required: true }; }
+  function mcpConfig() { return { command: '/usr/bin/env', args: ['-i', 'PATH=/usr/bin:/bin', process.execPath, BRIDGE, '--data-root', data, '--destination', 'codex', '--grant-id', input.grantId, ...(input.embeddedLease ? ['--embedded-lease', input.embeddedLease] : [])], enabled_tools: [...TOOLS], startup_timeout_sec: 15, tool_timeout_sec: 20, required: true }; }
   function launchArgs() {
     const config = mcpConfig();
     const inline = `{ command = ${JSON.stringify(config.command)}, args = ${JSON.stringify(config.args)}, enabled_tools = ${JSON.stringify(TOOLS)}, startup_timeout_sec = 15, tool_timeout_sec = 20, required = true }`;
-    return ['app-server', '--listen', 'stdio://', '-c', 'forced_login_method="chatgpt"', '-c', 'model_provider="openai"', '-c', 'sandbox_mode="read-only"', '-c', 'approval_policy="on-request"', '-c', 'approvals_reviewer="user"', '-c', 'features.shell_tool=false', '-c', 'features.shell_snapshot=false', '-c', 'features.memories=false', '-c', 'features.plugins=false', '-c', 'features.hooks=false', '-c', 'features.multi_agent=false', '-c', 'features.apps=false', '-c', 'features.browser_use=false', '-c', 'features.computer_use=false', '-c', 'features.js_repl=false', '-c', 'agents.enabled=false', '-c', 'apps._default.enabled=false', '-c', 'project_doc_max_bytes=0', '-c', 'web_search="disabled"', '-c', 'analytics.enabled=false', '-c', `mcp_servers={ learnbridge = ${inline} }`];
+    const disabled = ['shell_tool','shell_snapshot','memories','plugins','hooks','multi_agent','multi_agent_v2','apps','browser_use','browser_use_external','browser_use_full_cdp_access','computer_use','js_repl','unified_exec','view_image','image_generation','code_mode','code_mode_host','code_mode_only','code_mode_prewarm','skill_search','skill_mcp_dependency_install','chronicle','external_agent_memory_import','remote_plugin','tool_suggest','workspace_dependencies','goals','sleep_tool','request_permissions_tool','in_app_chat','in_app_local_automation','in_app_browser','in_app_dictation','auth_elicitation','tool_call_mcp_elicitation','mentions_v2'];
+    return ['app-server', '--listen', 'stdio://', '-c', 'forced_login_method="chatgpt"', '-c', 'model_provider="openai"', '-c', 'sandbox_mode="read-only"', '-c', 'approval_policy="on-request"', '-c', 'approvals_reviewer="user"', ...disabled.flatMap(key => ['-c', `features.${key}=false`]), '-c', 'features.skip_host_skill_discovery=true', '-c', 'agents.enabled=false', '-c', 'apps._default.enabled=false', '-c', 'apps._default.destructive_enabled=false', '-c', 'apps._default.open_world_enabled=false', '-c', 'project_doc_max_bytes=0', '-c', 'web_search="disabled"', '-c', 'analytics.enabled=false', '-c', 'feedback.enabled=false', '-c', 'history.persistence="none"', '-c', 'file_opener="none"', '-c', 'allow_login_shell=false', '-c', 'include_collaboration_mode_instructions=false', '-c', 'include_permissions_instructions=false', '-c', 'include_apps_instructions=false', '-c', 'include_environment_context=false', '-c', 'project_root_markers=[]', '-c', 'cli_auth_credentials_store="file"', '-c', 'mcp_oauth_credentials_store="file"', '-c', `log_dir=${JSON.stringify(join(project, 'logs'))}`, '-c', `sqlite_home=${JSON.stringify(join(project, 'state'))}`, '-c', `mcp_servers={ learnbridge = ${inline} }`];
   }
   async function effectiveConfig() {
     // This privileged response remains in this closure only. Never emit config,
@@ -199,29 +206,59 @@ export function createCodexAdapter(input, options = {}) {
     const config = response?.config;
     if (!config || typeof config !== 'object' || Array.isArray(config) || response.layers?.length) fail('SCOPE_DENIED');
     const safeRoot = ['analytics', 'approval_policy', 'approvals_reviewer', 'browser_use', 'computer_use', 'desktop', 'forced_chatgpt_workspace_id', 'forced_login_method', 'model', 'model_auto_compact_token_limit', 'model_auto_compact_token_limit_scope', 'model_context_window', 'model_provider', 'model_reasoning_effort', 'model_reasoning_summary', 'model_verbosity', 'review_model', 'sandbox_mode', 'sandbox_workspace_write', 'service_tier', 'tools', 'web_search', 'features', 'mcp_servers', 'agents', 'apps', 'project_doc_max_bytes', 'instructions', 'developer_instructions', 'compact_prompt'];
-    if (Object.keys(config).some(key => !safeRoot.includes(key))) fail('SCOPE_DENIED');
+    // Native config/read serializes many absent options as null or empty maps.
+    // Unknown *active* options remain denied, including provider overrides,
+    // hooks, notification commands and instruction-file paths.
+    const neutral = value => value === undefined || value === null || value === false || (Array.isArray(value) && value.length === 0) || (value && typeof value === 'object' && !Array.isArray(value) && Object.values(value).every(neutral));
+    const fixed = { file_opener: 'none', allow_login_shell: false, include_collaboration_mode_instructions: false, include_permissions_instructions: false, include_apps_instructions: false, include_environment_context: false, cli_auth_credentials_store: 'file', mcp_oauth_credentials_store: 'file', log_dir: join(project, 'logs'), sqlite_home: join(project, 'state'), background_terminal_max_timeout: 300000 };
+    for (const [key, value] of Object.entries(config)) {
+      if (safeRoot.includes(key) || neutral(value)) continue;
+      if (Object.hasOwn(fixed, key) && value === fixed[key]) continue;
+      if (key === 'history' && canonical(value) === canonical({ persistence: 'none', max_bytes: null })) continue;
+      if (key === 'chatgpt_base_url' && ['https://chatgpt.com/backend-api/', 'https://chatgpt.com/backend-api'].includes(value)) continue;
+      fail('SCOPE_DENIED');
+    }
     if (['instructions', 'developer_instructions', 'compact_prompt', 'browser_use', 'computer_use', 'desktop'].some(key => config[key] !== undefined && config[key] !== null)) fail('SCOPE_DENIED');
     if (config.forced_login_method !== 'chatgpt' || config.model_provider !== 'openai' || config.sandbox_mode !== 'read-only' || config.approval_policy !== 'on-request' || config.approvals_reviewer !== 'user' || config.project_doc_max_bytes !== 0 || config.web_search !== 'disabled' || config.analytics?.enabled !== false) fail('SCOPE_DENIED');
     const features = config.features;
-    if (!features || typeof features !== 'object' || Array.isArray(features) || Object.values(features).some(value => value !== false) || ['shell_tool', 'shell_snapshot', 'memories', 'plugins', 'hooks', 'multi_agent', 'apps', 'browser_use', 'computer_use', 'js_repl'].some(key => features[key] !== false)) fail('SCOPE_DENIED');
-    if (canonical(config.agents) !== canonical({ enabled: false }) || !config.apps || config.apps._default?.enabled !== false || Object.entries(config.apps).some(([key, value]) => key !== '_default' && value?.enabled !== false)) fail('SCOPE_DENIED');
+    if (!features || typeof features !== 'object' || Array.isArray(features) || Object.entries(features).some(([key, value]) => key === 'skip_host_skill_discovery' ? value !== true : value !== false && value !== null) || ['shell_tool', 'shell_snapshot', 'memories', 'plugins', 'hooks', 'multi_agent', 'apps', 'browser_use', 'computer_use', 'js_repl'].some(key => features[key] !== false)) fail('SCOPE_DENIED');
+    if (!config.agents || config.agents.enabled !== false || Object.entries(config.agents).some(([key, value]) => key !== 'enabled' && !neutral(value)) || !config.apps || config.apps._default?.enabled !== false || Object.entries(config.apps).some(([key, value]) => key !== '_default' && value?.enabled !== false)) fail('SCOPE_DENIED');
     if (config.apps._default.tools || Object.values(config.apps).some(app => app?.tools && Object.values(app.tools).some(tool => tool?.enabled !== false))) fail('SCOPE_DENIED');
     if (config.sandbox_workspace_write && (config.sandbox_workspace_write.network_access === true || config.sandbox_workspace_write.writable_roots?.length)) fail('SCOPE_DENIED');
     if (config.tools && Object.keys(config.tools).some(key => key !== 'web_search')) fail('SCOPE_DENIED');
-    if (!config.mcp_servers || canonical(config.mcp_servers) !== canonical({ learnbridge: mcpConfig() })) fail('SCOPE_DENIED');
+    if (!config.mcp_servers || Object.keys(config.mcp_servers).length !== 1 || !config.mcp_servers.learnbridge) fail('SCOPE_DENIED');
+    const actual = { ...config.mcp_servers.learnbridge };
+    if (Object.hasOwn(actual, 'enabled')) { if (actual.enabled !== true) fail('SCOPE_DENIED'); delete actual.enabled; }
+    if (Object.hasOwn(actual, 'environment_id')) { if (actual.environment_id !== null && actual.environment_id !== 'local') fail('SCOPE_DENIED'); delete actual.environment_id; }
+    if (canonical(actual) !== canonical(mcpConfig())) fail('SCOPE_DENIED');
     return true;
   }
-  async function initialize() {
+  async function initialize({ allowLogin = false } = {}) {
     if (initialized) return capabilities(); if (child || closed || initializing) fail('REVISION_CONFLICT'); initializing = true;
     let proof; try { authorize('launch'); proof = await probe(); if (proof.version !== VERSION || proof.protocol_verified !== true) fail('VERSION_MISMATCH'); authorize('launch'); } catch (failure) { initializing = false; throw failure; }
-    startedAt = Date.now(); try { child = factory(binary, launchArgs(), { cwd: project, env: environment(binary), stdio: ['pipe', 'pipe', 'pipe'], detached: process.platform !== 'win32' }); } catch { initializing = false; fatal('UNSUPPORTED'); fail('UNSUPPORTED'); }
+    startedAt = Date.now(); try { child = factory(binary, launchArgs(), { cwd: project, env: environment(binary, configurationHome), stdio: ['pipe', 'pipe', 'pipe'], detached: process.platform !== 'win32' }); } catch { initializing = false; fatal('UNSUPPORTED'); fail('UNSUPPORTED'); }
     child.stdout.on('data', chunk => { if (closed) return; outputBytes += chunk.length; if (outputBytes > limits.maxOutputBytes) { fatal('BUDGET_EXCEEDED'); return; } lineBuffer += decoder.write(chunk); if (Buffer.byteLength(lineBuffer) > 1000000) { fatal('BUDGET_EXCEEDED'); return; } let split; while ((split = lineBuffer.indexOf('\n')) !== -1 && !closed) { const line = lineBuffer.slice(0, split); lineBuffer = lineBuffer.slice(split + 1); if (!line.trim()) continue; try { receive(JSON.parse(line)); } catch (failure) { fatal(failure.code ?? 'VERSION_MISMATCH'); } } });
     child.stderr.on('data', chunk => { stderrBytes += chunk.length; if (stderrBytes > 64000) fatal('BUDGET_EXCEEDED'); }); child.once('error', () => fatal('UNSUPPORTED')); child.once('exit', () => { if (!closed) fatal(active ? 'UNKNOWN_OUTCOME' : 'OFFLINE'); });
     try { const greeting = await request('initialize', { clientInfo: { name: 'learnbridge_local', title: 'LearnBridge', version: '0.3.0' }, capabilities: { experimentalApi: false } }); if (typeof greeting.userAgent !== 'string' || typeof greeting.platformFamily !== 'string') fail('VERSION_MISMATCH'); write({ method: 'initialized', params: {} });
-      await effectiveConfig(); const account = await request('account/read', { refreshToken: false }); if (account.account?.type !== 'chatgpt') fail(account.account === null || account.account === undefined ? 'AUTH_REQUIRED' : 'UNSUPPORTED'); initialized = true; return capabilities();
+      await effectiveConfig(); connected = true; const account = await request('account/read', { refreshToken: false }); if (account.account?.type !== 'chatgpt') { if (account.account) fail('UNSUPPORTED'); if (!allowLogin) fail('AUTH_REQUIRED'); } else initialized = true; return capabilities();
     } catch (failure) { fatal(failure.code ?? 'PROVIDER_FAILURE'); throw failure; } finally { initializing = false; }
   }
-  function capabilities() { return { version: VERSION, state: initialized && !closed ? 'available' : 'unsupported', mode: 'official_chatgpt_managed', protocol_verified: initialized, model_entitlement_verified: false, tools: [...TOOLS], approvals: 'reject_or_cancel_only', session_history: input.persistSessions ? 'official_host_persisted' : 'ephemeral', thread_id: threadId }; }
+  function capabilities() { return { version: VERSION, state: !closed && initialized ? 'available' : !closed && connected ? 'requires_auth' : 'unsupported', mode: 'official_chatgpt_managed', protocol_verified: connected && !closed, model_entitlement_verified: false, tools: [...TOOLS], approvals: 'reject_or_cancel_only', session_history: input.persistSessions ? 'official_host_persisted' : 'ephemeral', thread_id: threadId }; }
+  async function accountStatus() {
+    if (!connected || closed || active) fail('REVISION_CONFLICT'); authorize('account_status');
+    const result = await request('account/read', { refreshToken: false }); authorize('account_status');
+    if (result.account && result.account.type !== 'chatgpt') fail('UNSUPPORTED');
+    initialized = result.account?.type === 'chatgpt'; return capabilities();
+  }
+  async function startLogin() {
+    if (!connected || closed || active || loginId) fail('REVISION_CONFLICT'); authorize('login');
+    const result = await request('account/login/start', { type: 'chatgpt' }); authorize('login');
+    if (result.type !== 'chatgpt' || !UUID.test(result.loginId) || typeof result.authUrl !== 'string' || result.authUrl.length > 8000) fail('VERSION_MISMATCH');
+    const url = new URL(result.authUrl); if (url.protocol !== 'https:' || !['auth.openai.com','chatgpt.com'].includes(url.hostname) || url.username || url.password || url.port) fail('SCOPE_DENIED');
+    loginId = result.loginId; return { login_id: loginId, auth_url: result.authUrl };
+  }
+  async function cancelLogin() { if (!loginId || closed) return { cancelled: false }; authorize('login_cancel'); const value = loginId; loginId = null; await request('account/login/cancel', { loginId: value }); return { cancelled: true }; }
+  async function logoutAccount() { if (!connected || closed || active) fail('REVISION_CONFLICT'); authorize('logout'); await cancelLogin(); await request('account/logout', {}); initialized = false; return capabilities(); }
   async function catalog() {
     const result = await request('mcpServerStatus/list', { threadId, limit: 20 });
     if (!Array.isArray(result.data) || result.nextCursor || result.data.length !== 1) fail('SCOPE_DENIED'); const only = result.data[0];
@@ -238,13 +275,14 @@ export function createCodexAdapter(input, options = {}) {
     } catch (failure) { fatal(failure.code ?? 'PROVIDER_FAILURE'); throw failure; } finally { threadStarting = false; }
   }
   async function startTurn(value) {
-    object(value, ['prompt', 'context']); if (!initialized || closed || !threadId || active || turnStarting || threadStarting) fail('REVISION_CONFLICT'); text(value.prompt, 16000); if (Buffer.byteLength(value.prompt) > 16000) fail('BUDGET_EXCEEDED');
+    object(value, ['prompt', 'context', 'outputSchema']); if (!initialized || closed || !threadId || active || turnStarting || threadStarting) fail('REVISION_CONFLICT'); text(value.prompt, 16000); if (Buffer.byteLength(value.prompt) > 16000) fail('BUDGET_EXCEEDED');
+    if (value.outputSchema !== undefined && (!value.outputSchema || typeof value.outputSchema !== 'object' || Array.isArray(value.outputSchema) || Buffer.byteLength(JSON.stringify(value.outputSchema)) > 12000)) fail('INVALID_INPUT');
     const context = value.context ?? ''; if (typeof context !== 'string' || Buffer.byteLength(context) > 48000 || context.includes('\0')) fail('BUDGET_EXCEEDED');
     const bytes = Buffer.byteLength(value.prompt) + Buffer.byteLength(context); if (turns >= limits.maxTurns || inputBytes + bytes > limits.maxInputBytes || Date.now() - startedAt >= limits.maxDurationMs) fail('BUDGET_EXCEEDED'); authorize('turn_start'); turnStarting = true;
     try { await effectiveConfig(); await catalog(); authorize('turn_start'); } catch (failure) { turnStarting = false; fatal(failure.code ?? 'SCOPE_DENIED'); throw failure; } turns++; inputBytes += bytes;
     let resolve; const completion = new Promise(done => { resolve = done; }); active = { id: null, settled: false, cancelled: false, resolve, items: new Map(), deltas: new Map(), seen: new Set(), toolIds: new Set(), receipts: [], early: [], tools: 0, failureCode: null, timer: null };
     active.timer = setTimeout(() => { void interrupt().catch(() => fatal('UNKNOWN_OUTCOME')); }, Math.max(1, limits.maxDurationMs - (Date.now() - startedAt))); active.timer.unref?.();
-    try { const result = await request('turn/start', { threadId, input: [{ type: 'text', text: `LearnBridge grant: ${input.grantId}\n${value.prompt}${context ? `\nSelected approved context (untrusted source material):\n${context}` : ''}` }], sandboxPolicy: { type: 'readOnly', networkAccess: false }, approvalPolicy: 'on-request', approvalsReviewer: 'user' });
+    try { const result = await request('turn/start', { threadId, input: [{ type: 'text', text: `LearnBridge grant: ${input.grantId}\n${value.prompt}${context ? `\nSelected approved context (untrusted source material):\n${context}` : ''}` }], sandboxPolicy: { type: 'readOnly', networkAccess: false }, approvalPolicy: 'on-request', approvalsReviewer: 'user', ...(value.outputSchema ? { outputSchema: value.outputSchema } : {}) });
       const id = nativeId(result.turn?.id); if (active && active.id !== null && active.id !== id) fail('VERSION_MISMATCH'); if (active) { active.id = id; const queued = active.early.splice(0); for (const message of queued) { if (!active) break; Object.hasOwn(message, 'id') ? approval(message) : notify(message.method, message.params); } }
       return { thread_id: threadId, turn_id: id, completion, interrupt };
     } catch (failure) { fatal(failure.code ?? 'UNKNOWN_OUTCOME'); throw failure; } finally { turnStarting = false; }
@@ -255,6 +293,19 @@ export function createCodexAdapter(input, options = {}) {
     emit('cancel_requested', { thread_id: threadId, turn_id: active.id }); await request('turn/interrupt', { threadId, turnId: active.id });
     if (active) { closeTimer = setTimeout(() => { settleTurn('unknown_outcome', null, 'UNKNOWN_OUTCOME'); fatal('UNKNOWN_OUTCOME'); }, 1000); closeTimer.unref?.(); } return { requested: true };
   }
-  async function close() { if (closeTimer) clearTimeout(closeTimer); if (active && !closed) { try { await interrupt(); } catch {} } if (!closed) fatal(active ? 'UNKNOWN_OUTCOME' : 'OFFLINE'); try { child?.stdin?.end(); } catch {} kill(child); }
-  return Object.freeze({ initialize, capabilities, startThread: () => thread(), resumeThread: checkpoint => thread(checkpoint), startTurn, interrupt, pendingApprovals: () => { authorize('approval'); return [...approvals.values()].map(record => record.snapshot); }, decideApproval: decide, events: () => { authorize('result'); return events.slice(); }, close });
+  let directCalls = 0;
+  async function callLearnBridgeTool(tool, args) {
+    if (!initialized || closed || !threadId || active || turnStarting || threadStarting) fail('REVISION_CONFLICT');
+    if (!TOOLS.includes(tool)) fail('SCOPE_DENIED'); if (++directCalls > limits.maxToolCalls) fail('BUDGET_EXCEEDED');
+    // The same exact argument boundary as model-originated MCP items. No raw
+    // server/tool/RPC method is accepted from HTTP, IPC or a model response.
+    itemValue({ id: `runtime-tool-${directCalls}`, type: 'mcpToolCall', server: 'learnbridge', tool, arguments: args });
+    authorize('runtime_tool'); await effectiveConfig(); await catalog();
+    const result = await request('mcpServer/tool/call', { threadId, server: 'learnbridge', tool, arguments: args }); authorize('runtime_tool_result');
+    if (!result || result.isError || !Array.isArray(result.content) || result.content.length !== 1 || result.content[0]?.type !== 'text' || typeof result.content[0].text !== 'string' || Buffer.byteLength(result.content[0].text) > 48000) fail('PROVIDER_FAILURE');
+    let value; try { value = JSON.parse(result.content[0].text); } catch { fail('VERSION_MISMATCH'); }
+    return { value, receipt: { tool, status: 'completed', failed: false, result_hash: digest(result) } };
+  }
+  async function close() { if (closeTimer) clearTimeout(closeTimer); if (active && !closed) { try { await interrupt(); } catch {} } if (!closed) fatal(active ? 'UNKNOWN_OUTCOME' : 'OFFLINE'); try { child?.stdin?.end(); } catch {} kill(child); if (child && child.exitCode === null && child.signalCode === null) await new Promise(resolve => { const timer = setTimeout(resolve, 2000); child.once('close', () => { clearTimeout(timer); resolve(); }); }); }
+  return Object.freeze({ initialize, capabilities, accountStatus, startLogin, cancelLogin, logoutAccount, callLearnBridgeTool, startThread: () => thread(), resumeThread: checkpoint => thread(checkpoint), startTurn, interrupt, pendingApprovals: () => { authorize('approval'); return [...approvals.values()].map(record => record.snapshot); }, decideApproval: decide, events: () => { authorize('result'); return events.slice(); }, close });
 }
