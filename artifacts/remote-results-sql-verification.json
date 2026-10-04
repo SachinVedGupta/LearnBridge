@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-04T07:13:57.956Z",
+  "runtime": {
+    "pglite": "0.5.8",
+    "pgtap": "0.0.9"
+  },
+  "scope": "disposable_single_session_postgresql_wasm_synthetic_auth",
+  "migrations": [
+    {
+      "name": "202610030003_remote_companion_foundation.sql",
+      "sha256": "501782701d3af680c8b013e0244e87a0645fe782a100ceb41c3d30be43dd89d1",
+      "status": "passed"
+    },
+    {
+      "name": "202610040005_remote_reviewed_results.sql",
+      "sha256": "c889f134066a00b115a9e83f8a9ffdcb9ede28d308566b452e13faed47bd3e9d",
+      "status": "passed"
+    }
+  ],
+  "checks": [
+    {
+      "name": "SQL canonical policy matches actual JS review hash",
+      "status": "passed"
+    },
+    {
+      "name": "anonymous cannot select result/delivery tables or invoke private canonical helper",
+      "status": "passed"
+    },
+    {
+      "name": "wrong device credential and installation rejected",
+      "status": "passed"
+    },
+    {
+      "name": "null metadata identities cannot acknowledge erasure",
+      "status": "passed"
+    },
+    {
+      "name": "strict policy rejects academic_policy",
+      "status": "passed"
+    },
+    {
+      "name": "strict policy rejects content_status",
+      "status": "passed"
+    },
+    {
+      "name": "strict policy rejects result_bytes",
+      "status": "passed"
+    },
+    {
+      "name": "strict policy rejects binding_revision",
+      "status": "passed"
+    },
+    {
+      "name": "strict policy rejects relay_processing_confirmed",
+      "status": "passed"
+    },
+    {
+      "name": "strict policy rejects source_documents",
+      "status": "passed"
+    },
+    {
+      "name": "strict policy rejects account_id",
+      "status": "passed"
+    },
+    {
+      "name": "wrong original text bytes or review hash are not retained",
+      "status": "passed"
+    },
+    {
+      "name": "exact reviewed result upload persists and retry returns one ID",
+      "status": "passed"
+    },
+    {
+      "name": "changed upload with same job/local receipt conflicts",
+      "status": "passed"
+    },
+    {
+      "name": "cross account cannot list/begin/read or erase another result",
+      "status": "passed"
+    },
+    {
+      "name": "new verified owner session cannot read old phone binding",
+      "status": "passed"
+    },
+    {
+      "name": "status list contains hashes and metadata but no text/policy",
+      "status": "passed"
+    },
+    {
+      "name": "phone needs a new one-use laptop delivery check before body is released",
+      "status": "passed"
+    },
+    {
+      "name": "wrong delivery nonce or hash is denied",
+      "status": "passed"
+    },
+    {
+      "name": "JSON null nonce/hash cannot bypass SQL comparisons",
+      "status": "passed"
+    },
+    {
+      "name": "fresh approval lasts at most 30 seconds; retry never extends expiry",
+      "status": "passed"
+    },
+    {
+      "name": "one exact delivery returns body/hash/policy once; replay fails",
+      "status": "passed"
+    },
+    {
+      "name": "result lifetime delivery budget remains 20 after physical ticket purge",
+      "status": "passed"
+    },
+    {
+      "name": "account 200 and global 2000 retained-ticket bounds reject new insertion",
+      "status": "passed"
+    },
+    {
+      "name": "expired ready ticket cannot release cached cloud text",
+      "status": "passed"
+    },
+    {
+      "name": "deleted GoTrue session rejects a still matching JWT claim",
+      "status": "passed"
+    },
+    {
+      "name": "device result preflight rejects deleted bound phone session before content",
+      "status": "passed"
+    },
+    {
+      "name": "cancelled phone job cannot request or receive a result",
+      "status": "passed"
+    },
+    {
+      "name": "fresh owner recovery erases active relay text but cannot revive it",
+      "status": "passed"
+    },
+    {
+      "name": "null phone result identity cannot acknowledge erasure",
+      "status": "passed"
+    },
+    {
+      "name": "relay erasure physically clears text/policy and denies all pending tickets",
+      "status": "passed"
+    },
+    {
+      "name": "revoked result cannot be re-uploaded or re-read",
+      "status": "passed"
+    },
+    {
+      "name": "fresh owner result recovery revokes lost-credential binding and erases owned responses",
+      "status": "passed"
+    },
+    {
+      "name": "student cannot invoke privileged physical purge",
+      "status": "passed"
+    },
+    {
+      "name": "service-only expired purge removes result/delivery rows",
+      "status": "passed"
+    },
+    {
+      "name": "extension rollback preserves existing status-only foundation",
+      "status": "passed"
+    }
+  ],
+  "status": "passed",
+  "production_configuration_changed": false,
+  "live_supabase_verified": false,
+  "real_jwt_session_revocation_verified": false,
+  "concurrent_sessions_verified": false,
+  "deployed_retention_scheduler_verified": false,
+  "postgres_version": "PostgreSQL 18.3 (PGlite 0.5.8) on wasm32-unknown-emscripten, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.74 (1092ec30a3fb1d46b1782ff1b4db5094d3d06ae5), 32-bit"
+}
