@@ -18,6 +18,7 @@ import { handleWritingRoute } from './writing-routes.mjs';
 import { handleResearchRoute } from './research-routes.mjs';
 import { handleProductivityRoute } from './productivity-routes.mjs';
 import { createHostTurns } from './host-turns.mjs';
+import { createOnboardingRoutes } from './onboarding-routes.mjs';
 import { TutoringError } from '../../../packages/local-academic/src/tutoring.mjs';
 
 export const LOCAL_VERSION = '0.3.0';
@@ -35,6 +36,7 @@ const assets = new Map([
   ['/writing.js', ['writing.js', 'text/javascript; charset=utf-8']],
   ['/research.js', ['research.js', 'text/javascript; charset=utf-8']],
   ['/productivity.js', ['productivity.js', 'text/javascript; charset=utf-8']],
+  ['/onboarding.js', ['onboarding.js', 'text/javascript; charset=utf-8']],
 ]);
 const base = '/api/local/v1';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -96,7 +98,8 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
   const store = LocalStore.open({ root: dataRoot, repositoryRoot, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' });
   let studentWorkspace;
   let hostTurns;
-  try { store.recoverInterruptedRuns(); studentWorkspace = createStudentWorkspace(store); hostTurns = createHostTurns({ store, ...hostAdapter }); }
+  let onboardingRoutes;
+  try { store.recoverInterruptedRuns(); studentWorkspace = createStudentWorkspace(store); hostTurns = createHostTurns({ store, ...hostAdapter }); onboardingRoutes = createOnboardingRoutes({ store, studentWorkspace }); }
   catch (error) { store.close(); throw error; }
   let policy;
   let control;
@@ -130,6 +133,7 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         { id: 'notes', label: 'Notes', state: 'available', detail: 'Multiple text notes with immutable revisions and verified hashes.' },
         { id: 'planning', label: 'Study planning', state: 'available', detail: 'Deterministic local study-plan previews with capacity deficits, task revision checks and saved review. No external calendar writes.' },
         { id: 'profile', label: 'Reviewed profile', state: 'available', detail: 'Student-entered facts with exact review, conflicts, purpose filters and stale source checks. No automatic identity or mastery inference.' },
+        { id: 'onboarding', label: 'Guided setup review', state: 'available', detail: 'Select saved local records and review an honest coverage report. No automatic discovery, profile confirmation, sharing grant or host connection is created.' },
         { id: 'library', label: 'Course library', state: 'available', detail: 'Reviewed export comparisons, immutable history, unchanged-content deduplication and current-course search with exact citations. Dates and coverage are source-reported; live university authentication remains a separate gate.' },
         { id: 'workflows', label: 'Durable local workflows', state: 'available', detail: 'Saved step journal, cumulative budgets, cancellation and restart recovery for registered local recipes. Unverified model turns remain disabled.' },
         { id: 'learning', label: 'Learning and catch-up', state: 'available', detail: 'Selected-course cited host recipes, your actual attempts and reviewed feedback, capacity-aware catch-up plans. A recorded check does not establish mastery.' },
@@ -210,6 +214,11 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         noQuery(url);
         const result = await handleCareerRoute({ route, method: request.method, privateBody, store, session,
           idempotencyKey: idempotency(request).idempotencyKey });
+        if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/onboarding/')) {
+        noQuery(url);
+        const result = await onboardingRoutes.handle({ route, method: request.method, privateBody, session });
         if (result) return json(response, result.status, result.data);
       }
       if (route.startsWith('/learning/')) {
@@ -563,6 +572,7 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
     closing = true;
     policy?.clear();
     academicPreviews.clear();
+    onboardingRoutes.clear();
     for (const operation of sourceOperations) operation.abort();
     closePromise = (async () => {
       try {

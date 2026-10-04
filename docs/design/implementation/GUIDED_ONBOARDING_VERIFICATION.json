@@ -1,0 +1,187 @@
+{
+  "format": "learnbridge_guided_onboarding_verification",
+  "date": "2026-10-04",
+  "status": "PASS_FOR_MEASURED_SLICE",
+  "base_commit": "678dbe5",
+  "synthetic_only": true,
+  "platform": {
+    "os": "macOS",
+    "architecture": "arm64",
+    "node": "22.23.2",
+    "python": "3.12.14"
+  },
+  "commands": {
+    "full_suite": "npm test",
+    "onboarding": "node --test web/scripts/local-onboarding.test.mjs web/scripts/local-onboarding-http.test.mjs web/scripts/local-onboarding-ui.test.mjs",
+    "clean_install": "node web/scripts/verify-local-install.mjs",
+    "build": "npm run build",
+    "design": "node docs/design/validate-design.mjs"
+  },
+  "measured_checks": {
+    "full_suite": {
+      "passed": 571,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "duration_ms": 44899.480583
+    },
+    "service_storage": {
+      "passed": 20,
+      "included_in_full_suite": true,
+      "exact_metadata_selection": true,
+      "omitted_values_bodies_paths": true,
+      "current_pin_revalidation": true,
+      "candidate_not_confirmed": true,
+      "expired_revoked_wrong_host_grants": true,
+      "no_context_budget_charge": true,
+      "idempotent_retry_no_tombstone_resurrection": true,
+      "report_cap_and_receipt_byte_boundary": true,
+      "oversized_current_metadata_retains_stale_readback": true
+    },
+    "paired_http": {
+      "passed": 12,
+      "included_in_full_suite": true,
+      "actual_paired_loopback": true,
+      "strict_nonce_origin_session": true,
+      "stale_review_denied_before_write": true,
+      "logout_runtime_restart_and_real_expiry": true,
+      "no_acquisition_or_host_call": true,
+      "no_implicit_grant_note_task_profile_confirmation": true,
+      "consumed_cache_reclaim_pending_review_preserved": true,
+      "exact_restart_and_fresh_restore": true
+    },
+    "ui_logic": {
+      "passed": 7,
+      "included_in_full_suite": true,
+      "evidence": "dependency-free DOM stand-in using shipped handlers; actual lazy-loader function with deterministic import boundary",
+      "post_commit_drift": true,
+      "post_commit_deleted_report_not_reopened": true,
+      "superseded_refresh": true,
+      "selection_reset_late_response_denied": true,
+      "single_lazy_mount_and_logout_guard": true,
+      "real_browser_layout": false
+    },
+    "clean_install": {
+      "passed_phases": 9,
+      "source_files": 69,
+      "source_digest": "fa2ed3200847c41cdd618fcdd51434657a25027ac4b6b554d0c81f7a49c39179",
+      "lock_sha256": "c5976bc94f4b80dee27d86f80f1520145594ed6880f539874015f9bccd4a1c74",
+      "static_assets": 10,
+      "mcp_tools": 4,
+      "offline_cache": true,
+      "fixture_cleanup": true
+    },
+    "hosted_build": {
+      "status": "PASS",
+      "provider_configuration_changed": false,
+      "new_production_dependencies": false
+    },
+    "design": {
+      "status": "PASS",
+      "scope": "documentation_only",
+      "features": 29,
+      "acceptance_cases": 182,
+      "work_packages": 24,
+      "product_tests_executed": false
+    },
+    "browser_created_independent_storage_read_and_restore": {
+      "status": "PASS",
+      "actual_browser_created_records": true,
+      "exact_restart_readback": true,
+      "exact_fresh_backup_restore": true,
+      "report_count": 1,
+      "report_revision": 1,
+      "report_needs_refresh": true,
+      "profile_count": 1,
+      "profile_revision": 3,
+      "current_course_count": 1,
+      "tasks": 0,
+      "notes": 0,
+      "sources": 0,
+      "grants": 0,
+      "report_omits_profile_values": true,
+      "records_sha256": "f5dd2c607c7a2651910c458bf6f14b5ab3f95ef6c25f7d4f98e59a6c041a8030",
+      "storage_schema_version": 5,
+      "backup_schema_version": 5,
+      "runtime_stopped_before_independent_process_read": true
+    }
+  },
+  "browser": {
+    "passed_flows": [
+      "unchecked categories/records and blank host defaults",
+      "candidate remains awaiting student action",
+      "changing purpose clears old preview",
+      "separate exact synthetic profile confirmation",
+      "explicit synthetic academic export save preserves unknown category coverage",
+      "selected profile metadata checked while course coverage remains partial and ungranted Codex awaits setup",
+      "exact coverage fingerprint confirmation and saved report",
+      "next-step navigation to Profile",
+      "changing selected fact marks prior saved report stale while retaining original pins",
+      "reload restores report and clears current choices",
+      "actual saved metadata omits profile values; no tasks, notes, sources or grants were created by onboarding"
+    ],
+    "console_errors": 0,
+    "console_warnings": 0,
+    "desktop_client_width": 1280,
+    "desktop_scroll_width": 1280,
+    "mobile_client_width": 390,
+    "mobile_scroll_width": 390,
+    "horizontal_overflow": false,
+    "screenshots": [
+      {
+        "path": "artifacts/local-onboarding-desktop.jpg",
+        "media_type": "image/jpeg",
+        "sha256": "90291e3c1e62e2fc89ec5dac6afb7964c33300b82efaf7147fee418755193ac9"
+      },
+      {
+        "path": "artifacts/local-onboarding-mobile.jpg",
+        "media_type": "image/jpeg",
+        "sha256": "08a67c958040a0c95f63b1512355cc6dd1277b6496a865b35843466b77196c42"
+      }
+    ],
+    "owned_fixture_stopped_and_removed": true
+  },
+  "limits": {
+    "selection_ids": 40,
+    "catalogue_per_list": 200,
+    "active_reports": 128,
+    "selection_clone_bytes": 12000,
+    "preview_bytes": 64000,
+    "report_data_bytes": 128000,
+    "preview_http_body_bytes": 16384,
+    "save_delete_http_body_bytes": 4096,
+    "retained_previews": 10,
+    "preview_lifetime_ms": 300000
+  },
+  "limitations": [
+    "Existing saved local metadata only; no laptop/account discovery, original-file freshness check, provider fetch, profile synthesis or student data processing.",
+    "Report titles, opaque IDs, hashes, field names and source coverage remain private local metadata. Raw bodies, profile values and folder paths are omitted.",
+    "A report creates no sharing permission, source import, confirmed profile statement, prepared note, task, MCP registration or model request.",
+    "Source coverage and academic retrieval clocks are retained claims, not independent university truth or completeness. Office extraction stays partial.",
+    "Valid sharing metadata never verifies actual Codex/Claude authentication, available subscription, tool catalogue or real model execution.",
+    "Active-view report forgetting does not selectively erase database history or backups; an old operation cannot resurrect the forgotten report.",
+    "The browser checks used disposable synthetic data on this Mac. The UI harness is not browser layout evidence; HTTP/service fixtures provide further boundaries not exercised visually.",
+    "The independent persistence process opened the stopped browser-created storage, reopened it and restored a fresh backup. HTTP fixtures separately exercised runtime restart/session barriers.",
+    "Clean offline-cache installation used69 allowlisted files on this Mac, not a new computer/online-install or other-platform proof; no existing .env, node_modules, personal data or Python environment was copied.",
+    "No database migration, new production dependency, hosted deployment or Google/Composio/Supabase configuration change was made for this local increment.",
+    "The full29-feature student vision still has separate live host, institution transport, cloud onboarding, browser/document, mobile and platform release gates."
+  ],
+  "source_hashes": {
+    "web/apps/local-runtime/src/onboarding.mjs": "584ae6650b5e5b587fbd1da08fee97cf9db3f5e8043896131f5d8cc8a30fa6cd",
+    "web/apps/local-runtime/src/onboarding-routes.mjs": "0f7180e76e833660a3ebd152b5dcd3e7b9fdb4cbb7bf308504ab0e08fa59b523",
+    "web/apps/local-runtime/src/server.mjs": "a2f1b80949a48cf199cccf001df83198ce3ad93813fe3c6ce469180699409b08",
+    "web/apps/local/public/onboarding.js": "b60ce0c7c75809818bde2daebb63d15ef2f9895d92502c09768a0fb6f8ee04ed",
+    "web/apps/local/public/app.js": "3e858c25f801536d4ffa702e40899adee67ea8bc1151720608bf0f6cc848b7ee",
+    "web/apps/local/public/index.html": "0b9cc2aa72c58714ef83aaff1e9148b6fe772606eec60200802770a3d270cabd",
+    "web/apps/local/build.mjs": "a15711fe0a484a9595b008021f2292dd6f419418ec8d83174e9a8806c7ede802",
+    "web/scripts/local-onboarding.test.mjs": "df4c5744d3ae902dc4f5cdabc51e8270dceea287b046baeed1ed0a4a848c9382",
+    "web/scripts/local-onboarding-http.test.mjs": "eb41939d181527984b1282b63ec4db9496870a53962b5435d108dced8537d766",
+    "web/scripts/local-onboarding-ui.test.mjs": "08a2a613bc464ce630a841414f8291e0edc6c869b34b48e3b423380b48990a4d",
+    "web/scripts/verify-local-install.mjs": "58e60add5474cedcb28ef5d2565e3809b24a983e4d68cc90e11206b99c4b138f",
+    "web/scripts/local-learning-service.test.mjs": "3a3f9c843cd5f523fc5adbc2f31402130d240727fbedcbc0e0a884ad2ddccbc7"
+  },
+  "verification_notes": [
+    "The final awake full-suite run passed all571 in44899.480583ms. Earlier long runs had native budget failures while the computer power log showed repeated sleep/wake cycles; limits were not increased.",
+    "A pre-existing catch-up test used a sub-minute live-clock window but expected90 whole minutes. The fixture now supplies a fixed exact90-minute interval; scheduling behavior was not changed."
+  ]
+}

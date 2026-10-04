@@ -11,6 +11,8 @@ LearnBridge starts with an empty student profile. Repository author details, Git
 
 For context onboarding, offer useful categories such as courses, career, projects, communications and routines. The student chooses folders, files, account exports or notes in the dashboard. Selected-folder inventory is local metadata; content imports and model sharing are separate decisions. Do not search a home directory, browser profile, credential store or hidden ChatGPT/Claude/Codex history to infer context. A student-selected agent-memory export can be a normal selected text source; it is never permission to read the host's private stores. Read the [onboarding design](../../../docs/design/ONBOARDING.md) only when implementing broader discovery; its future operation names are not shipped commands.
 
+Start context onboarding with **Get started** in the paired dashboard: choose a purpose, include categories and select existing records individually. Preview coverage and save the exact reviewed report if the student wants it. All selections start unchecked; the report inspects saved metadata only. Candidates stay unconfirmed, extraction/export limits stay visible, and a valid sharing permission never proves host login or a real model turn. Use its next-step links for separate imports, profile review and agent sharing. Read the [implemented guide](../../../docs/design/implementation/GUIDED_ONBOARDING.md) before describing the report as complete setup. Changed selected records need a fresh check; the saved report preserves its original review.
+
 The MCP surface has four tools:
 
 - `learnbridge_status`: installation state and opaque counts; it does not reveal a profile or grant access.

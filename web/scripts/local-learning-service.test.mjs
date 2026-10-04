@@ -61,7 +61,9 @@ test('recipe export is exactly pinned, read back and idempotent; it grants no mo
 });
 
 test('catch-up capacity preview stores one proposal, preserves unknown dates and makes zero tasks/calendar writes', t => {
-  const f = fixture(t); const session = f.service.createSession(f.input); const start = new Date(Date.now() + 60000).toISOString(); const end = new Date(Date.now() + 91 * 60000).toISOString();
+  // The planner schedules whole minutes. Use a fixed exact 90-minute window;
+  // a wall-clock sub-minute start can legitimately leave only 89 usable minutes.
+  const f = fixture(t); const session = f.service.createSession(f.input); const start = '2026-10-05T13:00:00.000Z'; const end = '2026-10-05T14:30:00.000Z';
   const input = { ...exact(session), topics: [{ id: 'A', title: 'Base cases', effort_minutes: 60, source_citations: f.input.citations }, { id: 'B', title: 'Recursion practice', effort_minutes: 60, dependency_ids: ['A'], source_citations: f.input.citations }], selected_topic_ids: ['A', 'B'], exam: { title: 'Practice exam', deadline: { precision: 'unknown', original: 'Evening Oct 5' } }, planning_input: { now: start, timezone: 'America/Toronto', horizonEnd: end, availability: [{ start, end }] } };
   const plan = f.service.previewCatchUp(session.id, input, { idempotencyKey: 'learning-catchup-fixture-1' }); assert.equal(plan.data.state, 'proposal'); assert.equal(plan.data.catch_up.exam.time_needs_review, true); assert.equal(plan.data.plan.coverage.proposed_minutes, 90); assert.equal(plan.data.plan.coverage.unscheduled_minutes, 30); assert.equal(f.store.listTasks().length, 0); assert.equal(f.service.previewCatchUp(session.id, input, { idempotencyKey: 'learning-catchup-fixture-1' }).id, plan.id);
   f.restart(); assert.equal(f.store.listWorkspaceRecords({ kind: 'plan' }).length, 1);

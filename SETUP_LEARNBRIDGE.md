@@ -48,6 +48,8 @@ For example, Productivity can quote only your explicitly selected saved records 
 
 The broader personal/cloud onboarding, live institution login, automatic profile synthesis and autonomous execution below remain staged contracts; use the setup guide to distinguish current operations from future ones.
 
+Start with **Get started** in the paired local dashboard. Its purpose/category/record selectors inspect existing saved metadata and show the next steps to Profile, Sources, Courses and Agent review. Save a coverage report only after reviewing the exact selection and limitations. That report grants no sharing, confirms no profile fact and tests no host login or model turn. Student imports, reviewed profile statements and sharing remain separate steps. See the [implemented onboarding contract](docs/design/implementation/GUIDED_ONBOARDING.md); the broader playbook below still contains future cloud/discovery work.
+
 ### Diagnose and plan
 
 Detect platform, supported runtime, installation root, existing agent/client versions, browser availability and optional artifact processors. Inspect explicit configuration files only as necessary for reviewed merges; never discover authentication by searching secret stores. Present install/config changes and supported modes. Choose local data storage outside the repository. Basic setup must not require the owner to create Supabase/Composio projects for every student.

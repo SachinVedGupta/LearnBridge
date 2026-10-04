@@ -10,13 +10,13 @@ let hostPoll;
 Object.assign(state, { profiles: [], snapshots: [], plans: [], runs: [], profileContextPreview: null, today: null });
 const extensionUIs = new Map();
 async function loadExtension(page) {
-  if (!['career', 'learning', 'life', 'writing', 'research', 'productivity'].includes(page)) return;
+  if (!['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding'].includes(page)) return;
   const nonce = state.nonce;
   if (!extensionUIs.has(page)) {
     const module = await import(`/${page}.js`);
     if (!state.sessionReady || state.nonce !== nonce) return;
-    const mount = { career: module.mountCareerUI, learning: module.mountLearningUI, life: module.mountLifeUI, writing: module.mountWritingUI, research: module.mountResearchUI, productivity: module.mountProductivityUI }[page];
-    extensionUIs.set(page, mount({ root: $(`${page}-workspace`), request, element, busy, confirmAction, message }));
+    const mount = { career: module.mountCareerUI, learning: module.mountLearningUI, life: module.mountLifeUI, writing: module.mountWritingUI, research: module.mountResearchUI, productivity: module.mountProductivityUI, onboarding: module.mountOnboardingUI }[page];
+    if (!extensionUIs.has(page)) extensionUIs.set(page, mount({ root: $(`${page}-workspace`), request, element, busy, confirmAction, message, navigate }));
   }
   await extensionUIs.get(page).refresh();
 }
@@ -193,7 +193,7 @@ async function openWorkspace(session) {
 }
 
 function navigate(page) {
-  if (!['today', 'notes', 'sources', 'agents', 'setup', 'courses', 'planning', 'profile', 'career', 'learning', 'life', 'writing', 'research', 'productivity'].includes(page)) return;
+  if (!['today', 'notes', 'sources', 'agents', 'setup', 'courses', 'planning', 'profile', 'career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding'].includes(page)) return;
   state.page = page;
   for (const section of document.querySelectorAll('.page')) section.hidden = section.id !== `page-${page}`;
   for (const button of document.querySelectorAll('.nav-item')) {
@@ -204,7 +204,7 @@ function navigate(page) {
   const refresh = { today: loadTasks, notes: loadDocuments, courses: loadCourses, planning: loadPlanning, profile: loadProfile,
     agents: async () => { await Promise.all([loadTasks(), loadDocuments(), loadSources(), loadAgentReview()]); renderGrantSelection(); } }[page];
   if (refresh) refresh().catch(error => message('global-message', error.message, true));
-  if (['career', 'learning', 'life', 'writing', 'research', 'productivity'].includes(page)) loadExtension(page).catch(error => message('global-message', error.message, true));
+  if (['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding'].includes(page)) loadExtension(page).catch(error => message('global-message', error.message, true));
 }
 
 async function loadTasks() {

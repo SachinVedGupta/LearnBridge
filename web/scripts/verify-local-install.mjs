@@ -34,6 +34,7 @@ const ALLOWLIST = Object.freeze([
   'web/apps/local-runtime/src/writing-routes.mjs', 'web/apps/local-runtime/src/research-service.mjs',
   'web/apps/local-runtime/src/research-routes.mjs', 'web/apps/local-runtime/src/productivity-service.mjs',
   'web/apps/local-runtime/src/productivity-routes.mjs',
+  'web/apps/local-runtime/src/onboarding.mjs', 'web/apps/local-runtime/src/onboarding-routes.mjs',
   'web/packages/local-sources/src/index.mjs',
   'web/packages/local-sources/src/pdf-native.mjs', 'web/packages/local-sources/src/pdf-text.swift',
   'web/packages/local-sources/src/office-native.mjs', 'web/packages/local-sources/src/office-text.py',
@@ -45,6 +46,7 @@ const ALLOWLIST = Object.freeze([
   'web/apps/local/public/career.js', 'web/apps/local/public/learning.js',
   'web/apps/local/public/life.js', 'web/apps/local/public/writing.js',
   'web/apps/local/public/research.js', 'web/apps/local/public/productivity.js',
+  'web/apps/local/public/onboarding.js',
 ]);
 const PREFIX = 'learnbridge-clean-install-fixture-';
 const SOURCE_ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -214,10 +216,10 @@ async function main() {
 
   await phase('FI03_BUILD_STATIC_DASHBOARD', async () => {
     await child(process.execPath, [join(copiedWeb, 'apps/local/build.mjs')], { cwd: checkout });
-    for (const name of ['index.html', 'app.js', 'styles.css', 'career.js', 'learning.js', 'life.js', 'writing.js', 'research.js', 'productivity.js']) {
+    for (const name of ['index.html', 'app.js', 'styles.css', 'career.js', 'learning.js', 'life.js', 'writing.js', 'research.js', 'productivity.js', 'onboarding.js']) {
       assert.equal(digest(await readFile(join(copiedWeb, 'apps/local/dist', name))), digest(await readFile(join(copiedWeb, 'apps/local/public', name))));
     }
-    assert.deepEqual(await inventory(join(copiedWeb, 'apps/local/dist')), ['app.js', 'career.js', 'index.html', 'learning.js', 'life.js', 'productivity.js', 'research.js', 'styles.css', 'writing.js']);
+    assert.deepEqual(await inventory(join(copiedWeb, 'apps/local/dist')), ['app.js', 'career.js', 'index.html', 'learning.js', 'life.js', 'onboarding.js', 'productivity.js', 'research.js', 'styles.css', 'writing.js']);
   });
 
   const cli = join(copiedWeb, 'apps/local-runtime/src/cli.mjs');
@@ -294,7 +296,7 @@ async function main() {
   });
   report.observed = { tasks: 1, documents: 1, document_content_sha256: saved.content_sha256,
     exact_records_survive_new_process: true, exact_records_survive_fresh_root_restore: true,
-    static_assets_built_and_hash_matched: 9 };
+    static_assets_built_and_hash_matched: 10 };
   report.status = 'PASS';
 }
 
