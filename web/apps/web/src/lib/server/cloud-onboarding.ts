@@ -30,7 +30,9 @@ export function hostedCloudOnboarding(userId: string) {
       const contract = CLOUD_TOOL_CONTRACTS[choice.provider];
       if (![contract.search, contract.read].includes(slug)) throw new AppError('This tool is outside the selected read-only import.', 403);
       const result = await client.tools.execute(slug, { userId: owner, connectedAccountId: choice.account_id, arguments: args, version: contract.version, allowTracing: false }, { signal });
-      if (result.error || result.successful === false) throw new AppError('The selected account could not return this item. Check access or reconnect.', 502);
+      if (result.error || result.successful === false) throw new AppError(choice.provider === 'googledocs' && slug === contract.search
+        ? 'Google Docs metadata search could not finish. It needs separate Google Drive search permission. Try one exact Docs link, or review permissions and reconnect.'
+        : 'The selected account could not return this item. Check access or reconnect.', 502);
       return result.data;
     },
   };
@@ -54,7 +56,7 @@ export function cloudOperationError(error: unknown) {
     AUTH_REQUIRED: ['Sign in to your own LearnBridge account.', 401],
     CONSENT_REQUIRED: ['This account or reviewed selection is no longer available. Refresh and select it again.', 403],
     SCOPE_DENIED: ['This source is outside the selected read-only import.', 403],
-    INVALID_INPUT: ['Choose an active account, a specific search and up to three valid items.', 400],
+    INVALID_INPUT: ['Choose an active account, a specific search or one canonical Google Docs link, and a valid academic policy.', 400],
     BUDGET_EXCEEDED: ['The selected response exceeds the import limit. Choose a smaller document or a manual excerpt.', 413],
     VERSION_MISMATCH: ['The provider tool schema or reviewed selection changed. Refresh before continuing.', 409],
     CANCELLED: ['The selected-source operation was cancelled. No bundle was prepared.', 409],

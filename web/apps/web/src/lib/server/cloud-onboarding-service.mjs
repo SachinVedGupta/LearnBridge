@@ -11,6 +11,14 @@ const fail = (code = 'INVALID_INPUT') => { throw new LearnBridgeError(code); };
 const sha = text => createHash('sha256').update(text).digest('hex');
 const stamp = value => { if (value === undefined || value === null) return null; if (typeof value !== 'string' || !Number.isFinite(Date.parse(value))) fail('PROVIDER_FAILURE'); return new Date(value).toISOString(); };
 function provider(value) { if (!CLOUD_PROVIDERS.includes(value)) fail(); return value; }
+function academicPolicy(value) { if (!['unrestricted', 'learning_support', 'graded_restricted'].includes(value)) fail(); return value; }
+function exactDocsLink(value) {
+  cloudText(value, 1000);
+  // Match the original string, never a normalized URL. No URL is fetched.
+  const match = /^https:\/\/docs\.google\.com\/document\/d\/([A-Za-z0-9_-]{10,200})\/edit$/.exec(value);
+  if (!match || match[0] !== value) fail();
+  return { id: cloudRecordId('googledocs', match[1]), url: value, modified_at: null };
+}
 function metadata(app, raw) {
   let id, title, modified_at;
   if (app === 'googledocs') { id = raw.id; title = raw.name; modified_at = stamp(raw.modified_time ?? raw.modifiedTime); }
@@ -60,6 +68,26 @@ export function createHostedCloudOnboarding({ transport, secret, origin, userId,
     }
     await authorized(choice, signal); return { provider: choice.provider, schema_state: 'compatible', tool_version: contract.version, personal_content_read: false };
   }
+  async function readRecord(input, selected, signal, exactLink = false) {
+    await authorized(input, signal); const contract = CLOUD_TOOL_CONTRACTS[input.provider];
+    const args = input.provider === 'googledocs' ? { document_id: selected.id, include_tabs_content: true, include_tables: true, include_headers: true, include_footers: true, include_footnotes: true } : { page_id: selected.id, include_transcript: false };
+    const result = cloudCopy(await transport.execute(userId, input, contract.read, args, signal), 100000); active(signal); await authorized(input, signal);
+    const returnedId = input.provider === 'googledocs' ? result.document_id : result.id?.toLowerCase().replace(/^([a-f0-9]{8})([a-f0-9]{4})([a-f0-9]{4})([a-f0-9]{4})([a-f0-9]{12})$/, '$1-$2-$3-$4-$5');
+    if (returnedId !== selected.id) fail('PROVIDER_FAILURE');
+    const text = input.provider === 'googledocs' ? result.plain_text : result.markdown; cloudText(text, CLOUD_LIMITS.textBytes, true);
+    const title = input.provider === 'googledocs' ? cloudText(result.title, 500) : selected.title;
+    const limitations = ['Partial text snapshot; original visuals, layout and factual claims require review.', ...(exactLink
+      ? ['Exact document ID selected from the supplied link; no metadata search or account inventory was performed.', 'Source modification time is not reported; live freshness and a stable upstream revision are not checked.']
+      : ['Selected metadata modification time is source-reported; no stable upstream revision is proved.'])];
+    if (input.provider === 'googledocs') { if (result.warnings !== undefined && (!Array.isArray(result.warnings) || result.warnings.length > 20)) fail('PROVIDER_FAILURE'); for (const reason of (result.warnings || []).slice(0, 4)) limitations.push(cloudText(reason, 500)); }
+    else { if (result.object !== 'page_markdown' || typeof result.truncated !== 'boolean' || !Array.isArray(result.unknown_block_ids) || result.unknown_block_ids.length > 200) fail('PROVIDER_FAILURE'); if (result.truncated) limitations.push('Provider reports truncated page content.'); if (result.unknown_block_ids.length) limitations.push('Provider reports blocks that could not be rendered.'); limitations.push('Transcripts, linked subpages and referenced files are not fetched.'); }
+    return { ...selected, title, text, sha256: sha(text), coverage: 'partial_text', limitations };
+  }
+  function reviewedPreview(input, records, exactLink = false) {
+    const bundle = createCloudBundle({ format: 'learnbridge-selected-cloud-export', schema_version: 1, origin, owner: { student_id: userId, verification: 'supabase_session_at_fetch' }, provider: input.provider, account_id: input.account_id, academic_policy: input.academic_policy,
+      retrieved_at: new Date(clock()).toISOString(), records, limitations: ['Only explicitly selected returned text is exported.', 'Account ownership was checked against the signed-in hosted student at fetch; transfer files do not authenticate the local student.', 'No model call, cloud document write or sharing grant occurred.', ...(exactLink ? ['The exact Docs link selected one document ID; no link URL, linked document or search result was fetched.'] : [])] });
+    return { bundle, review_hash: bundle.bundle_hash, preview_token: seal('reviewed_bundle', bundle), expires_at: new Date(clock() + 300000).toISOString(), sharing: 'not_granted' };
+  }
   return {
     accounts,
     async probe(raw, signal) { const input = cloudCopy(raw, 4096); cloudObject(input, ['provider', 'account_id']); return probe(input, signal); },
@@ -74,24 +102,18 @@ export function createHostedCloudOnboarding({ transport, secret, origin, userId,
     },
     async preview(raw, signal) {
       const input = cloudCopy(raw, 20000); cloudObject(input, ['provider', 'account_id', 'selection_tokens', 'academic_policy']);
-      if (!['unrestricted', 'learning_support', 'graded_restricted'].includes(input.academic_policy) || !Array.isArray(input.selection_tokens) || !input.selection_tokens.length || input.selection_tokens.length > CLOUD_LIMITS.records) fail();
+      academicPolicy(input.academic_policy); if (!Array.isArray(input.selection_tokens) || !input.selection_tokens.length || input.selection_tokens.length > CLOUD_LIMITS.records) fail();
       const selections = input.selection_tokens.map(token => open('selected_record', token)); if (new Set(selections.map(item => item.record.id)).size !== selections.length || selections.some(item => item.provider !== input.provider || item.account_id !== input.account_id)) fail('CONSENT_REQUIRED');
-      await probe(input, signal); const contract = CLOUD_TOOL_CONTRACTS[input.provider], records = [];
-      for (const selected of selections) {
-        await authorized(input, signal); const args = input.provider === 'googledocs' ? { document_id: selected.record.id, include_tabs_content: true, include_tables: true, include_headers: true, include_footers: true, include_footnotes: true } : { page_id: selected.record.id, include_transcript: false };
-        const result = cloudCopy(await transport.execute(userId, input, contract.read, args, signal), 100000); active(signal); await authorized(input, signal);
-        const returnedId = input.provider === 'googledocs' ? result.document_id : result.id?.toLowerCase().replace(/^([a-f0-9]{8})([a-f0-9]{4})([a-f0-9]{4})([a-f0-9]{4})([a-f0-9]{12})$/, '$1-$2-$3-$4-$5');
-        if (returnedId !== selected.record.id) fail('PROVIDER_FAILURE');
-        const text = input.provider === 'googledocs' ? result.plain_text : result.markdown; cloudText(text, CLOUD_LIMITS.textBytes, true);
-        const title = input.provider === 'googledocs' ? cloudText(result.title, 500) : selected.record.title;
-        const limitations = ['Partial text snapshot; original visuals, layout and factual claims require review.', 'Selected metadata modification time is source-reported; no stable upstream revision is proved.'];
-        if (input.provider === 'googledocs') { if (result.warnings !== undefined && (!Array.isArray(result.warnings) || result.warnings.length > 20)) fail('PROVIDER_FAILURE'); for (const reason of (result.warnings || []).slice(0, 4)) limitations.push(cloudText(reason, 500)); }
-        else { if (result.object !== 'page_markdown' || typeof result.truncated !== 'boolean' || !Array.isArray(result.unknown_block_ids) || result.unknown_block_ids.length > 200) fail('PROVIDER_FAILURE'); if (result.truncated) limitations.push('Provider reports truncated page content.'); if (result.unknown_block_ids.length) limitations.push('Provider reports blocks that could not be rendered.'); limitations.push('Transcripts, linked subpages and referenced files are not fetched.'); }
-        records.push({ ...selected.record, title, text, sha256: sha(text), coverage: 'partial_text', limitations });
-      }
-      const bundle = createCloudBundle({ format: 'learnbridge-selected-cloud-export', schema_version: 1, origin, owner: { student_id: userId, verification: 'supabase_session_at_fetch' }, provider: input.provider, account_id: input.account_id, academic_policy: input.academic_policy,
-        retrieved_at: new Date(clock()).toISOString(), records, limitations: ['Only explicitly selected returned text is exported.', 'Account ownership was checked against the signed-in hosted student at fetch; transfer files do not authenticate the local student.', 'No model call, cloud document write or sharing grant occurred.'] });
-      return { bundle, review_hash: bundle.bundle_hash, preview_token: seal('reviewed_bundle', bundle), expires_at: new Date(clock() + 300000).toISOString(), sharing: 'not_granted' };
+      await probe(input, signal); const records = [];
+      for (const selected of selections) records.push(await readRecord(input, selected.record, signal));
+      return reviewedPreview(input, records);
+    },
+    async previewLink(raw, signal) {
+      const input = cloudCopy(raw, 4096); cloudObject(input, ['provider', 'account_id', 'url', 'academic_policy']);
+      if (input.provider !== 'googledocs') fail(); academicPolicy(input.academic_policy);
+      const record = exactDocsLink(input.url); cloudAccount(input.account_id);
+      await probe(input, signal);
+      return reviewedPreview(input, [await readRecord(input, record, signal, true)], true);
     },
     async export(raw, signal) {
       const input = cloudCopy(raw, 180000); cloudObject(input, ['preview_token', 'review_hash', 'confirm']); if (input.confirm !== true) fail('CONSENT_REQUIRED');
