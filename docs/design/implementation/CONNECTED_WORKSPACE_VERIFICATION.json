@@ -1,0 +1,486 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-04T08:07:27.526Z",
+  "base_commit": "45deb913e1128c8a08347b74d7f6ff2264e7d677",
+  "status": "PASS_IMPLEMENTED_SLICE_LIVE_GATES_SEPARATE",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v22.23.2"
+  },
+  "source_files": [
+    {
+      "path": "supabase/migrations/202610040005_remote_reviewed_results.sql",
+      "sha256": "c889f134066a00b115a9e83f8a9ffdcb9ede28d308566b452e13faed47bd3e9d"
+    },
+    {
+      "path": "web/apps/local-runtime/src/cloud-onboarding-routes.mjs",
+      "sha256": "eee94f21155b5afe96530415f99a5894826c83b0ee21d268260382e61135e158"
+    },
+    {
+      "path": "web/apps/local-runtime/src/cloud-onboarding.mjs",
+      "sha256": "d32a9f6a5954eebf25d7d758d46986b316a40a977525034b89991210deb7104a"
+    },
+    {
+      "path": "web/apps/local-runtime/src/codex-adapter.mjs",
+      "sha256": "bd4e2383a82b5dd6d3f7dd2ad96beabe0fea62fe82bf6866f5c25d49861204d3"
+    },
+    {
+      "path": "web/apps/local-runtime/src/codex-profile.mjs",
+      "sha256": "241c430dfb53f95019591c078479d3f4f2e4badb0558d75bbb70dc31b88037ab"
+    },
+    {
+      "path": "web/apps/local-runtime/src/d2l-browser.mjs",
+      "sha256": "59653f1b480582a6bf5536c6864880cf17ce1b94a089679a064a87aca81cbd11"
+    },
+    {
+      "path": "web/apps/local-runtime/src/d2l-routes.mjs",
+      "sha256": "47077c37479e93b0f2daa7b21a65facdf6173249a13da9c85b0f5c59c6b46695"
+    },
+    {
+      "path": "web/apps/local-runtime/src/d2l-service.mjs",
+      "sha256": "546cf17f37d0f8c1a04b119649dfb0670509c13e2626a8ea4b887271750c86a9"
+    },
+    {
+      "path": "web/apps/local-runtime/src/host-turns.mjs",
+      "sha256": "b507cbfe707805248b02c0b2d9acab0d070be931f6ee9bcebf710f9f0e6289da"
+    },
+    {
+      "path": "web/apps/local-runtime/src/ipc.mjs",
+      "sha256": "279f9db5e47bd6fb9b8f1f7f4b766fca1717ca344e364ab6d3560ba2553db951"
+    },
+    {
+      "path": "web/apps/local-runtime/src/mcp.mjs",
+      "sha256": "96c58ea6940a6be32f9d4a1ad6401c0a4cd3593fd0108ee733d1d145d06e5380"
+    },
+    {
+      "path": "web/apps/local-runtime/src/remote-results.mjs",
+      "sha256": "3c5b0414e5b597f0e5ef2f6b940911f69dcf95ab5bcdb42aa8c3c68801a5c0c0"
+    },
+    {
+      "path": "web/apps/local-runtime/src/remote-routes.mjs",
+      "sha256": "01f15d584b2f8dda69a2038fb0d51c4afda1dab16c7ae9b0eba55365f9570b30"
+    },
+    {
+      "path": "web/apps/local-runtime/src/server.mjs",
+      "sha256": "fe217c29a30cf5070f5f0567f6d5301d2250aff3062a319ca0cc7a8aac4696d9"
+    },
+    {
+      "path": "web/apps/local/build.mjs",
+      "sha256": "296c706354c58e684331a2f36c685fc4a897a33ba119d6076d1fd2bf5c2a9d9f"
+    },
+    {
+      "path": "web/apps/local/public/ai.js",
+      "sha256": "8d3434fb9c38f6be6944baecfd43f7087a563a78202aaa67315cd18eb69e6f1b"
+    },
+    {
+      "path": "web/apps/local/public/app.js",
+      "sha256": "37fd2449637aa4756d6ab6336ab25f2d6974a4d86d0c93f7dc99ef51bb3a0ad9"
+    },
+    {
+      "path": "web/apps/local/public/cloud-onboarding.js",
+      "sha256": "e14129b1b8503dd29fd9cabcb66e61cb5e5ce83c408cccfca48a20a8e4918290"
+    },
+    {
+      "path": "web/apps/local/public/d2l.js",
+      "sha256": "82440237086e8b9fe9021d7aae213cca65aa0f5820843f5b6b24c297ab0bb5f7"
+    },
+    {
+      "path": "web/apps/local/public/index.html",
+      "sha256": "f2b90676de281b38b01297b1d1ab2dd7f1fc2e77a09f090b49b59990b6ed1589"
+    },
+    {
+      "path": "web/apps/local/public/remote.js",
+      "sha256": "d24b50663318264da04bc77f8306028e9d58351191a5040a782ff44ad28750f7"
+    },
+    {
+      "path": "web/apps/web/src/app/api/cloud-onboarding/[action]/route.ts",
+      "sha256": "d6420839fd22b1344b187e6d18b6f533e7d6bf297c5341b5e4e19cb0263478cb"
+    },
+    {
+      "path": "web/apps/web/src/app/api/remote/v1/results/device/route.ts",
+      "sha256": "9bb5cedb238d4b926a56ac061002b7f44b8d195db2abef51bd033db3da01aa04"
+    },
+    {
+      "path": "web/apps/web/src/app/api/remote/v1/results/route.ts",
+      "sha256": "87bb906d73b2b01a0b3fdc7ff0f82fe1ee0d3f7ff190182b6a341cde21c2c2e8"
+    },
+    {
+      "path": "web/apps/web/src/app/layout.tsx",
+      "sha256": "5152b68682e8abd91c7a49a036912e6d7807da587fa638c045a2c12a52e2ed65"
+    },
+    {
+      "path": "web/apps/web/src/app/onboarding/cloud/cloud-onboarding-client.tsx",
+      "sha256": "8e8a493cd54df780fd67fa79317070929460959482109fd6e3ba3eae2198aa2c"
+    },
+    {
+      "path": "web/apps/web/src/app/onboarding/cloud/page.tsx",
+      "sha256": "db20bcd4f6fe93859bd766e383b7e8298012bc2209d07866a0dd89a2f9eca126"
+    },
+    {
+      "path": "web/apps/web/src/app/remote/RemoteCompanion.tsx",
+      "sha256": "9a70d70a1edcd5e48450c3e0d3b4b7cf5d3c2ca581722f771877cd009644973b"
+    },
+    {
+      "path": "web/apps/web/src/app/remote/page.tsx",
+      "sha256": "1d7257374005694523b26db37bb80f4bcda652f03ff426cb78006fd972acfa97"
+    },
+    {
+      "path": "web/apps/web/src/app/remote/remote-phone-client.mjs",
+      "sha256": "d5a3bcf6eedfb3d845c8d0f1e97ef56e028af0e9909e2f7a6bba6892624ba542"
+    },
+    {
+      "path": "web/apps/web/src/app/setup/page.tsx",
+      "sha256": "d107472107798f29f52560f654b7aa0af5381f2bf5c22930012b471805780de4"
+    },
+    {
+      "path": "web/apps/web/src/lib/server/cloud-onboarding-service.mjs",
+      "sha256": "f6108144a5b76ed8921b56f2c3623ee43f4b175657ab93b8bc281b58890cc698"
+    },
+    {
+      "path": "web/apps/web/src/lib/server/cloud-onboarding.ts",
+      "sha256": "96d1a334635b610c4056237eba0db83af801dd70f79859e26976d2652da4528f"
+    },
+    {
+      "path": "web/apps/web/src/lib/server/remote-results.ts",
+      "sha256": "6807504086c022b304dfcf56caa7e40fdb818823f6d7dbc04c30fc3844387978"
+    },
+    {
+      "path": "web/packages/core/src/remote-results.mjs",
+      "sha256": "64a444b8cf5413b845579360b1b03a86f2c15212abe39056a164a67a398f7a92"
+    },
+    {
+      "path": "web/scripts/agent-mcp-grant-binding.test.mjs",
+      "sha256": "49dbd3aee206e065ec4b4e586f08e9c5f6d371d840e9fb29b13a93b346cc6a43"
+    },
+    {
+      "path": "web/scripts/cloud-onboarding-hosted.test.mjs",
+      "sha256": "b5ee69ff472d29b735e87fd0e2392d6103033b95ffdeccdb1d7f6b783d4199df"
+    },
+    {
+      "path": "web/scripts/cloud-onboarding-ui.test.mjs",
+      "sha256": "8836ca6290ca8aba44fab6ff947bb9ebe6d763d10b8afd0f869defb9f76e94b6"
+    },
+    {
+      "path": "web/scripts/fixtures/d2l-browser-fixture.mjs",
+      "sha256": "f93ef8aeb2d4b92d11e932c84abeb4be24da099352e96d419b4f3b3d0ea234b0"
+    },
+    {
+      "path": "web/scripts/fixtures/d2l-test-support.mjs",
+      "sha256": "0e5d08f2c8ddc0db80a3ce912969ce39c1b0cfbdbb083efa9d4f9530801c9b58"
+    },
+    {
+      "path": "web/scripts/fixtures/remote-result-fixture.mjs",
+      "sha256": "fe92ca4ad0296252c83bfee5458944b7a5f3a521c9853008088792c2c1b4672c"
+    },
+    {
+      "path": "web/scripts/local-cloud-onboarding-http.test.mjs",
+      "sha256": "b841ef89ea45c33bef2b719f613e9040006a1883a971df4b08b16556dab3325d"
+    },
+    {
+      "path": "web/scripts/local-cloud-onboarding-ui.test.mjs",
+      "sha256": "e150f5debea4c450343cd98893b5aa0793b533545501508ccdca87acabe05927"
+    },
+    {
+      "path": "web/scripts/local-cloud-onboarding.test.mjs",
+      "sha256": "42cbb029cda4c4faadc2252b9f0626c735674628ff8db7f52ae66c14728cf021"
+    },
+    {
+      "path": "web/scripts/local-codex-adapter.test.mjs",
+      "sha256": "90826e7ac15d141b2b4699affc48e5c205efbf80176264d27465215655714796"
+    },
+    {
+      "path": "web/scripts/local-codex-profile-review.test.mjs",
+      "sha256": "eb3914822539fd77ae02c9051adf286f37d90077c5c64ace2c173b069ee3c8ef"
+    },
+    {
+      "path": "web/scripts/local-codex-profile.test.mjs",
+      "sha256": "6fe53c0deaccfd9fef50183c2e8ee44a2517ff5b292997786c50cd8041627fee"
+    },
+    {
+      "path": "web/scripts/local-d2l-browser.test.mjs",
+      "sha256": "389ee9bc1f861d520f2d0f51914734a34f82e29e502f40f7b339d646407f2aa1"
+    },
+    {
+      "path": "web/scripts/local-d2l-http.test.mjs",
+      "sha256": "81accbb6478a270875e4bf25150830dab8544c6f47fd66a8d51cb3cf7378ffc8"
+    },
+    {
+      "path": "web/scripts/local-d2l-service.test.mjs",
+      "sha256": "185516f4af0c622773f71e38348013f2a15338619aeb8b18533339fa501379d2"
+    },
+    {
+      "path": "web/scripts/local-d2l-ui.test.mjs",
+      "sha256": "1f2fb5ae2ae4bd39ea47afd2a217a60bfc3cc978535c9fa1a88499280d8bd244"
+    },
+    {
+      "path": "web/scripts/local-onboarding-ui.test.mjs",
+      "sha256": "9528d7df0b047f7485c4ddf54a5f8c124c53f60bb5d5192b9a10a5ccd2fe3468"
+    },
+    {
+      "path": "web/scripts/local-remote-ui.test.mjs",
+      "sha256": "c421c289f51593c86f35f78d16fb85aa7654b0e566c1fc1e62d86acfd8ea4985"
+    },
+    {
+      "path": "web/scripts/remote-results-api.test.mjs",
+      "sha256": "db10bdd014c475fc77f0d5c2aa37148d45474a86215e5609977bb50a81d9f06d"
+    },
+    {
+      "path": "web/scripts/remote-results.test.mjs",
+      "sha256": "14ccf4c2d852228f500f60764eb0f22808ce2507c5debc4866df5a8bfd5a5b81"
+    },
+    {
+      "path": "web/scripts/verify-local-install.mjs",
+      "sha256": "a78808f28eee34e870cae96c99d909bb43ffb7a6ee7b86cfe1eaed8304d7f7da"
+    },
+    {
+      "path": "web/scripts/verify-remote-results-sql.mjs",
+      "sha256": "8c3dffc1eaab55c46142d23aa13133f5106aded5a479ae2bbaf9bf3a6e521b7c"
+    }
+  ],
+  "automated": {
+    "command": "cd web && node --test --test-concurrency=2 scripts/*.test.mjs",
+    "tests": 756,
+    "passed": 756,
+    "failed": 0,
+    "skipped": 0,
+    "duration_ms": 102186.319583,
+    "log_sha256": "ced16b2575297f66cdfcc411242e603a0b8a1379894c78c3ae5245286a3f211d",
+    "initial_combined_run": {
+      "tests": 755,
+      "passed": 753,
+      "failed": 2,
+      "notes": [
+        "Current-page lazy-loader test harness was corrected and meaningful navigation-away coverage added.",
+        "Native PDF extraction hit its fixed time budget while the hosted build ran concurrently; final full suite ran with two workers after the build, without expanding product budgets."
+      ]
+    }
+  },
+  "builds": {
+    "local": {
+      "static_assets": 14,
+      "status": "PASS"
+    },
+    "hosted": {
+      "command": "cd web/apps/web && npm run build",
+      "status": "PASS",
+      "log_sha256": "6598265bc0f8e577e3eb8cec90c905e9177b95db844d42cde6cac9d0c61bea80"
+    }
+  },
+  "clean_install": {
+    "schema_version": 1,
+    "suite": "local-clean-copy-offline-install-v1",
+    "evidence_type": "synthetic_fixture",
+    "status": "PASS",
+    "environment": {
+      "node": "v22.23.2",
+      "platform": "darwin",
+      "arch": "arm64",
+      "installed_driver": "13.0.3",
+      "sqlite": "3.53.4",
+      "child_node": "v22.23.2"
+    },
+    "scope": {
+      "copied_previous_node_modules": false,
+      "copied_environment_files": false,
+      "copied_personal_data": false,
+      "cloud_configuration_supplied": false,
+      "offline_cache_used": true,
+      "package_lifecycle_hooks_disabled": true
+    },
+    "phases": [
+      {
+        "id": "FI01_EXPLICIT_CLEAN_SOURCE_COPY",
+        "status": "PASS",
+        "duration_ms": 53
+      },
+      {
+        "id": "FI02_FRESH_LOCKED_OFFLINE_INSTALL",
+        "status": "PASS",
+        "duration_ms": 9229
+      },
+      {
+        "id": "FI03_BUILD_STATIC_DASHBOARD",
+        "status": "PASS",
+        "duration_ms": 62
+      },
+      {
+        "id": "FI04_CLOUD_FREE_SETUP_AND_DOCTOR",
+        "status": "PASS",
+        "duration_ms": 311
+      },
+      {
+        "id": "FI05_NEW_PROCESS_CREATES_SYNTHETIC_RECORDS",
+        "status": "PASS",
+        "duration_ms": 104
+      },
+      {
+        "id": "FI06_FRESH_PROCESS_READS_EXACT_SAVED_RECORDS",
+        "status": "PASS",
+        "duration_ms": 112
+      },
+      {
+        "id": "FI07_CLI_BACKUP_AND_FRESH_ROOT_RESTORE",
+        "status": "PASS",
+        "duration_ms": 282
+      },
+      {
+        "id": "FI08_INDEPENDENT_PROCESS_VERIFIES_RESTORED_RECORDS",
+        "status": "PASS",
+        "duration_ms": 102
+      },
+      {
+        "id": "FI09_FRESH_OFFICIAL_SDK_STDIO_DISCOVERY",
+        "status": "PASS",
+        "duration_ms": 508
+      }
+    ],
+    "limitations": [
+      "A clean disposable source copy installed from the existing offline npm cache; not a new computer or an online-download test.",
+      "Only this recorded OS, architecture and Node runtime were exercised.",
+      "Task/note persistence, static build, CLI lifecycle and actual SDK stdio discovery; real hosts, provider OAuth and personal onboarding are separate gates.",
+      "No fresh Python environment is copied or installed; selected-file acquisition requires a suitable project .venv and is verified separately."
+    ],
+    "source": {
+      "file_count": 86,
+      "source_digest": "769d0a24e49e08d49f7a4d773c3f96644e1e67fc644997ba69087d1c85bb6bcb",
+      "lock_sha256": "c5976bc94f4b80dee27d86f80f1520145594ed6880f539874015f9bccd4a1c74"
+    },
+    "observed": {
+      "tasks": 1,
+      "documents": 1,
+      "document_content_sha256": "6b3753692a884de653b1ad19639c7a1b4912c63fb3db43d13d610e742dbbb3d2",
+      "exact_records_survive_new_process": true,
+      "exact_records_survive_fresh_root_restore": true,
+      "static_assets_built_and_hash_matched": 14
+    },
+    "fixture_cleanup": true
+  },
+  "native_codex": {
+    "schema_version": 1,
+    "evidence_type": "real_official_codex_synthetic_source",
+    "verified_at": "2026-10-04T07:59:58.524Z",
+    "host_version": "0.154.0",
+    "account_mode": "official_chatgpt_managed",
+    "completed_turn_id": "975c5617-d8ab-41b3-81f9-99aa4cafccce",
+    "answer_sha256": "0fb5ca4f04d990d102fea72e8ef53bab1d89a2ed8177ca2a7eaedb788ac77b80",
+    "source": {
+      "id": "7fa29096-0693-4a5c-a37b-ef406edc63bc",
+      "revision": 1,
+      "sha256": "488d61c4f4c6f890cbac055c17832f2d2f27e6599d425ded84ec9558b8414818"
+    },
+    "tool_receipts": [
+      {
+        "tool": "learnbridge_status",
+        "status": "completed",
+        "failed": false,
+        "result_hash": "88c2ec37330a74c8dd755a3f08c12280071bd91a7c98649b72815e1d8f44da46"
+      },
+      {
+        "tool": "learnbridge_context",
+        "status": "completed",
+        "failed": false,
+        "result_hash": "ca0c113df994972e8409d3f0e69ac0e13c0c886371fdc039679ed2fac100bec2"
+      },
+      {
+        "tool": "learnbridge_propose_task",
+        "status": "completed",
+        "failed": false,
+        "result_hash": "fe97a918e4453617d4a95c7189d045589d9411eb69dd93e425f4d3ce6769fca6"
+      },
+      {
+        "tool": "learnbridge_propose_document",
+        "status": "completed",
+        "failed": false,
+        "result_hash": "60f0c620f550a4f2673161a99dc3f6846c1d06f6d1247625299c14e591bf3aee"
+      }
+    ],
+    "persistence": {
+      "accepted_tasks": 0,
+      "notes": 1,
+      "pending_task_proposals": 2,
+      "pending_writing_proposals": 2,
+      "original_unchanged": true,
+      "exact_records_survive_fresh_root_backup_restore": true,
+      "backup_contains_only_sqlite_files_and_manifest": true
+    },
+    "earlier_attempts": [
+      {
+        "state": "failed",
+        "error_code": "BUDGET_EXCEEDED",
+        "created_at": "2026-10-04T07:16:13.461Z"
+      },
+      {
+        "state": "completed",
+        "error_code": null,
+        "created_at": "2026-10-04T07:01:42.447Z"
+      },
+      {
+        "state": "completed",
+        "error_code": null,
+        "created_at": "2026-10-04T06:46:53.537Z"
+      },
+      {
+        "state": "failed",
+        "error_code": "VERSION_MISMATCH",
+        "created_at": "2026-10-04T06:35:37.566Z"
+      }
+    ],
+    "limitations": [
+      "Only synthetic recursion text was shared with the official Codex model service.",
+      "This confirms the current macOS and pinned Codex host, not Claude execution or every student device.",
+      "No proposals accepted, external writes, course reads or production phone pairing."
+    ]
+  },
+  "legacy_python": {
+    "status": "PASS",
+    "syntax_files": 14,
+    "streamlit_startup": true,
+    "unauthenticated_gate": true,
+    "invalid_callback_gate": true,
+    "missing_oauth_config": true,
+    "provider_mutations": 0,
+    "scope": "Project .venv synthetic AppTest and syntax checks; no real legacy provider login."
+  },
+  "phone_sql": {
+    "receipt": "../../../artifacts/remote-results-sql-verification.json",
+    "sha256": "f0193b980e912eeff01ad48ecd73fccf3634c3ed67e6aca00b81021c10a2385b",
+    "checks": 36,
+    "scope": "Disposable single-session PostgreSQL/WASM synthetic auth; no production migration or concurrency proof."
+  },
+  "live_gates": {
+    "codex": {
+      "status": "PASS_THIS_HOST_AND_ACCOUNT",
+      "synthetic_source_only": true
+    },
+    "d2l": {
+      "status": "REQUIRES_STUDENT_SSO_MFA_AND_SELECTED_COURSE",
+      "fixed_profile": "McMaster Avenue",
+      "actual_owned_chrome_launch": true,
+      "writes": 0
+    },
+    "cloud": {
+      "status": "PENDING_PRODUCTION_DEPLOYMENT_AND_LIVE_TRANSFER",
+      "schema_only_probe": true,
+      "providers": [
+        "googledocs",
+        "notion"
+      ]
+    },
+    "phone": {
+      "status": "IMPLEMENTED_DISABLED",
+      "production_migration_applied": false,
+      "live_sessions_verified": false,
+      "multi_worker_concurrency_verified": false,
+      "purge_scheduler_verified": false,
+      "physical_phone_round_trip": false
+    }
+  },
+  "limitations": [
+    "756 passes include synthetic adapters; these do not prove every account, institution or device.",
+    "Runtime-issued stable MCP calls around the structured model turn are actual RPCs; not a claim of autonomous model-selected RPCs.",
+    "No embedded Claude execution, account-wide scanning, automatic profile confirmation or external writes implemented by this increment.",
+    "No dependency additions, shared native credential copying or phone/adoption release flags enabled.",
+    "Deployment and a live selected cloud transfer will have their own subsequent receipt."
+  ]
+}

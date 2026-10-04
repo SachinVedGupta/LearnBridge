@@ -67,7 +67,7 @@ These module records are not automatically exposed as new MCP tools. Where a mod
 
 For a useful first flow, save one synthetic course note, confirm a purpose-limited learning preference, and preview both selections locally. Export only the chosen context. Grant the exact resulting note to one host for a short time/byte budget, ask for one study step or labelled draft, then read back the pending proposal. Verify zero accepted changes before human review and exactly one afterward. Revoke the grant and prove a subsequent context read is denied.
 
-An embedded Codex invocation and protocol adapter are under separate host verification. Do not turn a configuration/protocol fixture into a claim that dashboard model execution, native session resume or Claude execution is enabled. The installed runtime's capability result and a measured real-host receipt control that claim. External project MCP use remains the established host path.
+For embedded dashboard execution, open **Local AI** and follow [the Codex flow](design/implementation/LOCAL_CODEX_EXECUTION.md). It requires official CLI 0.154.0 and a separate normal ChatGPT-managed sign-in. Then select a Codex grant in **Agent & review** and confirm the exact question. The runtime prepares only that grant's context through MCP; a native model answer can produce bounded pending task/document proposals through the same bridge. Real synthetic tutor/task/writing turns passed on the verified Mac. Check each student's account and version separately; native resume and embedded Claude are unavailable. External project MCP remains supported without copying global host configuration.
 
 ## Avenue / D2L
 
@@ -77,7 +77,13 @@ Start with [the academic export template](../web/packages/local-academic/example
 
 The independent academic package can operate over an injected official MCP client, allowing only supported read schemas for explicitly selected courses. It rejects unknown/write/file-download/token tools, expired sessions, scope mismatches and oversized results. The actual upstream Avenue revision is audited in [AVENUE_ADAPTER_AUDIT.md](design/implementation/AVENUE_ADAPTER_AUDIT.md); unchanged upstream execution is not enabled because of logging, broad transport and file-writing concerns.
 
-Live D2L is **not installed by this slice**. It needs a reviewed institution profile, sanitized local transport, actual student SSO/MFA and verified session binding. A fixture session is not a real university login. Do not paste credentials into an export, copy another person's university session, launch arbitrary model-supplied server commands or upload tokens to the website. The planned supervised sign-in runner and credential vault remain future work.
+**School connection** now supplies a fixed McMaster institution profile and temporary visible Chrome transport. Follow [local D2L setup](design/implementation/LOCAL_D2L_BROWSER.md): open the owned school browser, finish SSO/MFA yourself, verify identity, enter exact course numbers and choose data categories. Preview the read and review the academic import. Real school sign-in/course access remains a per-account check, separate from 36 automated transport/service/HTTP/UI cases. Disconnect closes the browser and deletes its owned temporary profile. Never paste university credentials, copy normal browser cookies or upload tokens to the website. Other institutions are not implemented.
+
+## Selected cloud sources and phone access
+
+On the hosted website, open **Import cloud sources**. Choose your own Google Docs/Notion account, search a specific phrase, select up to three items, read their full returned text and review the transfer file. In local **Cloud sources**, select that JSON, confirm its reported account is yours and review the private note import. Saved text is a manual snapshot, not ongoing sync. Importing does not confirm profile facts or grant model processing. Follow [the selected-cloud contract](design/implementation/SELECTED_CLOUD_ONBOARDING.md).
+
+The phone companion has implemented pairing, limited local tutor dispatch and separately reviewed text delivery. It is disabled pending live database/session, retention and device checks. Setup must not enable it automatically. Its remote credentials are transient; the laptop polls outbound HTTPS and must remain awake. A generated answer first becomes a pending local writing proposal, then requires local exact acceptance and separate result consent before upload. The phone requests a fresh one-use delivery ticket; changes/revocation prevent future delivery, but an already displayed copy cannot be recalled.
 
 ## Agent-verifiable checks
 
