@@ -24,21 +24,25 @@ const walk = value => !value || typeof value !== 'object' ? [] : Array.isArray(v
 function harness(t, mode = 'normal', selected = bundle()) {
   const preview = { bundle: selected, review_hash: selected.bundle_hash, preview_token: 'synthetic_opaque_token', expires_at: new Date(Date.now() + 300000).toISOString() };
   const values = [[], '', '', 'learning_support', [], new Set(), preview, true, '', '', ''], hooks = [], calls = [], downloads = [], blobs = [], fetchStarted = deferred(), releaseFetch = deferred(), hashStarted = deferred(), releaseHash = deferred(); let index = 0, digests = 0;
-  const react = { useState(initial) { const own = index++; if (!(own in values)) values[own] = initial; return [values[own], value => { values[own] = typeof value === 'function' ? value(values[own]) : value; }]; }, useRef(initial) { const ref = { current: initial }; hooks.push(ref); return ref; }, useEffect() {} };
+  const react = { useState(initial) { const own = index++; if (!(own in values)) values[own] = initial; return [values[own], value => { values[own] = typeof value === 'function' ? value(values[own]) : value; }]; }, useRef(initial) { return hooks[0] ||= { current: initial }; }, useEffect() {} };
   const source = readFileSync(new URL('../apps/web/src/app/onboarding/cloud/cloud-onboarding-client.tsx', import.meta.url), 'utf8'), code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const module = { exports: {} }, jsx = (type, props) => ({ type, props });
   new Function('require', 'module', 'exports', code)(name => { if (name === 'react') return react; if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx }; throw Error(`Unexpected component dependency ${name}`); }, module, module.exports);
   const originals = Object.fromEntries(['window', 'document', 'fetch', 'crypto', 'setTimeout', 'clearTimeout'].map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
   const createURL = URL.createObjectURL, revokeURL = URL.revokeObjectURL;
-  Object.defineProperty(globalThis, 'window', { configurable: true, value: { confirm: () => true } });
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { confirm: () => assert.fail('Native browser confirmation must not be used.') } });
   Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement(tag) { assert.equal(tag, 'a'); const link = { click() { downloads.push({ href: link.href, filename: link.download }); } }; return link; } } });
   Object.defineProperty(globalThis, 'fetch', { configurable: true, value: async (path, options) => { calls.push({ path, ...options }); fetchStarted.resolve(); if (mode === 'network') await releaseFetch.promise; const result = { bundle: structuredClone(selected), sharing: 'not_granted', filename: 'LearnBridge-selected-googledocs.json' }; if (mode === 'corrupted') result.bundle.records[0].text += ' changed'; return { ok: true, json: async () => result }; } });
   Object.defineProperty(globalThis, 'crypto', { configurable: true, value: { subtle: { async digest(algorithm, input) { assert.equal(algorithm, 'SHA-256'); const bytes = createHash('sha256').update(input).digest(); if (++digests === 1 && mode === 'hash') { hashStarted.resolve(); await releaseHash.promise; } return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength); } } } });
   Object.defineProperty(globalThis, 'setTimeout', { configurable: true, value: () => 1 }); Object.defineProperty(globalThis, 'clearTimeout', { configurable: true, value: () => {} });
   URL.createObjectURL = value => { blobs.push(value); return 'blob:synthetic-verified-transfer'; }; URL.revokeObjectURL = () => {};
   t.after(() => { URL.createObjectURL = createURL; URL.revokeObjectURL = revokeURL; for (const [name, descriptor] of Object.entries(originals)) { if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete globalThis[name]; } });
-  const tree = module.exports.default(), nodes = walk(tree), review = nodes.find(node => node.type === 'input' && node.props.type === 'checkbox' && node.props.checked === true), download = nodes.find(node => node.type === 'button' && node.props.children === 'Download reviewed selected-source bundle');
-  assert.ok(review); assert.ok(download); return { selected, values, hooks, calls, downloads, blobs, fetchStarted, releaseFetch, hashStarted, releaseHash, start: () => download.props.onClick(), uncheck: () => review.props.onChange({ target: { checked: false } }) };
+  const nodes = () => { index = 0; return walk(module.exports.default()); }, button = name => nodes().find(node => node.type === 'button' && node.props.children === name);
+  assert.ok(button('Download reviewed selected-source bundle'));
+  return { selected, values, hooks, calls, downloads, blobs, fetchStarted, releaseFetch, hashStarted, releaseHash,
+    start() { button('Download reviewed selected-source bundle').props.onClick(); assert.equal(calls.length, 0, 'Arming confirmation cannot export.'); button('Confirm private download').props.onClick(); },
+    uncheck() { nodes().find(node => node.type === 'input' && node.props.type === 'checkbox').props.onChange({ target: { checked: false } }); },
+  };
 }
 
 test('CHUI01: actual hosted handler checks exact hashes and prepares only the reviewed JSON bytes with an honest prepared notice', async t => {

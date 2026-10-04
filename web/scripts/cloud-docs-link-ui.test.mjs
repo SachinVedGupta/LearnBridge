@@ -55,7 +55,7 @@ function harness(t, pending = false) {
   const jsx = (type, props) => ({ type, props }), component = loaded('../apps/web/src/app/onboarding/cloud/cloud-onboarding-client.tsx', { react, 'react/jsx-runtime': { jsx, jsxs: jsx } }, true).default;
   const originals = Object.fromEntries(['window', 'document', 'fetch', 'crypto', 'setTimeout', 'clearTimeout'].map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
   const createURL = URL.createObjectURL, revokeURL = URL.revokeObjectURL;
-  Object.defineProperty(globalThis, 'window', { configurable: true, value: { confirm: () => true } });
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { confirm: () => assert.fail('Native browser confirmation must not be used.') } });
   Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement(tag) { assert.equal(tag, 'a'); const anchor = { click() { downloads.push({ filename: anchor.download, href: anchor.href }); } }; return anchor; } } });
   Object.defineProperty(globalThis, 'fetch', { configurable: true, value: async (path, options) => {
     assert.match(path, /^\/api\/cloud-onboarding\/(preview_link|export)$/); requests.push({ path, ...options });
@@ -109,7 +109,10 @@ test('CLUI01: exact-link click runs actual hosted route/read/full review/compact
   assert.equal(h.requests.length, 1); assert.deepEqual(JSON.parse(h.requests[0].body), { provider: 'googledocs', account_id: ACCOUNT, url: LINK, academic_policy: 'graded_restricted' });
   assert.equal(h.providerCalls.filter(call => call[0] === 'execute').length, 1); assert.deepEqual(h.nodes().filter(node => node.type === 'pre').map(node => node.props.children), [TEXT]);
   assert.equal(h.values[7], false); assert.equal(h.button('Download reviewed selected-source bundle').props.disabled, true);
-  h.nodes().find(node => node.type === 'input' && node.props.type === 'checkbox').props.onChange({ target: { checked: true } }); h.click('Download reviewed selected-source bundle'); await until(() => h.blobs.length === 1 && !h.values[8]);
+  h.nodes().find(node => node.type === 'input' && node.props.type === 'checkbox').props.onChange({ target: { checked: true } }); h.click('Download reviewed selected-source bundle');
+  assert.equal(h.requests.length, 1, 'Opening in-app confirmation cannot request export.'); assert.equal(h.blobs.length, 0);
+  const panel = h.nodes().find(node => node.props.role === 'dialog'); assert.ok(panel); assert.equal(panel.props['aria-modal'], false);
+  h.click('Confirm private download'); await until(() => h.blobs.length === 1 && !h.values[8]);
   assert.deepEqual(h.downloads, [{ filename: 'LearnBridge-selected-googledocs.json', href: 'blob:synthetic-link-transfer' }]);
   const result = await importBlob(t, h.blobs[0]); assert.equal(result.records[0].title, 'Provider-returned synthetic title'); assert.equal(result.records[0].modified_at, null); assert.equal(result.records[0].url, LINK); assert.match(result.records[0].limitations.join(' '), /no metadata search|live freshness/);
 });
