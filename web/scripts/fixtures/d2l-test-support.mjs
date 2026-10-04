@@ -4,7 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { createD2lBrowser } from '../../apps/local-runtime/src/d2l-browser.mjs';
 
 const fixturePath = fileURLToPath(new URL('./d2l-browser-fixture.mjs', import.meta.url));
-/** Actual child + shipped browser expression, with invented school responses.
+/** Actual child + shipped browser expression, with invented school responses
+ * and session-correlated browser bearer observations. Protected fixture APIs
+ * reject cookie-only reads; a public versions response never proves identity.
  * No live service, browser, account, credential or provider is contacted.
  */
 export function syntheticSchool(controlPath, mode = 'normal') {
@@ -17,7 +19,10 @@ export function syntheticSchool(controlPath, mode = 'normal') {
   return { launches, reads, commands,
     change(value) { writeFileSync(controlPath, JSON.stringify({ ...JSON.parse(readFileSync(controlPath, 'utf8')), ...value }), { mode: 0o600 }); },
     waitRead: match => wait(reads, match), waitCommand: match => wait(commands, match),
-    assertClosed(assert) { for (const value of launches) { assert.equal(existsSync(value.profile), false); assert.equal(value.child.exitCode === null && value.child.signalCode === null, false); } },
+    assertClosed(assert) { for (const value of launches) {
+      assert.equal(existsSync(value.profile), false); assert.equal(value.child.exitCode === null && value.child.signalCode === null, false);
+      assert.equal(value.config.env.D2L_USERNAME, undefined); assert.equal(value.config.env.D2L_PASSWORD, undefined);
+    } },
     factory() { return createD2lBrowser({ factory(binary, args, config) {
       const child = spawn(process.execPath, [fixturePath, mode, controlPath], config), profile = args.find(value => value.startsWith('--user-data-dir=')).slice('--user-data-dir='.length);
       launches.push({ binary, args, config, child, profile }); const write = child.stdio[3].write.bind(child.stdio[3]);

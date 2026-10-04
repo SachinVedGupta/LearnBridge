@@ -14,7 +14,7 @@ export function createD2lRoutes({ studentWorkspace, browserFactory, clock = Date
     try { return await work(); }
     catch (error) {
       if (['AUTH_REQUIRED', 'AUTH_EXPIRED'].includes(error.code)) throw new HttpError(409, `D2L_${error.code}`,
-        error.code === 'AUTH_EXPIRED' ? 'The school sign-in expired. Complete official sign-in and check the school account again.' : 'Complete official school sign-in in the separate browser, then check your school account.');
+        error.code === 'AUTH_EXPIRED' ? 'The school API authorization expired. Refresh Avenue in the school browser, complete any sign-in or MFA, then check the school account again.' : 'Complete official school sign-in in the separate browser. If Avenue is already open, refresh its home page, then check your school account.');
       throw error;
     }
   }

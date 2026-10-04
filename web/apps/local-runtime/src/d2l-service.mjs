@@ -85,7 +85,7 @@ export function createD2lService({ studentWorkspace, browserFactory = createD2lB
       id: current.id, state: current.state, account: current.account ? { ...current.account } : null,
       verified_at: current.verified_at, last_read_at: current.last_read_at, proof: current.last_read_at ? current.browser.proof : 'none',
     } : null, limits: { courses: 5, categories: [...D2L_CATEGORIES], preview_lifetime_seconds: 300 },
-    notice: 'Complete official school sign-in yourself. Only selected course reads are available; passwords, tokens, enrollment scans, submissions and model sharing are absent.' };
+    notice: 'Complete official school sign-in yourself. Only selected course reads are available; no credential entry, enrollment scans, submissions or automatic model sharing.' };
   }
   function connection(input) {
     const body = cloneD2lData(input, 4096); object(body, ['connection_id']);

@@ -113,7 +113,12 @@ test('D2LH05: provider permission denial is partial coverage, never an auth bypa
   f.school.change({ expired: true }); const expired = await f.call('/d2l/preview', { connection_id: id, selected_course_ids: ['781264'], categories: ['materials'] });
   assert.equal(expired.status, 409); assert.equal(expired.data.error.code, 'D2L_AUTH_EXPIRED'); assert.equal((await f.call('/status')).status, 200);
   assert.equal((await f.call('/d2l/status')).data.connection.state, 'awaiting_sign_in');
-  f.school.change({ expired: false, denied: true }); const denied = await f.call('/d2l/verify', { connection_id: id }); assert.equal(denied.status, 403);
+  f.school.change({ expired: false }); const stale = await f.call('/d2l/verify', { connection_id: id });
+  assert.equal(stale.status, 409); assert.equal(stale.data.error.code, 'D2L_AUTH_REQUIRED');
+  assert.equal((await f.call('/status')).status, 200);
+  assert.equal((await f.call('/d2l/disconnect', { connection_id: id })).status, 200);
+  const fresh = (await f.call('/d2l/start', { institution_id: 'mcmaster-avenue' })).data.connection.id;
+  f.school.change({ denied: true }); const denied = await f.call('/d2l/verify', { connection_id: fresh }); assert.equal(denied.status, 403);
   assert.equal((await f.call('/d2l/status')).data.connection.state, 'permission_denied');
 });
 
