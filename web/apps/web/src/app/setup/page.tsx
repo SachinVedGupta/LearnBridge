@@ -34,11 +34,18 @@ export default function SetupPage() {
           <p className="mt-3 leading-7 text-slate-300">Keep tasks and notes locally, plan study sessions, prepare reviewed drafts and manage student routines from selected sources or details you enter. Import selected text, Markdown, supported PDF text, Word (.docx) paragraphs and PowerPoint (.pptx) slide text, then review changes proposed through your Codex or Claude MCP bridge.</p>
           <a href="#agent-setup-heading" className="mt-5 inline-block rounded-lg bg-teal-300 px-4 py-3 font-semibold text-slate-950 hover:bg-teal-200">Set up with your agent</a>
           <p className="mt-3 text-sm leading-6 text-slate-400">Basic tasks and notes need no cloud service keys. Your agent uses its own official account and permissions.</p>
+          <p className="mt-3 text-sm leading-6 text-slate-400">Local AI supports a separate official ChatGPT sign-in with Codex CLI 0.154.0. School connection opens a temporary Avenue browser for your own McMaster sign-in; live course access depends on your school account.</p>
         </section>
       </div>
 
       <SetupMeasurement enabled={measurementEnabled}><SetupPrompt /></SetupMeasurement>
       <AccountMeasurement enabled={measurementEnabled} />
+
+      <section aria-labelledby="connected-setup-heading" className="mt-10 rounded-2xl border border-slate-800 p-6">
+        <h2 id="connected-setup-heading" className="text-2xl font-semibold text-white">Bring your workflows together</h2>
+        <p className="mt-3 leading-7 text-slate-300">After signing in online, <a href="/onboarding/cloud" className={linkStyle}>choose exact Google Docs or Notion pages</a>, review their text and export a bounded bundle. In the local dashboard, open Cloud sources to review and import it. Account linking, importing and sharing with your AI are separate choices.</p>
+        <p className="mt-3 leading-7 text-slate-300">The <a href="/remote" className={linkStyle}>phone companion</a> has an implementation for pairing, selected local tutor requests and separately reviewed text results. Public phone access stays disabled until its database, live account and device checks pass. Your computer must be awake and you must approve each result locally before it can be sent to the phone.</p>
+      </section>
 
       <section aria-labelledby="requirements-heading" className="mt-10 rounded-2xl border border-slate-800 p-6">
         <h2 id="requirements-heading" className="text-2xl font-semibold text-white">Before you start locally</h2>
