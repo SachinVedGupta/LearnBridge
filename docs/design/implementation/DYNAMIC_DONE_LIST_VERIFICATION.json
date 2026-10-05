@@ -1,0 +1,50 @@
+{
+  "format": "learnbridge_dynamic_done_list_verification_v1",
+  "verified_at": "2026-10-05T18:36:17.000Z",
+  "scope": "local selected-source dynamic task reconciliation, one-source AI extraction and trusted read-only host tool policy",
+  "command": "cd web && node --test --test-reporter=tap scripts/local-codex-tool-policy.test.mjs scripts/dynamic-task*.test.mjs",
+  "tests": {
+    "total": 61,
+    "passed": 61,
+    "failed": 0,
+    "skipped": 0,
+    "duration_ms": 2763.727833,
+    "deterministic_service": 20,
+    "deterministic_routes": 5,
+    "ai_orchestration_service": 13,
+    "ai_routes": 4,
+    "shipped_ui_handlers": 7,
+    "real_paired_http": 2,
+    "trusted_tool_policy_unit_and_real_mcp_ipc": 10
+  },
+  "established": [
+    "Off by default; exact selected source policy and no provider/model reads in deterministic refresh.",
+    "Account-qualified source identity, deduplication, current academic-stream refresh and conflicting source rejection.",
+    "Known/unknown deadlines, local-day and exact-time sorting, dependencies and manual edits preserved.",
+    "Separate acceptance or exact reviewed existing-task link; source omissions do not complete/delete/recreate tasks.",
+    "Opted-in student-reported project checkbox completion and exact pre/post-write interruption recovery.",
+    "Source/task/done receipt and exact policy survive restart and fresh backup restore with integrity readback.",
+    "One exact full message body/account/version preview precedes private context-note, current grant and host start.",
+    "Actual host orchestration with a declared fixture executor receives only the selected context and no unselected canary.",
+    "Trusted read_only policy is persisted, passed to the executor and bound to retry identity; changing it conflicts after restart without replay.",
+    "Actual paired runtime/MCP/IPC extraction exposes only two eager read tools; hidden task/document requests, forged completion and unbrokered native MCP writes leave zero proposal writes.",
+    "Profile permit delegation rejects proposal names before an IPC lease is issued; structured read-only output rejects generic proposal fields before any write.",
+    "Strict up-to-three candidate parser rejects invented quotes/dates, extra completion fields, malformed/duplicate blocks and over-limit results.",
+    "Source/copy mutation and exact cancellation withhold late results; no AI-derived automatic completion or candidate acceptance.",
+    "Atomic real SQLite pending-candidate publication rolls back an injected trigger failure and recovers without duplicates.",
+    "Paired HTTP source-policy to extraction to pending review to exact task acceptance survives runtime restart with independent SQLite readback.",
+    "Actual shipped UI handlers display linked agent progress/result/open controls and reject reset, pause and source-change consent races.",
+    "HTTP pairing, origin, nonce, no-query, body-key and unsupported-provider-command gates preserve task/grant state."
+  ],
+  "not_established_by_this_report": [
+    "A real current-account Gmail/D2L/Calendar/other provider read or continuous cloud polling.",
+    "A real Codex model answer; orchestration tests explicitly use a fixture executor.",
+    "Real browser layout or visual checks; the UI handler tests use a small DOM stand-in.",
+    "Actual employer form compatibility, application submission, external communication or native computer control.",
+    "A deployed hosted-web release, physical phone behavior or sleeping-computer notifications."
+  ],
+  "integration_owner": "The root implementation wires runtime routes/ticks, dashboard navigation, linked task sessions and broader end-to-end checks.",
+  "production_dependencies_added": [],
+  "provider_writes": 0,
+  "personal_accounts_or_source_bodies_used": false
+}

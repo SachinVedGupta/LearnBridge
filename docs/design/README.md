@@ -16,6 +16,7 @@ The first useful release is deliberately complete in one narrow workflow: instal
 | [Remote access and adoption](FEATURES_REMOTE_AND_ADOPTION.md) | Phone requests executed on a paired local agent, public setup funnel and privacy-conscious usage metrics |
 | [Controlled onboarding](ONBOARDING.md) | Broad but scoped discovery, profile review, source coverage, consent and deletion |
 | [Implementation plan](IMPLEMENTATION_PLAN.md) | Dependency-ordered work packages and release gates for a coding agent |
+| [Done list and interactive studios](implementation/DONE_LIST_AND_INTERACTIVE_STUDIOS.md) | Task-linked agent sessions, selected-source reconciliation, slideshow tutoring, mock interviews and reviewed application preparation |
 | [Implementation status](IMPLEMENTATION_STATUS.md) | Code delivered, measured foundation evidence and remaining gates |
 | [Verification](VERIFICATION.md) | Deterministic fixtures, live checks, quality evaluation and evidence required for completion |
 | [Agent setup entry point](../../SETUP_LEARNBRIDGE.md) | Instructions for an agent setting up this repository for a student |

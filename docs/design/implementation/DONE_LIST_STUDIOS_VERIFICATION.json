@@ -1,0 +1,442 @@
+{
+  "format": "learnbridge_done_list_studios_verification.v1",
+  "checked_at": "2026-10-05T18:54:56.328919+00:00",
+  "status": "PASS_FOR_RECORDED_LOCAL_SCOPE",
+  "code_commit": "72f20f440b2c2335037cfe0cfeeaa9be37dad8cd",
+  "environment": {
+    "node": "v22.23.2",
+    "platform": "darwin",
+    "arch": "arm64",
+    "installed_driver": "13.0.3",
+    "sqlite": "3.53.4",
+    "child_node": "v22.23.2"
+  },
+  "automated": {
+    "command": "npm --prefix web test",
+    "tests": 1408,
+    "pass": 1408,
+    "fail": 0,
+    "skipped": 0,
+    "duration_ms": 66767.732291,
+    "scope": "Repository core, storage, runtime, paired HTTP/MCP, UI fixtures and actual owned native PDF/Chrome checks. Many host executors are synthetic; actual model evidence is listed separately."
+  },
+  "builds": {
+    "local_dashboard": "PASS",
+    "full_web_shared_api_nextjs": "PASS",
+    "local_assets": 33
+  },
+  "clean_install": {
+    "schema_version": 1,
+    "suite": "local-clean-copy-offline-install-v1",
+    "evidence_type": "synthetic_fixture",
+    "status": "PASS",
+    "environment": {
+      "node": "v22.23.2",
+      "platform": "darwin",
+      "arch": "arm64",
+      "installed_driver": "13.0.3",
+      "sqlite": "3.53.4",
+      "child_node": "v22.23.2"
+    },
+    "scope": {
+      "copied_previous_node_modules": false,
+      "copied_environment_files": false,
+      "copied_personal_data": false,
+      "cloud_configuration_supplied": false,
+      "offline_cache_used": true,
+      "package_lifecycle_hooks_disabled": true
+    },
+    "phases": [
+      {
+        "id": "FI01_EXPLICIT_CLEAN_SOURCE_COPY",
+        "status": "PASS",
+        "duration_ms": 121
+      },
+      {
+        "id": "FI02_FRESH_LOCKED_OFFLINE_INSTALL",
+        "status": "PASS",
+        "duration_ms": 6112
+      },
+      {
+        "id": "FI03_BUILD_STATIC_DASHBOARD",
+        "status": "PASS",
+        "duration_ms": 55
+      },
+      {
+        "id": "FI04_CLOUD_FREE_SETUP_AND_DOCTOR",
+        "status": "PASS",
+        "duration_ms": 241
+      },
+      {
+        "id": "FI05_NEW_PROCESS_CREATES_SYNTHETIC_RECORDS",
+        "status": "PASS",
+        "duration_ms": 73
+      },
+      {
+        "id": "FI06_FRESH_PROCESS_READS_EXACT_SAVED_RECORDS",
+        "status": "PASS",
+        "duration_ms": 64
+      },
+      {
+        "id": "FI07_CLI_BACKUP_AND_FRESH_ROOT_RESTORE",
+        "status": "PASS",
+        "duration_ms": 220
+      },
+      {
+        "id": "FI08_INDEPENDENT_PROCESS_VERIFIES_RESTORED_RECORDS",
+        "status": "PASS",
+        "duration_ms": 72
+      },
+      {
+        "id": "FI09_FRESH_OFFICIAL_SDK_STDIO_DISCOVERY",
+        "status": "PASS",
+        "duration_ms": 360
+      }
+    ],
+    "limitations": [
+      "A clean disposable source copy installed from the existing offline npm cache; not a new computer or an online-download test.",
+      "Only this recorded OS, architecture and Node runtime were exercised.",
+      "Task/note persistence, static build, CLI lifecycle and actual SDK stdio discovery; real hosts, provider OAuth and personal onboarding are separate gates.",
+      "No fresh Python environment is copied or installed; selected-file acquisition requires a suitable project .venv and is verified separately."
+    ],
+    "source": {
+      "file_count": 144,
+      "source_digest": "668e50c3f339d0f1b748bcba4afbabe8f7e3aab929ab3849ad8825d202f1c1af",
+      "lock_sha256": "c5976bc94f4b80dee27d86f80f1520145594ed6880f539874015f9bccd4a1c74"
+    },
+    "observed": {
+      "tasks": 1,
+      "documents": 1,
+      "document_content_sha256": "6b3753692a884de653b1ad19639c7a1b4912c63fb3db43d13d610e742dbbb3d2",
+      "exact_records_survive_new_process": true,
+      "exact_records_survive_fresh_root_restore": true,
+      "static_assets_built_and_hash_matched": 33
+    },
+    "fixture_cleanup": true
+  },
+  "actual_official_codex": {
+    "format": "learnbridge_studios_actual_host_v1",
+    "checked_at": "2026-10-05T18:52:41.888Z",
+    "host": "official_codex_0.154.0",
+    "checks": [
+      {
+        "kind": "official_host_check",
+        "state": "available"
+      },
+      {
+        "kind": "task_session",
+        "state": "ready_for_review",
+        "result_bytes": 1133,
+        "tool_receipts": [
+          {
+            "tool": "learnbridge_status",
+            "status": "completed",
+            "failed": false,
+            "result_hash": "f21eb0910ae1f61abfe5f41bf2c0a8571f7cda231b80f068fbd3b79fa6eb43e4",
+            "origin": "model"
+          },
+          {
+            "tool": "learnbridge_context",
+            "status": "completed",
+            "failed": false,
+            "result_hash": "1622853f04948796c316e9f997f6c7ad69aae0554a0082379a14960160091d38",
+            "origin": "model"
+          }
+        ],
+        "task_unchanged": true,
+        "session_id": "148ae06c-9cae-4d29-869f-2402fecfe3cd"
+      },
+      {
+        "kind": "actual_course_quiz",
+        "state": "completed",
+        "native_png_sha256": "7305d840b3ac6734f7378d7f9f36bad9be0a8e8ab8db90b091ad1383f18e1cc4",
+        "physical_page": 2,
+        "questions": 3,
+        "attempt_saved": true,
+        "student_rating": "correct",
+        "mastery_claim": false,
+        "tool_receipts": [
+          {
+            "tool": "learnbridge_status",
+            "status": "completed",
+            "failed": false,
+            "result_hash": "c7f6800d0568f892359be7ad1513af8a95ab61fd4c5c6e79893e39ec9f094b85",
+            "origin": "model"
+          },
+          {
+            "tool": "learnbridge_context",
+            "status": "completed",
+            "failed": false,
+            "result_hash": "4b1684be11fffe1804ca7634c69c3f492b682e14b89f7a36806bc06c3d9df3ef",
+            "origin": "model"
+          }
+        ],
+        "studio_id": "bd9ba0a5-7b21-49ab-b275-f1c8d7665f2b"
+      },
+      {
+        "kind": "actual_ordinary_email_extraction",
+        "state": "pending_tasks_ready",
+        "candidates": 2,
+        "pending_proposals": 2,
+        "tasks_created": 0,
+        "all_quotes_verbatim": true,
+        "tool_receipts": [
+          {
+            "tool": "learnbridge_status",
+            "status": "completed",
+            "failed": false,
+            "result_hash": "5c0c513841dac997dae27f7a1d2adb87641cbe7b6e1fc8282bcf031e07e3021c",
+            "origin": "model"
+          },
+          {
+            "tool": "learnbridge_context",
+            "status": "completed",
+            "failed": false,
+            "result_hash": "2929d3d816212b1dacf3f873a2c489ab738057006c9031a5d88b08835e462d94",
+            "origin": "model"
+          }
+        ]
+      },
+      {
+        "kind": "actual_interview_question_feedback",
+        "state": "completed",
+        "question_saved": true,
+        "exact_answer_saved": true,
+        "feedback_saved": true,
+        "quotes_verbatim": true,
+        "tool_receipts": [
+          {
+            "tool": "learnbridge_status",
+            "status": "completed",
+            "failed": false,
+            "result_hash": "d7d06ac827104a192f56207049cd29c8e7a9baeab683fb9fc02b3c9ae630b751",
+            "origin": "model"
+          },
+          {
+            "tool": "learnbridge_context",
+            "status": "completed",
+            "failed": false,
+            "result_hash": "1c468ed3d399f36baa61294bcb7a57b68f047c28a7c0da975ebdd181be45bc64",
+            "origin": "model"
+          }
+        ],
+        "session_id": "8f418d0b-1399-43f2-a537-f75b42993598"
+      },
+      {
+        "kind": "actual_final_plain_language_course_coaching",
+        "state": "completed",
+        "tool_policy": "read_only",
+        "result_bytes": 1138,
+        "result_sha256": "534c339b63addb708dcb1463d48537592ddcf37a5dde4b70276c38ea78127410",
+        "corrects_misconception": true,
+        "asks_comprehension_question": true,
+        "no_raw_identifiers_or_formatting_markers": true,
+        "original_selected_notes_unchanged": true,
+        "reviewed_task_completion_retains_result": true,
+        "tool_receipts": [
+          {
+            "tool": "learnbridge_status",
+            "status": "completed",
+            "failed": false,
+            "result_hash": "121fba537189dbe3ec9500688d57bc0abc83019dc3e41a3ab74abfce05f21d16",
+            "origin": "model"
+          },
+          {
+            "tool": "learnbridge_context",
+            "status": "completed",
+            "failed": false,
+            "result_hash": "71c26f7195ecb24b015bb19c5570e597b961aa3fe6dc6d8d6c58f1fd7b332837",
+            "origin": "model"
+          }
+        ]
+      }
+    ],
+    "private_student_data_transmitted": false,
+    "context_description": "Synthetic student/task/slide/email data and a saved public official role excerpt; no private student records.",
+    "synthetic_student_context_only": true
+  },
+  "actual_fresh_restore": {
+    "format": "learnbridge_studios_actual_restore_v1",
+    "checked_at": "2026-10-05T18:46:53.787Z",
+    "synthetic_context_only": true,
+    "status": "PASS",
+    "tables": [
+      {
+        "table": "records",
+        "rows": 22,
+        "sha256": "34df152c00eaf7917b05968fd1803f20ddaa159f1f6ea8a9117845c1caf3bb43"
+      },
+      {
+        "table": "document_revisions",
+        "rows": 13,
+        "sha256": "454c84859e7ceebff9efe26c863e090fd3fc964a5464dc940eac4d5f27097df5"
+      },
+      {
+        "table": "workspace_records",
+        "rows": 75,
+        "sha256": "e283caef524a9e8cc414a6b5b7d4c78d0ab6ea2d3673982bf429effd87d7adee"
+      },
+      {
+        "table": "workspace_revisions",
+        "rows": 246,
+        "sha256": "9edd6f581709199da3f4023d3e27c02e3f078a3af6d2aa06501895ade03c793f"
+      },
+      {
+        "table": "agent_grants",
+        "rows": 15,
+        "sha256": "ffd624f0a227e06290a82d3d809526e763ca463d0a5e44609ef455c57a3314ff"
+      },
+      {
+        "table": "task_proposals",
+        "rows": 4,
+        "sha256": "d030dacaaa4a2a8991879871e1de66cc3b44acb83349ddd62c0d2af5ef1c395c"
+      },
+      {
+        "table": "source_entries",
+        "rows": 3,
+        "sha256": "b626bd29f54bcafb025d03fdf22f09b2876490387826a1b12c70a650a09c15dd"
+      }
+    ],
+    "reviewed_task_result_survives": true,
+    "course_quiz_attempt_circle_survive": true,
+    "interview_question_answer_feedback_survive": true,
+    "backup_contains_no_official_host_credentials": true,
+    "restored_host_not_enabled": true,
+    "original_pdf_location_still_on_this_machine": true
+  },
+  "browser_verification": {
+    "data": "Disposable synthetic student workspaces; real official model course/task result and fixture interview/Done-list review checks distinguish execution below.",
+    "course": {
+      "actual_native_pdf": true,
+      "actual_model_question_and_quiz": true,
+      "reviewed_native_quote_circle": true,
+      "previous_new_local_page_then_next_reuses_exact_saved_page": true,
+      "keyboard_left_right": true,
+      "typing_arrow_does_not_navigate": true,
+      "question_draft_survives_navigation": true,
+      "old_quiz_attempt_survives_restart": true,
+      "zoom_150_percent_observed": true,
+      "setup_collapses_after_open": true,
+      "desktop": {
+        "width": 1280,
+        "page_width": 1280,
+        "layout_columns": "512.195px 379.406px",
+        "circle_count": 1
+      },
+      "mobile": {
+        "width": 390,
+        "page_width": 390,
+        "layout_columns": "324px",
+        "circle_count": 1
+      },
+      "temporary_viewport_restored": true
+    },
+    "task": {
+      "actual_model_result_read": true,
+      "task_pending_until_exact_completion_review": true,
+      "completion_review_discloses_retained_history": true,
+      "reviewed_result_retained_and_independently_read_back": true
+    },
+    "done_list": {
+      "selected_saved_email": true,
+      "two_pending_commitments": true,
+      "one_reviewed_acceptance": true,
+      "previous_completed_task_preserved": true,
+      "ui_model_seam": "synthetic fixture; separate actual Codex quoted extraction above"
+    },
+    "interview": {
+      "actual_answer_saved_before_feedback": true,
+      "coaching_and_quote_visible": true,
+      "ui_model_seam": "synthetic fixture; separate actual Codex question/answer/feedback above"
+    }
+  },
+  "native_application_browser": {
+    "scope": "Actual owned temporary Chrome and controlled loopback form; not a real employer integration.",
+    "inspection_reviewed_fill_readback": "PASS",
+    "network_and_script_freeze_before_field_writes": "PASS",
+    "zero_submit_autosave_requests": "PASS",
+    "temporary_browser_cleanup": "PASS",
+    "live_employer_compatibility": false
+  },
+  "legacy_python": {
+    "runtime": ".venv Python 3.12.14",
+    "syntax_files": 16,
+    "imports": "PASS",
+    "actual_streamlit_health_and_auth_gate": "PASS",
+    "missing_config_invalid_callback": "PASS",
+    "synthetic_callback_success_clear_query_rerun": "PASS",
+    "provider_calls": 0,
+    "limitation": "Historical retired callback lacks stored pending-state verification; this is compatibility evidence, not production OAuth security certification."
+  },
+  "documentation_validation": {
+    "status": "PASS",
+    "scope": "documentation_only",
+    "features": 29,
+    "planned_acceptance_cases": 182,
+    "work_packages": 24,
+    "local_links": 180
+  },
+  "source_hashes": {
+    "web/apps/local-runtime/src/application-browser-routes.mjs": "cec676a2ffdbabd2ea9d27eb4b0b9c9c6933897dd582294b60a1c90480503e19",
+    "web/apps/local-runtime/src/application-browser-service.mjs": "aeeeb74b026bca5d67b3221327eab233e269442340fc1e03fc3b48fc1f5b21b7",
+    "web/apps/local-runtime/src/application-browser.mjs": "063de91e32840d087526a07acbb3d1a5513a4b84d70b781e20772192bad90c37",
+    "web/apps/local-runtime/src/codex-adapter.mjs": "239cc76c593f2d60968b252712254d67b92d0cbc15aed0929d6f34378ec3d847",
+    "web/apps/local-runtime/src/codex-profile.mjs": "1350ae09bbb23c87e43c5f981cf9ba714dd9b6c19aac7ebf538fc16c5ae03a8e",
+    "web/apps/local-runtime/src/codex-tools.mjs": "827777df8058507a83497f4d761430b8db8780c84c619e0cba6eb7c13fe90a37",
+    "web/apps/local-runtime/src/course-studio-routes.mjs": "d8a8a4aab3c1cee031b7fd9b9c757284e2f82662453086093c3162fc8c0118d6",
+    "web/apps/local-runtime/src/course-studio-service.mjs": "a24faefc51a5ead41554033482e0c865dc1915e1eb17dc7660e6be3b0f8a1cd1",
+    "web/apps/local-runtime/src/dynamic-task-ai-routes.mjs": "0372e0fcb5d19e9bfc576c042fef01181e25ea7068ba5d5b4a74b05a227a8b4a",
+    "web/apps/local-runtime/src/dynamic-task-ai-service.mjs": "45dac8e2b016e4c5c971ff97982e84ad12d84963fd27398c458eba7147848f7c",
+    "web/apps/local-runtime/src/dynamic-task-routes.mjs": "1c6705f4d1022842fc423d0986b83f9396285d21839632195919f3d032aa409a",
+    "web/apps/local-runtime/src/dynamic-task-service.mjs": "0d06aa79973e1b41fcac0de716105d3e963086a8cae09f53a4c2ef416c9dade1",
+    "web/apps/local-runtime/src/host-turns.mjs": "c21533f4de0e47b4596a8423790eaf33254d12b07b8fbf274ad025cb0d7a8466",
+    "web/apps/local-runtime/src/interview-studio-routes.mjs": "c8908cf39dd333d35361961f75fadbc0d77cda71d737f9a41582fd9a03a8c63e",
+    "web/apps/local-runtime/src/interview-studio-service.mjs": "7d590db41c6433895944eada2d077100064ce11cfc5a3b38722bd1bf6d456b14",
+    "web/apps/local-runtime/src/server.mjs": "b0807ffecfed956220c1b485a276f1ce9ab0c36b81ec021b8bdbf1dac52237a2",
+    "web/apps/local-runtime/src/task-session-routes.mjs": "71b3b871dd5906d9e62a72f38fd3788cdd087095901a6ba8b1e63c6fa769ef05",
+    "web/apps/local-runtime/src/task-session-service.mjs": "e831aa64ad01708be34ee567128405674279d86b72c07593d3ef5c0646ec30c8",
+    "web/apps/local/build.mjs": "8daa8a4ecd16713f5146ec32edad974f447c0a27f799d2fa26b8ad5bd4976f77",
+    "web/apps/local/public/app.js": "5d1ed2dd5236b377e74b46abbfc64e50667328d4081093ace362cc78bbba6273",
+    "web/apps/local/public/application-browser.js": "15dc9d47a1a8af59ddeeb0079c74ba4b73fc983ce534c32a7854c4178d37b65f",
+    "web/apps/local/public/course-studio.css": "01faec505b24d5d6e857b8a0bcae7288e8e8a866e3a23a39a8f3928af9712728",
+    "web/apps/local/public/course-studio.js": "4c706f0cf7c045e99cc4b76e5215f536d8ee048ecc7ccfbf7aeaaed9d7033fcc",
+    "web/apps/local/public/dynamic-tasks.js": "c24c0816ab09e28210d22855fc6ab4dc62a855c0eaab34122bb113c4c86f4469",
+    "web/apps/local/public/index.html": "1f70dda56805c65a35379b4859ade65331235ba7c8f76d849f4f474602371606",
+    "web/apps/local/public/interview-studio.js": "d1b65e1ecedc1d51b8355bf547e24b0bcce22502e649211226ceefb79ad29948",
+    "web/apps/local/public/overview.js": "49be2293ac7b2726a1373c8e162496211a01a8e7850f4187489f8949c78e7123",
+    "web/apps/local/public/task-agents.js": "0ff9dda318962c95abb42bb7d74166f68044bcb6f00e944952fe453b79106d51",
+    "web/packages/local-sources/src/index.mjs": "91345035333b35dcbe4972f900a6e4fae0e3076a9ad41181d899c85239312381",
+    "web/packages/local-sources/src/pdf-native.mjs": "e590f62436a73384811d6c27d7267a9fd709d872e2e1cbe9966ab3e0e8a07be3",
+    "web/packages/local-sources/src/pdf-page.swift": "6e59bcc24c8a07e3b2b641813bdb2dd7c4aaec76d954f9edef394f1048ce0b65",
+    "web/packages/local-storage/src/index.mjs": "faf4466850d4e5a5686d4016a6273e1eb8f1ca648c227bed429f95d8dc8c0bc9",
+    "web/scripts/application-browser-http.test.mjs": "002a257bdda1f4bf47eb1a0046a74f692c74f77696ed6842e7c6ad7fbb55492b",
+    "web/scripts/application-browser.test.mjs": "475e500eaba979a67cc9aca829d100c7f37ce827d9330b40e3182e775d18beba",
+    "web/scripts/course-studio-ui.test.mjs": "6fccbf50d4eee5166102b1094f7052779aebf4c3d1cbb89a06084f1d5154ff85",
+    "web/scripts/dynamic-task-ai-routes.test.mjs": "0f118f33353029df508cc5b7f0f786b489239a321f65464ceeab3526a3637b20",
+    "web/scripts/dynamic-task-ai-service.test.mjs": "9c9a8daf1fcc44a3ed9621f81b5341e434db5fed12466a6d70c7362a4f0ee080",
+    "web/scripts/dynamic-task-http.test.mjs": "99099f8391b6f49b465269dd24d2b0281f6f9e11e6c1b3e0c314ec5d4cfff741",
+    "web/scripts/dynamic-task-routes.test.mjs": "8376977ca05dcee97387d10ddc652567c305aafaad82a9acb6fef58d388fbac7",
+    "web/scripts/dynamic-task-service.test.mjs": "834b21ed51daec1ce2dcbf5f5d305d003adee2749cb7a82fe79e7c7f3b82128b",
+    "web/scripts/dynamic-task-ui.test.mjs": "541d6de217af4c6c0b1eb6894ccbf094c14bd83cbd5db9389c88d03102cd02e1",
+    "web/scripts/interview-studio.test.mjs": "7507e121cd6d33f9732d5f10a910c79c8e53df3a8f37a47a7876f51b456c1c85",
+    "web/scripts/local-codex-model-tools.test.mjs": "14e0c47d80711e0572b3377144f2562aa7b90629135ac6156d023a783ec0797e",
+    "web/scripts/local-codex-tool-policy.test.mjs": "195142aba6f8f64b7916969b3f3fbfe246800c44acda05ecdb80144dfa0b76c3",
+    "web/scripts/local-course-studio.test.mjs": "494c63f9aa0281f8a056820d945279234a92aa4f2849eb28a376dbf032d85b6a",
+    "web/scripts/local-overview-ui.test.mjs": "3b224e244ba0e64ea19e5538fdeeda51a88e4ebf33df39a6c47cb58db5390d5b",
+    "web/scripts/local-reminder-http.test.mjs": "c33f74de2987a6bdaa421c13a840b94684067bf5f8edad7a26708156cf461d7b",
+    "web/scripts/task-agent-ui.test.mjs": "07696a3351a4bd61d6c1d378cf820bb0bf33b6f7807a81e8e0130594bf0e8d35",
+    "web/scripts/task-session-boundaries.test.mjs": "5bdb1b5ee225299c33a4add3e8bfb1157d27932a454f927293729d23684e2a80",
+    "web/scripts/task-session-http.test.mjs": "d360bbe5aaeecc4cdcdda40c10855365e8e93ad954fc8e475058eb1ed7c8084f",
+    "web/scripts/task-session-service.test.mjs": "f0259cff6ce989ab4e36085e09478febb45ad0841e56b87eb9166dc68ffe3bdd",
+    "web/scripts/verify-local-install.mjs": "6ff3af95cf82af1660d79a33a21a8b915fd201dd5fe2b45ac69096125013edec"
+  },
+  "remaining_live_gates": [
+    "Actual student D2L SSO/MFA, selected-course read and expiry/disconnect.",
+    "Selected live Gmail/Notion and second hosted account. Saved-source task refresh is not automatic provider polling.",
+    "Installed Claude embedded execution; current external MCP bridge is supported.",
+    "Physical microphone/speaker quality, two-way voice and multimodal slide-image reasoning.",
+    "Real employer form compatibility, reviewed attachments and final manual submission.",
+    "Production phone/adoption database, sessions, retention, multi-worker concurrency and physical-phone round trip; flags stay off.",
+    "No new hosted deployment this increment; public website is separate from the delivered local studios."
+  ]
+}
