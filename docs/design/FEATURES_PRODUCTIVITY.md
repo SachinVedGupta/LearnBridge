@@ -172,6 +172,8 @@ Implement practice session records and recipes in `web/packages/core/workflows/c
 
 **Live gate.** Complete one actual practice session with the selected agent mode. Code execution support is released per language/runtime, separately from conversational interview support.
 
+**Current local slice (October 5).** [LeetCode history and coding practice](implementation/LEETCODE_AND_CODING_PRACTICE.md) specifies the implemented retained-browser sign-in, read-only MCP, bounded failed/repeated history, selected answer imports, saved code/explanation checkpoints and reviewed official Codex coaching. Its [verification receipt](implementation/LEETCODE_VERIFICATION.json) separates actual anonymous provider and host reads from synthetic private-account tests. Native code execution in F16-A01 and continuous live voice remain unimplemented; platform judge outcomes describe historical submissions only.
+
 **Quality rubric.** Human reviewers score feedback accuracy, appropriate hints, faithful story grounding, and whether students can explain what they learned. Passing exercise tests alone does not establish conceptual mastery.
 
 **Non-goals.** Completing graded interview assessments, claiming credentials from browsing activity, or sending follow-ups without review.

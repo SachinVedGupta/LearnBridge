@@ -1,0 +1,444 @@
+{
+  "schema_version": 1,
+  "feature": "local_leetcode_history_and_coding_practice",
+  "verified_at": "2026-10-05T19:39:33.517Z",
+  "code_commit": "8293fe1a4a35b8a7ebe01df142c4f0812ad7f2c6",
+  "environment": {
+    "node": "v22.23.2",
+    "platform": "darwin",
+    "arch": "arm64",
+    "installed_driver": "13.0.3",
+    "sqlite": "3.53.4",
+    "child_node": "v22.23.2"
+  },
+  "source_sha256": {
+    "web/apps/local-runtime/src/coding-practice-routes.mjs": "7f5bf18fe55ff11bb2f2a85fad4d01f7fccb8b0c6a2aa3393215ae8ccf626357",
+    "web/apps/local-runtime/src/coding-practice-service.mjs": "71dbebe59106c28e9cfd1937f838d6861cc3078f3ed51174e81fcbd4875842a4",
+    "web/apps/local-runtime/src/leetcode-browser.mjs": "60b26d2d3a1078d091f410330ca9005e0ddf0b99cf9098859fb6e061d02b952f",
+    "web/apps/local-runtime/src/leetcode-client.mjs": "d32b1f75c8de655e371458cdd0d8d441b293de6c7d6998390b26c36c0c8273dc",
+    "web/apps/local-runtime/src/leetcode-mcp.mjs": "bae17808195a58e1169ce6fe880bce0d0f8cad06a33413a1b72d172f01106b71",
+    "web/apps/local-runtime/src/leetcode-routes.mjs": "51caeb3b5ba30dba98e89592f4f840409dee669ecd3a613cedc89355a9bf3c60",
+    "web/apps/local-runtime/src/leetcode-service.mjs": "2ccf795fc658eb096d3998294b36c17c6227d50fe8a630a3ba9f418b7b98bf09",
+    "web/apps/local-runtime/src/server.mjs": "4ac5cff07c0cc9026ebe092db78c00452820595dc7996e56113cb99216d5a902",
+    "web/apps/local/build.mjs": "88626dc4b48b7c2862300a70f30eab9d8e7a69feb4b8e101ed0289939130b087",
+    "web/apps/local/public/app.js": "319295149af703df588b61560907d5919ec6fdd971c70a5a58c29b096cb8de40",
+    "web/apps/local/public/index.html": "893e6d33dea47053d384303494a12da60645cbe8bef54f24b36f71d672df64f9",
+    "web/apps/local/public/leetcode.css": "69ec2444ae4e2d4703f59da42f62155d1222214933af9d64bc24c27c2bdbe871",
+    "web/apps/local/public/leetcode.js": "48cc78f7f3ee7ede2be101697a9321e4c8fefd440865da4879c41fae2fec022f",
+    "web/scripts/fixtures/leetcode-browser-fixture.mjs": "d23cdbaf798c3ad06ffa6dd44a193a22c0b065c7377bf934d7f6ebbea92be16c",
+    "web/scripts/fixtures/leetcode-mcp-fixture.mjs": "0c990ab4c35e13990da81ac3b6c1093855986d3f5d066fc520e0683ee95b37d3",
+    "web/scripts/fixtures/leetcode-test-support.mjs": "db8e63d397661a73f6b6766fd09297375ab480e74ee228bc6633e9d67191a9e1",
+    "web/scripts/leetcode-ui.test.mjs": "28a29202a79298d66373aaf0f5528cb426354806314a441f8eb9535210d3d720",
+    "web/scripts/local-coding-practice.test.mjs": "882679db9967e4b0e1d6bb0e61054d04709e5cbdc21fd9779f3e6cc6d96738fc",
+    "web/scripts/local-leetcode-browser.test.mjs": "e603d3d1bc37962ee81400f9013fc1663e6bacb80d96c1956a73d423e3720494",
+    "web/scripts/local-leetcode-http.test.mjs": "218b7db2a4adcaef2f2d0176fe72dc3233e81d45aafad93af6f94377ca0971b1",
+    "web/scripts/local-leetcode-mcp.test.mjs": "636bb3495835403cd5c5a284356bf3ab6062d091e77fed2e34198c3048fa24ef",
+    "web/scripts/local-leetcode-service.test.mjs": "8c08e4f1df688779e9b274f09d2ac463598efc9efc1555f638b13bc3f8c68143",
+    "web/scripts/verify-local-install.mjs": "6b03401287bb393c0b29bad9ad01188dca32dfc405ab00b2e7336d18fddb039d"
+  },
+  "automated": {
+    "status": "PASS",
+    "full_suite": {
+      "tests": 1541,
+      "passed": 1541,
+      "failed": 0,
+      "skipped": 0
+    },
+    "focused": {
+      "tests": 133,
+      "passed": 133,
+      "failed": 0,
+      "skipped": 0
+    },
+    "by_boundary": {
+      "mcp": 14,
+      "owned_browser": 33,
+      "history_service": 21,
+      "paired_http": 9,
+      "coding_practice": 26,
+      "ui": 30
+    }
+  },
+  "builds": {
+    "local_static_assets": 35,
+    "hosted_website": "PASS; hosted source unchanged; no new deployment"
+  },
+  "clean_install": {
+    "schema_version": 1,
+    "suite": "local-clean-copy-offline-install-v1",
+    "evidence_type": "synthetic_fixture",
+    "status": "PASS",
+    "environment": {
+      "node": "v22.23.2",
+      "platform": "darwin",
+      "arch": "arm64",
+      "installed_driver": "13.0.3",
+      "sqlite": "3.53.4",
+      "child_node": "v22.23.2"
+    },
+    "scope": {
+      "copied_previous_node_modules": false,
+      "copied_environment_files": false,
+      "copied_personal_data": false,
+      "cloud_configuration_supplied": false,
+      "offline_cache_used": true,
+      "package_lifecycle_hooks_disabled": true
+    },
+    "phases": [
+      {
+        "id": "FI01_EXPLICIT_CLEAN_SOURCE_COPY",
+        "status": "PASS",
+        "duration_ms": 202
+      },
+      {
+        "id": "FI02_FRESH_LOCKED_OFFLINE_INSTALL",
+        "status": "PASS",
+        "duration_ms": 11554
+      },
+      {
+        "id": "FI03_BUILD_STATIC_DASHBOARD",
+        "status": "PASS",
+        "duration_ms": 69
+      },
+      {
+        "id": "FI04_CLOUD_FREE_SETUP_AND_DOCTOR",
+        "status": "PASS",
+        "duration_ms": 690
+      },
+      {
+        "id": "FI05_NEW_PROCESS_CREATES_SYNTHETIC_RECORDS",
+        "status": "PASS",
+        "duration_ms": 109
+      },
+      {
+        "id": "FI06_FRESH_PROCESS_READS_EXACT_SAVED_RECORDS",
+        "status": "PASS",
+        "duration_ms": 82
+      },
+      {
+        "id": "FI07_CLI_BACKUP_AND_FRESH_ROOT_RESTORE",
+        "status": "PASS",
+        "duration_ms": 617
+      },
+      {
+        "id": "FI08_INDEPENDENT_PROCESS_VERIFIES_RESTORED_RECORDS",
+        "status": "PASS",
+        "duration_ms": 78
+      },
+      {
+        "id": "FI09_FRESH_OFFICIAL_SDK_STDIO_DISCOVERY",
+        "status": "PASS",
+        "duration_ms": 416
+      }
+    ],
+    "limitations": [
+      "A clean disposable source copy installed from the existing offline npm cache; not a new computer or an online-download test.",
+      "Only this recorded OS, architecture and Node runtime were exercised.",
+      "Task/note persistence, static build, CLI lifecycle and actual SDK stdio discovery; real hosts, provider OAuth and personal onboarding are separate gates.",
+      "No fresh Python environment is copied or installed; selected-file acquisition requires a suitable project .venv and is verified separately."
+    ],
+    "source": {
+      "file_count": 153,
+      "source_digest": "9f9d979c923953f5c5a533842c33d81209475ac767f0d77e47961de15392ccac",
+      "lock_sha256": "c5976bc94f4b80dee27d86f80f1520145594ed6880f539874015f9bccd4a1c74"
+    },
+    "observed": {
+      "tasks": 1,
+      "documents": 1,
+      "document_content_sha256": "6b3753692a884de653b1ad19639c7a1b4912c63fb3db43d13d610e742dbbb3d2",
+      "exact_records_survive_new_process": true,
+      "exact_records_survive_fresh_root_restore": true,
+      "static_assets_built_and_hash_matched": 35
+    },
+    "fixture_cleanup": true
+  },
+  "live_public_provider": {
+    "status": "PASS",
+    "transport": "actual bundled SDK stdio client and LeetCode GraphQL",
+    "profile_username": "leetcode",
+    "profile_accepted_difficulty_entries": 4,
+    "problem_slug": "two-sum",
+    "statement_bytes": 1442,
+    "language_templates": 19,
+    "private_cookie_used": false
+  },
+  "live_native_browser": {
+    "status": "PASS_unsigned_in_gate_only",
+    "transport": "installed macOS Google Chrome, owned profile and private debugging pipe",
+    "fixed_login_opened": true,
+    "unsigned_in_session_read": "AUTH_REQUIRED",
+    "normal_human_sign_in_required": true,
+    "shutdown_and_disposable_profile_cleanup": true,
+    "actual_private_account_authenticated": false
+  },
+  "paired_http": {
+    "evidence_type": "synthetic_provider_and_browser; actual paired runtime HTTP and SQLite",
+    "history_selected_report_checkpoint_exact_note_grant_read_only_turn": "PASS",
+    "native_state_normalization": "PASS",
+    "terminal_browser_replacement_after_logout_and_forget": "PASS",
+    "authority_epoch_change_discards_inflight_snapshot": "PASS",
+    "cookies_absent_from_database_and_HTTP_responses": "PASS",
+    "platform_write_calls": 0
+  },
+  "browser_ui": {
+    "evidence_type": "actual shipped component with labeled synthetic account/API/coaching fixtures",
+    "viewports": [
+      {
+        "width": 1280,
+        "horizontal_overflow": false
+      },
+      {
+        "width": 390,
+        "horizontal_overflow": false
+      }
+    ],
+    "unsaved_draft_survives_refresh": true,
+    "console_errors": 0,
+    "evidence": [
+      "evidence/leetcode-synthetic-desktop.jpg",
+      "evidence/leetcode-synthetic-mobile.jpg"
+    ],
+    "live_private_account_proof": false,
+    "live_model_proof": false,
+    "evidence_sha256": {
+      "evidence/leetcode-synthetic-desktop.jpg": "134bf84556407175068cf4e282b5f02b53c8694dea41f633168e2f858a8f6622",
+      "evidence/leetcode-synthetic-mobile.jpg": "acbd9726d65b61750326a1bff69d39ce75984feb3aee40682ae363e180c58979"
+    }
+  },
+  "actual_codex": {
+    "source": "actual_official_codex",
+    "problem_public_read": true,
+    "private_user_data": false,
+    "api_fallback": false,
+    "question": {
+      "kind": "question",
+      "message": "Why does your solution check whether the complement is already in `seen` before storing the current value, and what bug could happen if you stored the current value first?",
+      "follow_up": "Use the input `nums = [3, 3]`, `target = 6` to explain how your ordering avoids reusing the same element.",
+      "source_refs": [
+        "c0ad7a7a-802a-4ca1-805b-17c8290c6bcd"
+      ]
+    },
+    "review": {
+      "kind": "review",
+      "summary": "This saved work shows a hash-map based approach and a written rationale for checking complements before storing the current value. I did not execute the code or verify it against a judge, so this is a review of the saved code and explanation only.",
+      "evidence": [
+        {
+          "dimension": "approach",
+          "assessment": "observed",
+          "evidence_quote": "if complement in seen:",
+          "evidence_from": "code",
+          "reason": "The checkpoint shows the intended lookup-first approach using previously seen values before returning a pair of indices."
+        },
+        {
+          "dimension": "complexity",
+          "assessment": "observed",
+          "evidence_quote": "I think this is linear time with extra space for the map.",
+          "evidence_from": "explanation",
+          "reason": "The explanation states the expected time and space tradeoff, though no execution or formal proof was provided here."
+        },
+        {
+          "dimension": "edge_cases",
+          "assessment": "observed",
+          "evidence_quote": "I would test duplicate values.",
+          "evidence_from": "explanation",
+          "reason": "The checkpoint explicitly names duplicate values as an edge case to test, which is relevant for avoiding reuse of the same element."
+        },
+        {
+          "dimension": "communication",
+          "assessment": "observed",
+          "evidence_quote": "I check for its complement before adding the current value so the same element is not reused.",
+          "evidence_from": "explanation",
+          "reason": "The explanation connects an implementation choice to the problem constraint about not reusing the same element."
+        }
+      ],
+      "next_question": "Can you walk through nums = [3, 3], target = 6 step by step and explain why checking before storing the current value matters?",
+      "source_refs": [
+        "c0ad7a7a-802a-4ca1-805b-17c8290c6bcd"
+      ]
+    },
+    "receipts": [
+      {
+        "kind": "question",
+        "output_sha256": "15c431bc35883efdfdc10a35e742c106ddf7ff9ba5eb2f0e56b85353a74732ca",
+        "tools": [
+          "learnbridge_status",
+          "learnbridge_context"
+        ]
+      },
+      {
+        "kind": "review",
+        "output_sha256": "b7340ecd067df8272bdf702d89d9bfce5ff78b6f4f16bd6d0dfd7e15c4d32080",
+        "tools": [
+          "learnbridge_status",
+          "learnbridge_context"
+        ]
+      }
+    ],
+    "assessment_validation": [
+      {
+        "dimension": "approach",
+        "assessment": "observed",
+        "evidence_from": "code",
+        "exact_quote_valid": true
+      },
+      {
+        "dimension": "complexity",
+        "assessment": "observed",
+        "evidence_from": "explanation",
+        "exact_quote_valid": true
+      },
+      {
+        "dimension": "edge_cases",
+        "assessment": "observed",
+        "evidence_from": "explanation",
+        "exact_quote_valid": true
+      },
+      {
+        "dimension": "communication",
+        "assessment": "observed",
+        "evidence_from": "explanation",
+        "exact_quote_valid": true
+      }
+    ],
+    "prompt_fix": "explicit_closed_enum_and_four_dimensions",
+    "strict_parser_unchanged": true,
+    "unsupported_assessment_reviewed_rejected": true,
+    "student_code_sha256": "395c367b05535b8fbef8de3f1133e957d682e25549e8e263f3f0022cfde648c6",
+    "student_explanation_sha256": "c8889f353c4c851f5b4977ff71840163a3ed60d381b126cca896b497f8356c03",
+    "context_note_sha256": "d578a4e56cd2ad0e5742b4b405e632fc8a17710a46d5d754544b5f1c7ad37cc6",
+    "automatic_submission": false,
+    "code_execution_verified": false,
+    "tool_policy": "read_only",
+    "verification_scope": "saved_public_problem_and_synthetic_student_code_only"
+  },
+  "legacy_python": {
+    "status": "PASS",
+    "syntax_source_files": 16,
+    "actual_Streamlit_startup_health": 200,
+    "actual_AppTest_unsigned_in_gate": true,
+    "missing_and_malformed_config": "expected rejection",
+    "callback_success_and_failure": "synthetic exchange/storage only",
+    "external_Google_or_LLM_calls": 0,
+    "existing_secrets_read": false,
+    "limitation": "Retired callback lacks stored-state validation and is not the production authentication path."
+  },
+  "publication": {
+    "new_production_dependencies": 0,
+    "provider_configuration_changes": 0,
+    "hosted_deployments": 0,
+    "hosted_website_preserved": true
+  },
+  "limitations": [
+    "Actual student-controlled LeetCode sign-in, private history/report reads, account expiry and rotation require a live account check. Browser and transport fixtures do not certify provider entitlement.",
+    "Normal retained-browser sign-in is implemented; no documented third-party LeetCode OAuth delegation was found. Sessions can expire and require reauthentication.",
+    "Current native browser target is installed Google Chrome on macOS. No new-computer or other OS browser test was performed.",
+    "History is bounded and may be partial; no complete-history, mastery, hiring or skill score is inferred.",
+    "Student code is stored and reviewed, never run locally or submitted. Historical judge outcomes are platform reports, not local execution.",
+    "Optional browser dictation/read-aloud is implemented; physical microphone/speaker quality and continuous two-way voice are unverified or unimplemented.",
+    "Embedded Codex uses its separately signed-in official subscription. Embedded Claude remains unavailable; reviewed external context grants are supported.",
+    "Sign-in profile persists outside Git and SQLite backups; disconnect retains it and explicit Forget removes only the owned profile. Saved history/code and existing backups are independent historical copies."
+  ],
+  "actual_backup_restore": {
+    "format": "learnbridge_leetcode_actual_persistence.v1",
+    "verified_at": "2026-10-05T19:39:33.517Z",
+    "source": "actual_official_codex_completed_question_and_review",
+    "verification_scope": "public_problem_and_synthetic_student_code_only",
+    "private_user_data": false,
+    "backup": {
+      "schema_version": 5,
+      "database_sha256": "020c17cae00a3230a731a50bdfe3df28cf1c11a0be3859772b7c885e1934ac25",
+      "database_bytes": 2048000,
+      "fresh_restore": true
+    },
+    "records": [
+      {
+        "role": "problem",
+        "sha256": "15060c06e0c2f5490588ec0a56824bd3e49e4974e64ad996c3a57da504801565",
+        "restored_sha256": "15060c06e0c2f5490588ec0a56824bd3e49e4974e64ad996c3a57da504801565",
+        "exact_match": true
+      },
+      {
+        "role": "session",
+        "sha256": "228d787293d51d539b70f1ab18395580c22c91ed277c98d1bd3dd0ff8aaef467",
+        "restored_sha256": "228d787293d51d539b70f1ab18395580c22c91ed277c98d1bd3dd0ff8aaef467",
+        "exact_match": true
+      },
+      {
+        "role": "checkpoint",
+        "sha256": "60178502284ee1509a18118528fc8501857dc3202cb702e28e06074d45c07b13",
+        "restored_sha256": "60178502284ee1509a18118528fc8501857dc3202cb702e28e06074d45c07b13",
+        "exact_match": true
+      },
+      {
+        "role": "question_host_turn",
+        "sha256": "e65264bba5ee049be6ca6d1b6b7f9b0d2edaad8e112635230e0fea8bf0aac42d",
+        "restored_sha256": "e65264bba5ee049be6ca6d1b6b7f9b0d2edaad8e112635230e0fea8bf0aac42d",
+        "exact_match": true
+      },
+      {
+        "role": "review_host_turn",
+        "sha256": "2c149cafc9e74bbf46f60ac7361354cf98447ff31a3eaa8813d22ef866305b54",
+        "restored_sha256": "2c149cafc9e74bbf46f60ac7361354cf98447ff31a3eaa8813d22ef866305b54",
+        "exact_match": true
+      }
+    ],
+    "context_note": {
+      "sha256": "d578a4e56cd2ad0e5742b4b405e632fc8a17710a46d5d754544b5f1c7ad37cc6",
+      "restored_sha256": "d578a4e56cd2ad0e5742b4b405e632fc8a17710a46d5d754544b5f1c7ad37cc6",
+      "exact_text": true,
+      "revision_preserved": true
+    },
+    "grants": [
+      {
+        "sha256": "fbadbc6b12428b0b8bfedf6279316aa45b1d40bb6636fbd06e30ba858ade7b7a",
+        "restored_sha256": "fbadbc6b12428b0b8bfedf6279316aa45b1d40bb6636fbd06e30ba858ade7b7a",
+        "exact_match": true,
+        "selected_document_count": 1,
+        "destination": "codex"
+      }
+    ],
+    "host_receipts": [
+      {
+        "kind": "question",
+        "output_sha256": "15c431bc35883efdfdc10a35e742c106ddf7ff9ba5eb2f0e56b85353a74732ca",
+        "tools": [
+          "learnbridge_status",
+          "learnbridge_context"
+        ],
+        "exact_preserved": true
+      },
+      {
+        "kind": "review",
+        "output_sha256": "b7340ecd067df8272bdf702d89d9bfce5ff78b6f4f16bd6d0dfd7e15c4d32080",
+        "tools": [
+          "learnbridge_status",
+          "learnbridge_context"
+        ],
+        "exact_preserved": true
+      }
+    ],
+    "question_preserved": true,
+    "review_preserved": true,
+    "student_code_preserved": true,
+    "student_explanation_preserved": true,
+    "all_four_review_dimensions_preserved": true,
+    "current_view_valid": true,
+    "model_output_withheld": false,
+    "restored_host_state": "unavailable",
+    "restored_leetcode_connection": "disconnected",
+    "host_execution_count": 0,
+    "provider_call_count": 0,
+    "credential_files_copied": false,
+    "code_execution_verified": false,
+    "automatic_submission": false,
+    "integrity": "ok",
+    "disposable_restore_cleaned": true
+  },
+  "commands": [
+    "cd web && npm test",
+    "cd web && node --test --test-reporter=dot scripts/local-leetcode-*.test.mjs scripts/local-coding-practice.test.mjs scripts/leetcode-ui.test.mjs",
+    "cd web && npm -w @learnbridge/local-dashboard run build",
+    "cd web && npm run build:website",
+    "cd web && node scripts/verify-local-install.mjs"
+  ]
+}
