@@ -100,6 +100,32 @@ test('unverifiable successful output is refused instead of becoming a completed 
   assert.equal(final.data.state, 'failed'); assert.equal(final.data.error_code, 'VERSION_MISMATCH'); assert.equal(final.data.text, '');
 });
 
+test('context delivery is persisted only with matching exact status/context origins and is never inferred for legacy output', async t => {
+  const {store,grant}=fixture(t);
+  for(const [index,delivery] of ['model_requested','runtime_prepared'].entries()){
+    const origin=delivery==='model_requested'?'model':'runtime';
+    const service=createHostTurns({store,enabled:true,execute:async()=>({...result('Synthetic attested context.'),context_delivery:delivery,
+      tool_receipts:['learnbridge_status','learnbridge_context'].map(tool=>({tool,status:'completed',failed:false,result_hash:sha(tool),origin}))})});
+    const first=await start(service,grant,'attested-context-'+index),final=await finished(service,first.id);
+    assert.equal(final.data.state,'completed');assert.equal(final.data.context_delivery,delivery);await service.drain();
+  }
+  const cases=[
+    {context_delivery:'model_requested',origin:'runtime'},
+    {context_delivery:'runtime_prepared',origin:'model'},
+    {context_delivery:'runtime_prepared',origin:undefined},
+    {context_delivery:'guessed_mode',origin:'runtime'},
+  ];
+  for(const [index,value] of cases.entries()){
+    const service=createHostTurns({store,enabled:true,execute:async()=>({...result('REJECTED_DELIVERY_CANARY'),context_delivery:value.context_delivery,
+      tool_receipts:['learnbridge_status','learnbridge_context'].map(tool=>({tool,status:'completed',failed:false,result_hash:sha(tool),...(value.origin?{origin:value.origin}:{})}))})});
+    const first=await start(service,grant,'invalid-delivery-'+index),final=await finished(service,first.id);
+    assert.equal(final.data.state,'failed');assert.equal(final.data.error_code,'VERSION_MISMATCH');assert.equal(final.data.context_delivery,null);assert.equal(final.data.text,'');await service.drain();
+  }
+  const legacy=createHostTurns({store,enabled:true,execute:async()=>result('Legacy context proof.')});
+  const first=await start(legacy,grant,'legacy-context-mode'),final=await finished(legacy,first.id);
+  assert.equal(final.data.state,'completed');assert.equal(final.data.context_delivery,null);await legacy.drain();
+});
+
 test('actual paired host route binds grant/request/retry and rejects hostile origin, nonce and executable fields', async t => {
   const parent = mkdtempSync(join(tmpdir(), 'learnbridge-host-http-test-')); const runtime = await startRuntime({ dataRoot: join(parent, 'private'), port: 0,
     hostAdapter: { enabled: true, execute: async () => result('Synthetic HTTP selected evidence answer.') } });

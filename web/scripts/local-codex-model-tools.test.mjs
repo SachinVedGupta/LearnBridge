@@ -17,7 +17,7 @@ import readline from 'node:readline';
 const [mode,configText,clientUrl,transportUrl]=process.argv.slice(2),config=JSON.parse(configText);
 const {Client}=await import(clientUrl),{StdioClientTransport}=await import(transportUrl);
 const send=value=>process.stdout.write(JSON.stringify(value)+'\n');
-let client,thread='synthetic-model-thread',turn='synthetic-model-turn',step=0,context,items=[],pendingItem,requestNumber=100;
+let client,thread='synthetic-model-thread',turn='synthetic-model-turn',step=0,context,items=[],pendingItem,requestNumber=100,experimental=false;
 const note=(method,params)=>send({method,params:{threadId:thread,turnId:turn,...params}});
 const finish=()=>{const item={id:'answer',type:'agentMessage',phase:'final_answer',text:JSON.stringify({answer:'A base case ends recursion. The suggested study work is pending review.'})};note('item/completed',{item});note('turn/completed',{turn:{id:turn,status:'completed',items:[...items,item]}})};
 const ask=async()=>{
@@ -60,12 +60,12 @@ readline.createInterface({input:process.stdin}).on('line',async line=>{
    if(mode==='changedArgs'&&step===2)item.arguments={...item.arguments,document_ids:[]};
    pendingItem=null;items.push(item);note('item/completed',{item});step++;setTimeout(ask,5);return;
  }
- if(m.method==='initialize'){if(m.params.capabilities.experimentalApi!==true)process.exit(9);send({id:m.id,result:{userAgent:'codex/0.154.0',platformFamily:'unix',platformOs:'macos'}});return}
+ if(m.method==='initialize'){experimental=m.params.capabilities.experimentalApi===true;send({id:m.id,result:{userAgent:'codex/0.154.0',platformFamily:'unix',platformOs:'macos'}});return}
  if(m.method==='config/read'){send({id:m.id,result:{config,layers:null}});return}
  if(m.method==='account/read'){send({id:m.id,result:{account:{type:'chatgpt',email:'SYNTHETIC_NOT_REAL_ACCOUNT',planType:'pro'}}});return}
  if(m.method==='model/list'){send({id:m.id,result:{data:['gpt-6-astra','gpt-5.2','gpt-5.5'].map(model=>({id:model,model,hidden:false,isDefault:model==='gpt-6-astra',description:'Synthetic public catalog',displayName:model,defaultReasoningEffort:'medium',supportedReasoningEfforts:[{reasoningEffort:'medium',description:'Synthetic'}]})),nextCursor:null}});return}
  if(m.method==='thread/start'){
-   if(m.params.model!=='gpt-5.5'||m.params.dynamicTools?.length!==4||m.params.dynamicTools.some(t=>t.type!=='function'||t.deferLoading!==false))process.exit(10);
+   if(!experimental||m.params.model!=='gpt-5.5'||m.params.dynamicTools?.length!==4||m.params.dynamicTools.some(t=>t.type!=='function'||t.deferLoading!==false))process.exit(10);
    const p=config.mcp_servers.learnbridge;client=new Client({name:'synthetic-native-codex-host',version:'1'});await client.connect(new StdioClientTransport({command:p.command,args:p.args,stderr:'pipe'}));
    send({id:m.id,result:{thread:{id:thread},model:m.params.model,modelProvider:'openai',approvalPolicy:'on-request',approvalsReviewer:'user',cwd:process.cwd(),sandbox:{type:'readOnly',networkAccess:false}}});return;
  }

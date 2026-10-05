@@ -13,6 +13,11 @@ import { startRuntime } from '../apps/local-runtime/src/server.mjs';
 
 const A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const entry = fileURLToPath(new URL('../apps/local-runtime/src/mcp.mjs', import.meta.url));
+async function barrier(promise, label, timeoutMs = 5000) {
+  let timer;
+  try { return await Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(label + ' timed out.')), timeoutMs); })]); }
+  finally { clearTimeout(timer); }
+}
 async function agent(t, root, destination = 'codex', boundGrant = undefined, embeddedLease = undefined) {
   const transport = new StdioClientTransport({ command: process.execPath, args: [entry, '--data-root', root, '--destination', destination, ...(boundGrant === undefined ? [] : ['--grant-id', boundGrant]), ...(embeddedLease === undefined ? [] : ['--embedded-lease', embeddedLease])], env: { PATH: '/usr/bin:/bin' }, stderr: 'pipe' });
   let stderr = ''; transport.stderr.on('data', chunk => { stderr += chunk; });
@@ -85,7 +90,7 @@ test('MGB05: actual MCP forwards only its trusted outer lease; revoked/wrong lea
   }
   assert.equal(f.operations.length, beforeWork); assert.equal(JSON.stringify(f.calls.map(call => call.input)).includes('embedded_lease'), false);
 });
-test('MGB06: real embedded runtime lease binds one grant and logout refuses late stdio reads/proposals without spending another grant', async t => {
+test('MGB06: real embedded runtime lease binds one grant and logout refuses late stdio reads/proposals without spending another grant', { timeout: 15000 }, async t => {
   const parent = realpathSync(mkdtempSync(join(tmpdir(), 'learnbridge-mcp-native-lease-'))), root = join(parent, 'workspace');
   let releaseModel; const heldModel = new Promise(done => { releaseModel = done; }); let modelStarted; const began = new Promise(done => { modelStarted = done; }); let bridge, leaseId;
   const result = { status: 'completed', turn_id: 'synthetic-lease-model-turn', text: JSON.stringify({ answer: 'Synthetic selected-source explanation.', task_proposals: [], document_proposals: [] }), error: null };
@@ -93,7 +98,9 @@ test('MGB06: real embedded runtime lease binds one grant and logout refuses late
     async startThread() { leaseId = input.embeddedLease; assert.match(leaseId, /^[a-f0-9-]{36}$/); bridge = await agent(t, root, 'codex', input.grantId, leaseId); },
     async callLearnBridgeTool(tool, args) { const response = await bridge.tool(tool, args); assert.equal(response.failed, false); return { value: response.value, receipt: { tool, status: 'completed', failed: false, result_hash: createHash('sha256').update(JSON.stringify(response.value)).digest('hex') } }; },
     async startTurn() { modelStarted(); return { completion: heldModel }; }, close: async () => {} });
-  const runtime = await startRuntime({ dataRoot: root, port: 0, codexProfileOptions: { adapterFactory } });
+  // This fixture deliberately holds a model-requested turn while exercising
+  // real MCP lease permissions. Catalogue/auto selection has separate tests.
+  const runtime = await startRuntime({ dataRoot: root, port: 0, codexProfileOptions: { adapterFactory, executionMode: 'model' } });
   t.after(async () => { releaseModel(result); await runtime.close(); rmSync(parent, { recursive: true, force: true }); });
   async function pair() {
     const response = await fetch(runtime.origin + '/api/local/v1/pair', { method: 'POST', headers: { Origin: runtime.origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ code: runtime.createPairingCode() }) });
@@ -104,7 +111,7 @@ test('MGB06: real embedded runtime lease binds one grant and logout refuses late
   const noteA = (await call('/documents', { title: 'Lease-selected note', content: 'SYNTHETIC_LEASE_BOUND_NOTE' })).document, noteB = (await call('/documents', { title: 'Other active grant', content: 'PRIVATE_OTHER_GRANT_CANARY' })).document;
   async function grant(note) { return (await call('/agent-grants', { destination: 'codex', task_ids: [], document_ids: [note.id], source_entry_ids: [], expected_records: { tasks: [], documents: [{ id: note.id, revision: note.revision }], source_entries: [] }, max_bytes: 48000, expires_in_minutes: 60 })).grant; }
   const own = await grant(noteA), other = await grant(noteB); assert.equal((await call('/ai/connect', { confirmed: true })).state, 'available');
-  const turn = (await call('/host-turns', { grant_id: own.id, prompt: 'Explain my selected note.', confirmed: true })).item; await began;
+  const turn = (await call('/host-turns', { grant_id: own.id, prompt: 'Explain my selected note.', confirmed: true })).item; await barrier(began, 'Synthetic model-start barrier');
   const before = (await call('/agent-grants')).items.find(item => item.id === other.id); assert.equal(before.used_bytes, 0);
   await assert.rejects(requestAgentControl(root, 'codex', 'context', { grant_id: other.id }, { embeddedLease: leaseId }), { code: 'CONSENT_REQUIRED' });
   // Possessing a live lease is insufficient: only a broker-minted one-use exact permit may execute.

@@ -24,6 +24,11 @@ readline.createInterface({input:process.stdin}).on('line',line=>{
   if(mode==='unsupportedRpc'){send({id:m.id,error:{code:-32601,message:'PRIVATE_VERSION_CANARY'}});return}
   if(mode==='tokenRefresh'){send({id:'token-request',method:'account/chatgptAuthTokens/refresh',params:{reason:'unauthorized'}});setTimeout(()=>send({id:m.id,result:{data:[model('gpt-5.5')],nextCursor:null}}),100);return}
   let data=['gpt-6-astra','gpt-5.2','gpt-5.5'].map(model),nextCursor=null;
+  if(['current','currentFallback','currentLuna','currentHidden','currentAlias'].includes(mode))data=['gpt-6-astra','gpt-5.6-sol','gpt-5.6-terra','gpt-5.6-luna'].map(model);
+  if(mode==='currentFallback')data=data.filter(m=>m.model!=='gpt-5.6-sol');
+  if(mode==='currentLuna')data=data.filter(m=>['gpt-6-astra','gpt-5.6-luna'].includes(m.model));
+  if(mode==='currentHidden')data=data.map(m=>({...m,hidden:m.model!=='gpt-6-astra'}));
+  if(mode==='currentAlias')data[1].id='unsafe-current-alias';
   if(mode==='fallback')data=data.filter(m=>m.model!=='gpt-5.5');
   if(mode==='noDirect')data=[model('gpt-6-astra')];
   if(mode==='hidden')data=data.map(m=>({...m,hidden:m.model!=='gpt-6-astra'}));
@@ -89,4 +94,24 @@ test('CMC06 experimental thread schema must be verified independently before mod
 });
 test('CMC07 native thread substitution is rejected before MCP catalog or any model turn',async t=>{
  const f=fixture(t,'wrongSelected');await assert.rejects(begin(f),{code:'VERSION_MISMATCH'});assert.equal(f.traffic.filter(m=>m.method==='thread/start').length,1);assert.equal(f.traffic.some(m=>m.method==='mcpServerStatus/list'||m.method==='turn/start'),false);
+});
+test('CMC08 current native code-mode-only catalog is unsupported for eager functions before any thread or model turn',async t=>{
+ for(const mode of ['current','currentFallback','currentLuna']){
+  const f=fixture(t,mode);await f.adapter.initialize();assert.deepEqual(await f.adapter.directFunctionCapability(),{supported:false,model:null});
+  assert.equal(f.traffic.some(m=>m.method==='thread/start'||m.method==='turn/start'||m.method==='mcpServer/tool/call'),false);
+  assert.equal(f.adapter.capabilities().model_entitlement_verified,false);
+  await assert.rejects(f.adapter.startThread(),{code:'UNSUPPORTED'});assert.equal(f.traffic.some(m=>m.method==='thread/start'),false);
+ }
+});
+test('CMC09 code-mode-only model overrides and aliases remain forbidden despite catalog visibility',async t=>{
+ for(const [mode,code]of [['currentHidden','UNSUPPORTED'],['currentAlias','VERSION_MISMATCH']]){const denied=fixture(t,mode);await assert.rejects(begin(denied),{code});assert.equal(denied.traffic.some(m=>m.method==='thread/start'),false);}
+ for(const model of ['gpt-5.6','gpt-5.6-sol','gpt-5.6-terra','gpt-5.6-luna','gpt-5.6-sol-unreviewed','gpt-6-astra'])assert.throws(()=>fixture(t,'current',{input:{model}}),{code:'UNSUPPORTED'});
+});
+test('CMC10 explicit capability reports only catalog absence; authority, RPC and malformed catalog failures still throw',async t=>{
+ const f=fixture(t);await f.adapter.initialize();assert.deepEqual(await f.adapter.directFunctionCapability(),{supported:true,model:'gpt-5.5'});
+ assert.equal(f.traffic.some(m=>m.method==='thread/start'||m.method==='turn/start'),false);
+ for(const [mode,code]of [['accountMissing','AUTH_REQUIRED'],['accountApiKey','UNSUPPORTED'],['unsupportedRpc','UNSUPPORTED'],['authError','AUTH_REQUIRED'],['tokenRefresh','UNSUPPORTED'],['malformed','VERSION_MISMATCH'],['paginated','BUDGET_EXCEEDED']]){
+  const denied=fixture(t,mode);await denied.adapter.initialize();await assert.rejects(denied.adapter.directFunctionCapability(),{code});
+  assert.equal(denied.traffic.some(m=>m.method==='thread/start'||m.method==='turn/start'||m.method==='mcpServer/tool/call'),false);
+ }
 });

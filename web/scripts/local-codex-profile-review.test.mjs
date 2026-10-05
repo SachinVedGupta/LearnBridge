@@ -38,7 +38,7 @@ function fixture(t, mutate, academicPolicy = 'learning_support') {
             draft_text: args.draft, source_documents: [{ id: pin.document_id, revision: pin.revision, sha256: pin.sha256 }], academic_policy: { learning_support: 'learning_support', graded_scaffolding: 'graded_restricted', not_applicable: 'unrestricted' }[args.academic_policy], origin: 'agent_paste' },
           { idempotencyKey: args.idempotency_key, agentOrigin: 'codex', grantId: args.grant_id });
         } else assert.fail('No native shell, browser, provider or other action is allowed.');
-        return { value, receipt: { tool, status: 'completed', failed: false, result_hash: sha(JSON.stringify(value)) } };
+        return { value, receipt: { tool, status: 'completed', failed: false, result_hash: sha(JSON.stringify(value)), origin: 'runtime' } };
       },
       async startTurn(input) { assert.equal(input.outputSchema.additionalProperties, false); const context = JSON.parse(input.context);
         assert.deepEqual(context.documents.map(item => item.id), [source.document.id]); assert.equal(JSON.stringify(context).includes('UNSELECTED_PRIVATE_BODY_CANARY'), false);
@@ -76,6 +76,7 @@ test('CPR01: unknown/unselected documents, invalid policy and forbidden graded p
 test('CPR02: invalid/extra action fields, malformed later proposals and excess action counts cannot write even an earlier valid proposal', async t => {
   const cases = [
     value => { value.send_email = { recipient: 'unselected@example.test' }; },
+    value => { value.answer = 'CONTROL\u0001ANSWER'; },
     value => { value.task_proposals.push({ title: 'Invalid second task', reason: 'Synthetic', deadline: { precision: 'date', date: '2026-10-15' } }); },
     value => { value.document_proposals[0].accept = true; },
     value => { value.document_proposals[0].draft = { command: 'Never execute model source data' }; },

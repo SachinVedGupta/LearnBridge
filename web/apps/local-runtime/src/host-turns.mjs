@@ -71,7 +71,7 @@ export function createHostTurns({ store, execute = executeCodexTurn, enabled = f
       const item = store.createWorkspaceRecord({ kind: 'artifact', title: 'Codex workspace conversation', data: {
         format: FORMAT, host: 'codex', grant_id: grant.id, grant_revision: grant.revision,
         grant_fingerprint: grant.consent_fingerprint, prompt: input.prompt, tool_policy: policy,
-        request_hash, idempotency_key: idempotencyKey, state: 'queued', text: '', tool_receipts: [], progress: [],
+        request_hash, idempotency_key: idempotencyKey, state: 'queued', text: '', tool_receipts: [], context_delivery: null, progress: [],
         created_at: new Date().toISOString(), finished_at: null, native_resume_available: false,
         proposals_require_review: true, account_mode: 'official_chatgpt_managed', instance: randomUUID(),
       } }, { idempotencyKey: `host-${idempotencyKey}` });
@@ -89,14 +89,22 @@ export function createHostTurns({ store, execute = executeCodexTurn, enabled = f
         let allowed = false; try { allowed = authorized(); } catch {}
         if (!allowed) { save(item.id, { state: controller.signal.aborted ? 'interrupted' : 'withheld', error_code: controller.signal.aborted ? 'CANCELLED' : 'CONSENT_REQUIRED', text: '', tool_receipts: [], finished_at: new Date().toISOString() }); return; }
         if (!result || !terminal.has(result.state) || typeof result.text !== 'string' || Buffer.byteLength(result.text) > 64000 || !Array.isArray(result.tool_receipts) || result.tool_receipts.length > 20 || result.output_sha256 !== sha(result.text) || result.complete !== (result.state === 'completed')) denied('VERSION_MISMATCH');
+        // Legacy executors did not attest how context reached the model. Keep
+        // that value unknown rather than infer it from an unlabelled receipt.
+        const delivery = result.context_delivery ?? null;
+        if (delivery !== null && !['model_requested','runtime_prepared'].includes(delivery)) denied('VERSION_MISMATCH');
         const receipts = result.tool_receipts.map(receipt => {
           if (receipt && !tools.includes(receipt.tool)) denied('SCOPE_DENIED');
           if (!receipt || Object.keys(receipt).some(key => !['tool', 'status', 'failed', 'result_hash', 'origin'].includes(key)) || !['learnbridge_status', 'learnbridge_context', 'learnbridge_propose_task', 'learnbridge_propose_document'].includes(receipt.tool) || (receipt.origin !== undefined && !['model','runtime'].includes(receipt.origin)) || typeof receipt.failed !== 'boolean' || !/^[a-f0-9]{64}$/.test(receipt.result_hash)) denied('VERSION_MISMATCH');
           return { tool: receipt.tool, status: ['completed', 'failed'].includes(receipt.status) ? receipt.status : 'unknown', failed: receipt.failed, result_hash: receipt.result_hash, ...(receipt.origin ? { origin: receipt.origin } : {}) };
         });
         if (result.state === 'completed' && (!result.text.trim() || !receipts.some(receipt => receipt.tool === 'learnbridge_context' && receipt.status === 'completed' && !receipt.failed) || receipts.some(receipt => receipt.failed))) denied('VERSION_MISMATCH');
+        if (result.state === 'completed' && delivery !== null) {
+          const origin = delivery === 'model_requested' ? 'model' : 'runtime';
+          if (receipts.some(receipt => receipt.origin !== origin) || ['learnbridge_status','learnbridge_context'].some(tool => !receipts.some(receipt => receipt.tool === tool && receipt.origin === origin && receipt.status === 'completed' && !receipt.failed))) denied('VERSION_MISMATCH');
+        }
         save(item.id, { state: result.state, text: result.state === 'completed' ? result.text : '', output_sha256: result.output_sha256,
-          tool_receipts: receipts, host_version: result.host_version, error_code: result.error_code || null, finished_at: new Date().toISOString() });
+          tool_receipts: receipts, context_delivery: delivery, host_version: result.host_version, error_code: result.error_code || null, finished_at: new Date().toISOString() });
       }).catch(error => {
         const current = getRecord(item.id); if (terminal.has(current.data.state)) return;
         const code = ['UNSUPPORTED', 'AUTH_REQUIRED', 'CONSENT_REQUIRED', 'SCOPE_DENIED', 'VERSION_MISMATCH', 'OFFLINE', 'BUDGET_EXCEEDED', 'CANCELLED', 'TIMEOUT','UNKNOWN_OUTCOME','RATE_LIMITED'].includes(error?.code) ? error.code : 'PROVIDER_FAILURE';

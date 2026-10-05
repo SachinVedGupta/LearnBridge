@@ -75,7 +75,7 @@ test('CTP04 profile denies proposal permits before delegation and structured rea
       leaseFactory: (grant, allowed, policy) => { assert.equal(grant, f.grant.id); assert.equal(allowed(), true); assert.equal(policy, 'read_only'); return { id: randomUUID(), release() {}, permitTool() { delegated++; return () => {}; } }; },
       adapterFactory: input => { adapterPolicy = input.toolPolicy; return {
         async initialize() { return { state: 'available' }; }, async startThread() {}, async close() {},
-        async callLearnBridgeTool(tool, args) { calls.push(tool); const value = tool === 'learnbridge_context' ? f.store.agentContext({ destination: 'codex', ...args }) : { healthy: true }; return { value, receipt: receipt(tool) }; },
+        async callLearnBridgeTool(tool, args) { calls.push(tool); const value = tool === 'learnbridge_context' ? f.store.agentContext({ destination: 'codex', ...args }) : { healthy: true }; return { value, receipt: { ...receipt(tool), origin: 'runtime' } }; },
         async startTurn(value) {
           turnInput = value;
           if (mode === 'hiddenPermit') input.toolPermit('learnbridge_propose_task', { grant_id: f.grant.id, title: 'Forbidden generic action', idempotency_key: 'forbidden-readonly-proposal' });
@@ -124,15 +124,15 @@ readline.createInterface({input:process.stdin}).on('line',async line=>{
  if(m.method==='initialize'){send({id:m.id,result:{userAgent:'codex/0.154.0',platformFamily:'unix',platformOs:'macos'}});return}
  if(m.method==='config/read'){send({id:m.id,result:{config,layers:null}});return}
  if(m.method==='account/read'){send({id:m.id,result:{account:{type:'chatgpt',email:'SYNTHETIC_ACCOUNT',planType:'pro'}}});return}
- if(m.method==='model/list'){send({id:m.id,result:{data:[{id:'gpt-5.5',model:'gpt-5.5',hidden:false,isDefault:true,description:'Synthetic model',displayName:'Synthetic',defaultReasoningEffort:'medium',supportedReasoningEfforts:[]}],nextCursor:null}});return}
+ if(m.method==='model/list'){const model=mode==='runtimePrepared'?'gpt-5.6-sol':'gpt-5.5';send({id:m.id,result:{data:[{id:model,model,hidden:false,isDefault:true,description:'Synthetic model',displayName:'Synthetic',defaultReasoningEffort:'medium',supportedReasoningEfforts:[]}],nextCursor:null}});return}
  if(m.method==='thread/start'){
-  if(m.params.dynamicTools?.map(t=>t.name).join(',')!=='learnbridge_status,learnbridge_context')process.exit(10);
+  if(mode==='runtimePrepared'?m.params.dynamicTools!==undefined:m.params.dynamicTools?.map(t=>t.name).join(',')!=='learnbridge_status,learnbridge_context')process.exit(10);
   const p=config.mcp_servers.learnbridge;client=new Client({name:'synthetic-policy-host',version:'1'});await client.connect(new StdioClientTransport({command:p.command,args:p.args,stderr:'pipe'}));
-  send({id:m.id,result:{thread:{id:thread},model:m.params.model,modelProvider:'openai',approvalPolicy:'on-request',approvalsReviewer:'user',cwd:process.cwd(),sandbox:{type:'readOnly',networkAccess:false}}});return;
+  send({id:m.id,result:{thread:{id:thread},model:m.params.model||'gpt-5.6-sol',modelProvider:'openai',approvalPolicy:'on-request',approvalsReviewer:'user',cwd:process.cwd(),sandbox:{type:'readOnly',networkAccess:false}}});return;
  }
  if(m.method==='mcpServerStatus/list'){const tools=(await client.listTools()).tools;send({id:m.id,result:{data:[{name:'learnbridge',tools:Object.fromEntries(tools.map(t=>[t.name,t])),resources:[],resourceTemplates:[],runtimeStatus:'connected'}],nextCursor:null}});return}
- if(m.method==='mcpServer/tool/call'){send({id:m.id,result:await client.callTool({name:m.params.tool,arguments:m.params.arguments})});return}
- if(m.method==='turn/start'){send({id:m.id,result:{turn:{id:turn,status:'inProgress',items:[]}}});note('turn/started',{turn:{id:turn}});setTimeout(ask,5);return}
+ if(m.method==='mcpServer/tool/call'){const result=await client.callTool({name:m.params.tool,arguments:m.params.arguments});if(m.params.tool==='learnbridge_context')context=JSON.parse(result.content[0].text);send({id:m.id,result});return}
+ if(m.method==='turn/start'){send({id:m.id,result:{turn:{id:turn,status:'inProgress',items:[]}}});note('turn/started',{turn:{id:turn}});setTimeout(mode==='runtimePrepared'?finish:ask,5);return}
  if(m.method==='turn/interrupt'){send({id:m.id,result:{}});return}
 });
 `;
@@ -184,4 +184,24 @@ test('CTP07 unreported native MCP proposal calls cannot obtain an IPC permit in 
   const f = await transportFixture(t, 'nativeBypass'); assert.equal(f.turn.data.state, 'completed', f.turn.data.error_code);
   assert.equal(f.traffic.filter(item => item.method === 'mcpServer/tool/call').length, 2);
   assert.equal((await f.call('/task-proposals')).data.items.length, 0); assert.equal((await f.call('/writing/items')).data.items.length, 0); assert.equal((await f.call('/tasks')).data.items.length, 0);
+});
+
+test('CTP08 auto transport prepares the exact approved context through actual MCP/IPC before a single schema-only turn', async t => {
+  const f = await transportFixture(t, 'runtimePrepared');
+  assert.equal(f.turn.data.state, 'completed', f.turn.data.error_code); assert.equal(f.turn.data.context_delivery, 'runtime_prepared');
+  assert.deepEqual(f.turn.data.tool_receipts.map(({tool,origin})=>({tool,origin})), ['learnbridge_status','learnbridge_context'].map(tool=>({tool,origin:'runtime'})));
+  assert.equal(f.traffic.filter(item=>item.method==='turn/start').length,1);
+  assert.equal(f.traffic.filter(item=>item.method==='thread/start').length,1);
+  assert.equal(f.traffic.filter(item=>item.method==='mcpServer/tool/call').length,2);
+  assert.equal(f.traffic.some(item=>item.method==='item/tool/call'),false);
+  assert.equal(f.launches.length,3); // explicit login, catalogue-only probe, fresh schema-only adapter
+  const thread=f.traffic.find(item=>item.method==='thread/start').params;
+  assert.equal(thread.dynamicTools,undefined); assert.match(thread.developerInstructions,/runtime prepares approved status\/context/);
+  assert.doesNotMatch(thread.developerInstructions,/Call learnbridge_status, then/);
+  const turn=f.traffic.find(item=>item.method==='turn/start').params;
+  assert.deepEqual(turn.outputSchema.required,['answer']); assert.match(turn.input[0].text,/Selected approved context/);
+  assert.match(turn.input[0].text,/Please review your timetable by 2026-10-09/);
+  assert.equal((await f.call('/ai/status')).data.tool_execution,'runtime_prepared');
+  assert.equal((await f.call('/tasks')).data.items.length,0); assert.equal((await f.call('/task-proposals')).data.items.length,0);
+  assert.equal((await f.call('/writing/items')).data.items.length,0);
 });

@@ -16,13 +16,13 @@ function fixture(t, mode = 'normal') {
   const calls = []; let signedIn = false, release = null;
   const adapterFactory = (input, options) => {
     const call = { input, options, closed: false }; calls.push(call);
-    const result = { status: 'completed', turn_id:'synthetic-turn', text: JSON.stringify({answer:'A base case ends the selected recursion.',task_proposals:[],document_proposals:[]}), tool_receipts: ['learnbridge_status','learnbridge_context'].map(tool => ({ tool, status: 'completed', failed: false, result_hash: sha(tool) })), error: null };
+    const result = { status: 'completed', turn_id:'synthetic-turn', text: JSON.stringify({answer:'A base case ends the selected recursion.',task_proposals:[],document_proposals:[]}), tool_receipts: [], error: null };
     return { async initialize() { if (mode === 'late') await new Promise(resolve => { release = resolve; }); return { state: signedIn ? 'available' : 'requires_auth' }; },
       async startLogin() { return { auth_url: 'https://auth.openai.com/synthetic-login' }; },
       async accountStatus() { return { state: signedIn ? 'available' : 'requires_auth' }; },
       async cancelLogin() { calls.push({ cancelled: true }); }, async logoutAccount() { signedIn = false; calls.push({ loggedOut: true }); },
       async startThread() { assert.equal(input.authorize(), true); },
-      async callLearnBridgeTool(tool){ if(mode==='missing_context'&&tool==='learnbridge_context')return {value:{},receipt:{tool:'learnbridge_status',status:'completed',failed:false,result_hash:sha(tool)}};return {value:{documents:[]},receipt:{tool,status:'completed',failed:false,result_hash:sha(tool)}}; },
+      async callLearnBridgeTool(tool){ if(mode==='missing_context'&&tool==='learnbridge_context')return {value:{},receipt:{tool:'learnbridge_status',status:'completed',failed:false,result_hash:sha(tool),origin:'runtime'}};return {value:{documents:[]},receipt:{tool,status:'completed',failed:false,result_hash:sha(tool),origin:'runtime'}}; },
       async startTurn({ prompt, outputSchema }) { assert.ok(prompt.includes('prepared approved context'));assert.equal(outputSchema.type,'object'); if (mode === 'revoke') signedIn = false; return { completion: Promise.resolve(result) }; },
       async close() { call.closed = true; } };
   };
@@ -49,6 +49,7 @@ test('CP02 execution requires completed sign-in and both actual context/status r
   await assert.rejects(service.execute(input), { code: 'AUTH_REQUIRED' });
   await service.connect(auth); signIn(); await service.check(auth);
   const output = await service.execute(input); assert.equal(output.state, 'completed'); assert.equal(output.complete, true); assert.equal(output.output_sha256, sha(output.text)); assert.equal(output.tool_receipts.length, 2);
+  assert.equal(output.context_delivery,'runtime_prepared'); assert.equal(service.status().tool_execution,'runtime_prepared');
   assert.equal(existsSync(calls[1].input.projectRoot), false); assert.equal(calls[1].closed, true);
 });
 test('CP03 an answer without selected-context proof is rejected instead of marked successful', async t => {
