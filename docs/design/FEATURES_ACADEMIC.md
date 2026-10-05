@@ -152,6 +152,12 @@ Pedagogy release gate: score a fixed 24-case set covering factual explanation, p
 
 Delivery milestone: M3 agent and planning, after source retrieval and one working official provider mode. Non-goals: guaranteed answer correctness, autonomous graded work, surveillance of attention, or universal subscription access.
 
+### Delivered selected-slide lecture extension
+
+[AI lecture mode](implementation/AI_LECTURE_MODE.md) implements a bounded F08 extension: select one to eight physical PDF pages, approve one exact-note Codex grant, review the proposed explanations/examples/takeaways and quiz answers, then accept the script. Installed macOS speech produces saved narration; actual audio completion advances the original slides and pauses at ungraded comprehension checks. Exact student answers, pause-to-ask chapter clarification and the listening cursor persist. Playback does not establish mastery. Codex receives extracted text and selected course context, not PDF images; diagram-only evidence and real-course teaching quality remain separate gates.
+
+The guide defines parser/source/hash checks, paired HTTP authority, cancellation/restart/restore behavior, private cache removal and objective native/audio/browser proof. These incremental tests do not replace the broader F08 acceptance or pedagogy rubric above. A linear narrated MP4 is the related F11 export; quizzes and clarification remain interactive LearnBridge behavior.
+
 ## F09 Catch-up plans and exam preparation
 
 ### Meaning and expected behavior
@@ -266,6 +272,10 @@ Missing dependencies report an unsupported/blocked format with a precise remedy;
 | F11-A07 | Student approves sharing artifact hash H1; file is replaced with H2 before upload. | Upload is rejected pending new review; capture shows no connector write under the old approval. |
 
 Delivery milestone: M4 documents, browser and career, format by format. Markdown and selected PDF/DOCX/LaTeX processors are the initial scope; slides/spreadsheets and F11-A06 gate their own later format release. Feasibility requires pinned parser/converter dependencies and per-platform checks; request any required production dependency approvals during implementation. Non-goals: every office feature, unreviewed uploads, automatic academic submissions or claiming a visually perfect export from text extraction alone.
+
+### Delivered narrated-video extension
+
+[AI lecture mode](implementation/AI_LECTURE_MODE.md) adds a local linear MP4 artifact from an exact accepted lecture pack, original PDF renders and measured saved narration. The macOS renderer uses H.264 at 1280 × 720, with private source/script/media hashes and independent track/duration/boundary-frame verification. Download requires current paired authority and validated bytes. Native media is a separately removable cache outside workspace backups; restore retains the reviewed script and attempts and offers explicit regeneration. This does not imply universal video support, interactive quizzes inside an MP4, network voice generation or automatic sharing. The original F11 office-format gates remain unchanged.
 
 ## Integration evidence and release boundary
 

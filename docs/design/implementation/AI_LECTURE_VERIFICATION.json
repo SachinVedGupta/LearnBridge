@@ -1,0 +1,407 @@
+{
+  "schema_version": 1,
+  "feature": "local_reviewed_ai_lecture_and_video",
+  "verified_at": "2026-10-05T22:37:17.562Z",
+  "code_commit": "6d5fa98fe70b33c049bf59413174c14a8537f8ef",
+  "environment": {
+    "node": "v22.23.2",
+    "platform": "darwin",
+    "arch": "arm64",
+    "codex_protocol": "0.154.0",
+    "voice": "installed_macos_Samantha"
+  },
+  "source_sha256": {
+    "web/apps/local-runtime/src/codex-adapter.mjs": "07663bc3c8fee0777a515883b730db5e799566dd6369d895497107353ad4e3ae",
+    "web/apps/local-runtime/src/codex-profile.mjs": "5bc865e26cfba89741a48e4747c5fd94e5b6760ae277e40212041ef6b6ddfdc4",
+    "web/apps/local-runtime/src/host-turns.mjs": "dcf088b77ac1a3e6e7ad2ca334d6795b4d1a4041d0128e2b1f7d76d07a134246",
+    "web/apps/local-runtime/src/lecture-media.mjs": "c9e73e1f63af3c9489a7c63f6ac07b38db1ba08a4dca002c2e4ae72ced1ac58c",
+    "web/apps/local-runtime/src/lecture-routes.mjs": "09ebaac2e6ad64316b07bfcdb7262824f2bc1a3f456db5ffab5c8054f9a00e89",
+    "web/apps/local-runtime/src/lecture-service.mjs": "71a02c949d18679c4b272e926eb701ae69550fdb8918cca68910a0189d9f5473",
+    "web/apps/local-runtime/src/lecture-video.swift": "f882a9ace1c72e88f0be06114facf3b4cb336a868272d960ef4a10b965010dc0",
+    "web/apps/local-runtime/src/server.mjs": "a268550e1ecaaf48a5e3b03ebe5a5e25694b4137b2c03620442ac96eeaf8d7a0",
+    "web/apps/local/build.mjs": "3a3a6b25f8fdb79a91a52f2d345f9e4b0e8094ee3656f7c61077940e68f9ca88",
+    "web/apps/local/public/app.js": "95cc1f7a5dd686dd7d8f57a965cf78b383a0eed2c55b795580a24c6d1f6bf61a",
+    "web/apps/local/public/course-studio.js": "5874d479983a99c767ec3ab6e7c591bf94d1cfd72652a77c40198e9cb0a34c97",
+    "web/apps/local/public/lecture-player.css": "d56f45daab1be2208c87a3b359c9a475a4e1ae193aa97ca78a60b711ff27752e",
+    "web/apps/local/public/lecture-player.js": "0033b6b6cf8d8f9214085069b96fdb35fa404a0edcd885b33ebd06368cb71212",
+    "web/scripts/agent-mcp-grant-binding.test.mjs": "bd447212d6b464093c163d4fa01aec48ae8e5b02f6cdce80322c1e129a252044",
+    "web/scripts/fixtures/lecture-media-fixture.mjs": "3e2403261f214c624659c13398adb1de4d2c04970b8885a5b3846ca5f99c1916",
+    "web/scripts/fixtures/lecture-test-support.mjs": "1c4b6f2881538a1e66da3218f32d0e620130ab3c340f79b78e54f90717f52ba5",
+    "web/scripts/fixtures/lecture-ui-fixture.mjs": "aa0f360a5ad28fee66f84937ed63eb73031156958a591fb4ca9755d90f98fb30",
+    "web/scripts/fixtures/lecture-video-inspect.swift": "5f2c37682d68dabdca61939113e66972ed4edee9af0c7a69f9de16bb578c2138",
+    "web/scripts/lecture-player-ui.test.mjs": "f88a3313a68d36bcf053d5813bdd66cb1c2ca8d9fddf6e3eaf3643110a949d49",
+    "web/scripts/local-codex-model-catalog.test.mjs": "ddf9d9062498cf567223f7684ba2584ddfc864c5e22e20a9e3fe6fd809346729",
+    "web/scripts/local-codex-model-tools.test.mjs": "66b1242dc1e633ac2519959a35a370b00e6866ad2de67e7e723eee7b9aa9e15e",
+    "web/scripts/local-codex-profile-auto.test.mjs": "3eeed7bbba533aefe4d7a8113338a79cbae055fc5173019a55e36177f3db7ad5",
+    "web/scripts/local-codex-profile-review.test.mjs": "5eb8eb909b32b11cc5adc943b56d5a825e8abebd52f79481c070a0bdc148146d",
+    "web/scripts/local-codex-profile.test.mjs": "40c0369796070cf3009974c2387a08371b4f86f234b8b293aab28eed38986e1f",
+    "web/scripts/local-codex-tool-policy.test.mjs": "0067f32f64bdab183bddba21982183f4cc87a603cda21b7337cebcf9499a3132",
+    "web/scripts/local-host-turns.test.mjs": "a1974e400f51006da24271ee7e486da528e889a337a7ca34f4fdd7c2f9b021d1",
+    "web/scripts/local-lecture-http.test.mjs": "4825c305ea277a3063fb817e76a26ed2eafccf37839db62515a6d70005512ae2",
+    "web/scripts/local-lecture-media.test.mjs": "2b02feba925f3ed7ad6120bd086eec9336a1c3bf9f9ad5cd3dc35593cf70f97b",
+    "web/scripts/local-lecture-service.test.mjs": "f4d6350bea92f8b1deec7dc6d4a8d598afe14bc40b99e6175a0d49b8a0c05622",
+    "web/scripts/verify-local-install.mjs": "7905669529b97ccf8adc608e999fdd6d06199a02e8edcb0a66e770a62d354149"
+  },
+  "automated": {
+    "status": "PASS",
+    "full_suite": {
+      "tests": 1645,
+      "passed": 1645,
+      "failed": 0,
+      "skipped": 0,
+      "log_sha256": "e2a368ffeea1ff70617c72e94aefbbd312fea2ade0e604de2074e2b4a282109d"
+    },
+    "focused": {
+      "lecture_service": 30,
+      "paired_http": 3,
+      "native_media": 21,
+      "lecture_player": 39,
+      "codex_auto_and_transport": 89,
+      "grant_binding": 6,
+      "note": "Counts identify focused runs; shared suites overlap and are not added to the full-suite count."
+    }
+  },
+  "builds": {
+    "local_static_assets": 37,
+    "full_application": "PASS",
+    "deployment": "Not performed; hosted edition preserved"
+  },
+  "clean_install": {
+    "schema_version": 1,
+    "suite": "local-clean-copy-offline-install-v1",
+    "evidence_type": "synthetic_fixture",
+    "status": "PASS",
+    "environment": {
+      "node": "v22.23.2",
+      "platform": "darwin",
+      "arch": "arm64",
+      "installed_driver": "13.0.3",
+      "sqlite": "3.53.4",
+      "child_node": "v22.23.2"
+    },
+    "scope": {
+      "copied_previous_node_modules": false,
+      "copied_environment_files": false,
+      "copied_personal_data": false,
+      "cloud_configuration_supplied": false,
+      "offline_cache_used": true,
+      "package_lifecycle_hooks_disabled": true
+    },
+    "phases": [
+      {
+        "id": "FI01_EXPLICIT_CLEAN_SOURCE_COPY",
+        "status": "PASS",
+        "duration_ms": 59
+      },
+      {
+        "id": "FI02_FRESH_LOCKED_OFFLINE_INSTALL",
+        "status": "PASS",
+        "duration_ms": 4184
+      },
+      {
+        "id": "FI03_BUILD_STATIC_DASHBOARD",
+        "status": "PASS",
+        "duration_ms": 42
+      },
+      {
+        "id": "FI04_CLOUD_FREE_SETUP_AND_DOCTOR",
+        "status": "PASS",
+        "duration_ms": 406
+      },
+      {
+        "id": "FI05_NEW_PROCESS_CREATES_SYNTHETIC_RECORDS",
+        "status": "PASS",
+        "duration_ms": 52
+      },
+      {
+        "id": "FI06_FRESH_PROCESS_READS_EXACT_SAVED_RECORDS",
+        "status": "PASS",
+        "duration_ms": 48
+      },
+      {
+        "id": "FI07_CLI_BACKUP_AND_FRESH_ROOT_RESTORE",
+        "status": "PASS",
+        "duration_ms": 359
+      },
+      {
+        "id": "FI08_INDEPENDENT_PROCESS_VERIFIES_RESTORED_RECORDS",
+        "status": "PASS",
+        "duration_ms": 89
+      },
+      {
+        "id": "FI09_FRESH_OFFICIAL_SDK_STDIO_DISCOVERY",
+        "status": "PASS",
+        "duration_ms": 382
+      }
+    ],
+    "limitations": [
+      "A clean disposable source copy installed from the existing offline npm cache; not a new computer or an online-download test.",
+      "Only this recorded OS, architecture and Node runtime were exercised.",
+      "Task/note persistence, static build, CLI lifecycle and actual SDK stdio discovery; real hosts, provider OAuth and personal onboarding are separate gates.",
+      "No fresh Python environment is copied or installed; selected-file acquisition requires a suitable project .venv and is verified separately."
+    ],
+    "source": {
+      "file_count": 159,
+      "source_digest": "9a1a8a64a7edfb20fd098a9fce97cb5aaac2de0ee2268530d63870c156a5f189",
+      "lock_sha256": "c5976bc94f4b80dee27d86f80f1520145594ed6880f539874015f9bccd4a1c74"
+    },
+    "observed": {
+      "tasks": 1,
+      "documents": 1,
+      "document_content_sha256": "6b3753692a884de653b1ad19639c7a1b4912c63fb3db43d13d610e742dbbb3d2",
+      "exact_records_survive_new_process": true,
+      "exact_records_survive_fresh_root_restore": true,
+      "static_assets_built_and_hash_matched": 37
+    },
+    "fixture_cleanup": true
+  },
+  "actual_official_host": {
+    "evidence": "Actual official native Codex on a disposable synthetic selected-PDF workspace; normal pairing and HTTP; no fixture model",
+    "observed_model_slug": "gpt-6-astra",
+    "host_version": "0.154.0",
+    "state": "completed",
+    "context_delivery": "runtime_prepared",
+    "tool_policy": "read_only",
+    "tool_receipts": [
+      {
+        "tool": "learnbridge_status",
+        "status": "completed",
+        "failed": false,
+        "origin": "runtime",
+        "result_hash": "6e97e03651598005fa017b843faa210de3d1f962339022ca95581184d2430660"
+      },
+      {
+        "tool": "learnbridge_context",
+        "status": "completed",
+        "failed": false,
+        "origin": "runtime",
+        "result_hash": "b37d572889e4c4a90e2fda267a6ca2441d27bef5df16c8dce6c38ca32c7200cf"
+      }
+    ],
+    "generation_output_sha256": "35755e8d6896b806995dac44e92e0ff5618c3053444d7611d7a9a7a72606d8da",
+    "accepted_pack_sha256": "bea6f518d09c42f62bc68a4d7a0d71f0cb76b7eee19a01017d9a7041df4587a5",
+    "selected_physical_pages": [
+      1,
+      2
+    ],
+    "native_execution_disabled": true,
+    "credential_copy": false,
+    "api_key_fallback": false,
+    "model_request_replay": false
+  },
+  "actual_native_lecture": {
+    "evidence": "Actual installed speech and AVFoundation export of the reviewed real model answer; synthetic course only",
+    "voice": "Samantha",
+    "rate": 180,
+    "audio": {
+      "sha256": [
+        "fa8b3c795d2a26988e83c1b7c2eeb59bef55b532f3e1f32b07400881868c7656",
+        "2a6272e1784b0552a4888d97c765c0bec4eece4fdec9de299a6c2b65fbb3e2ae"
+      ],
+      "duration_seconds": 81.48734693877552
+    },
+    "video": {
+      "sha256": "a15efb0164858d51b049753972f7a0f1407e0d44db01b90b008a156b229f3055",
+      "bytes": 341403,
+      "width": 1280,
+      "height": 720,
+      "duration_seconds": 81.48735,
+      "audio_duration_seconds": 81.48735,
+      "video_duration_seconds": 81.48666666666666,
+      "audio_tracks": 1,
+      "video_tracks": 1
+    },
+    "independent_reopen": {
+      "video_tracks": 1,
+      "pixels": [
+        [
+          253,
+          253,
+          252
+        ],
+        [
+          254,
+          254,
+          254
+        ]
+      ],
+      "audio_tracks": 1,
+      "duration": 81.48735
+    },
+    "artifact": "artifacts/local-ai-lecture-sample.mp4",
+    "export_interactive": false
+  },
+  "clarification": {
+    "evidence": "Separate actual official Codex chapter question over paired HTTP",
+    "state": "completed",
+    "physical_page": 1,
+    "answer_bytes": 492,
+    "answer_sha256": "4394c90ad8c886013d29e6193317f7f52e7f1392580222b762fedc96cb1edcfb",
+    "resume_is_separate_action": true
+  },
+  "progress": {
+    "exact_literal_response_saved": true,
+    "assessment": "unassessed",
+    "cursor": {
+      "chapter_index": 1,
+      "position_seconds": 0,
+      "state": "paused"
+    },
+    "automatic_mastery": false
+  },
+  "native_timing_proof": {
+    "proof": "actual_native_synthetic_media",
+    "voice": "Samantha",
+    "segments": [
+      {
+        "page": 1,
+        "duration_seconds": 1.784580498866213,
+        "start_seconds": 0,
+        "end_seconds": 1.784580498866213
+      },
+      {
+        "page": 2,
+        "duration_seconds": 3.1662131519274377,
+        "start_seconds": 1.784580498866213,
+        "end_seconds": 4.950793650793651
+      }
+    ],
+    "video": {
+      "duration_seconds": 4.9508,
+      "audio_duration_seconds": 4.9508,
+      "video_duration_seconds": 4.95,
+      "bytes": 24287,
+      "sha256": "ad371d155ab51890d571d8365f9f36e763b3beda559c87e7e40ce5a7a850104d",
+      "width": 1280,
+      "height": 720
+    },
+    "frame_sample_seconds": [
+      0.8922902494331065,
+      1.744580498866213,
+      1.824580498866213,
+      3.3676870748299317
+    ],
+    "frame_center_rgb": [
+      [
+        255,
+        37,
+        0
+      ],
+      [
+        255,
+        37,
+        0
+      ],
+      [
+        4,
+        50,
+        252
+      ],
+      [
+        4,
+        50,
+        252
+      ]
+    ],
+    "no_user_data": true,
+    "audio_quality": "subjective_review_not_claimed",
+    "focused_tests": {
+      "tests": 21,
+      "pass": 21,
+      "fail": 0,
+      "skipped": 0
+    }
+  },
+  "backup_restore": {
+    "synthetic_course": true,
+    "actual_completed_model_and_native_before_backup": true,
+    "reviewed_chapters_hash_equal": true,
+    "exact_attempts_hash_equal": true,
+    "saved_cursor_hash_equal": true,
+    "media_cache_state": "unavailable",
+    "export_state": "unavailable",
+    "automatic_regeneration": false
+  },
+  "browser": {
+    "evidence": "Shipped HTML/CSS/JS exercised in normal in-app browser with an explicitly labeled synthetic backend and silent three-second WAV fixtures; actual model/native proof is separate",
+    "actual_audio_events": true,
+    "checks": [
+      "Play shows Playing lecture and enables Pause",
+      "Audio ended advances the slide",
+      "Quiz pauses and hides reference until a literal answer",
+      "Answer stays paused until explicit Continue",
+      "Replay rewinds the finished chapter",
+      "Finished state persists",
+      "390px layout fits without horizontal overflow"
+    ],
+    "desktop": true,
+    "mobile_css_width": 390,
+    "mobile_client_width": 390,
+    "mobile_scroll_width": 390,
+    "physical_phone": false,
+    "artifacts": [
+      "artifacts/local-ai-lecture-player.jpg",
+      "artifacts/local-ai-lecture-quiz.jpg",
+      "artifacts/local-ai-lecture-mobile.jpg"
+    ]
+  },
+  "legacy": {
+    "evidence": "Unchanged legacy Python; scrubbed environment, isolated HOME, dotenv intercepted, synthetic callback exchange/storage seams",
+    "python_syntax_files": 16,
+    "native_streamlit_loopback_health": "PASS",
+    "actual_streamlit_auth_gate": "PASS",
+    "callback_handling": "PASS with synthetic/no-config seams; real configured OAuth state-security not certified",
+    "missing_config": "PASS",
+    "external_google_or_llm_calls": 0,
+    "credential_reads": 0
+  },
+  "artifact_sha256": {
+    "artifacts/local-ai-lecture-player.jpg": "471e6769c59b751abb115350240a0160a30d5acb0edcf6fb997d07afe1ed30f0",
+    "artifacts/local-ai-lecture-quiz.jpg": "6492975750342bd62476b0a10ddaa59a9a8c6ddcddc70221dd3dfe1c40a8d9ba",
+    "artifacts/local-ai-lecture-mobile.jpg": "e46b8428fea69d10d98bdd385dc64a9f6fd96e2151d936c7d014d8360420e16a",
+    "artifacts/local-ai-lecture-sample.mp4": "a15efb0164858d51b049753972f7a0f1407e0d44db01b90b008a156b229f3055"
+  },
+  "reproduction": {
+    "deterministic": [
+      "node --test web/scripts/local-lecture-service.test.mjs web/scripts/local-lecture-http.test.mjs",
+      "node --test web/scripts/local-lecture-media.test.mjs",
+      "node --test web/scripts/lecture-player-ui.test.mjs",
+      "npm run local:build",
+      "node web/scripts/verify-local-install.mjs",
+      "npm test",
+      "npm run build",
+      "node docs/design/validate-design.mjs"
+    ],
+    "live": [
+      "Use normal local setup and official Codex sign-in",
+      "Import a specifically selected synthetic PDF; open Course studio; choose AI lecture",
+      "Review one-to-eight pages and the exact one-note read-only grant",
+      "Generate; inspect and accept exact output/pack hashes",
+      "Create narration; ask a chapter question; export and independently reopen MP4",
+      "Answer a check; save cursor; backup and restore in a fresh root; confirm absent cache without automatic regeneration"
+    ]
+  },
+  "limitations": [
+    "Local edition; no hosted deployment or physical-phone validation in this increment.",
+    "Native saved narration/video were exercised only on macOS arm64 with installed Samantha, say, Swift and AVFoundation; unsupported systems retain reviewed text/manual navigation.",
+    "Selected batches contain one to eight pages. Whole-deck batching is future work.",
+    "Model receives extracted page text and selected course context, not rendered slide images. Diagram/scanned-page understanding is not certified.",
+    "MP4 is linear. Quizzes, clarification, progress and playback controls belong to the interactive player.",
+    "Typed clarification is implemented; microphone transcription and continuous spoken conversation are future work.",
+    "Synthetic source and independent timing proofs do not certify real-course teaching usefulness or subjective audible voice quality.",
+    "Playback and attempts never imply mastery.",
+    "Fresh install used the existing offline dependency cache on this Mac, not a fresh computer or online-download test.",
+    "Claude remains external MCP support; embedded lecture generation was verified with Codex."
+  ],
+  "documentation_check": {
+    "status": "PASS",
+    "scope": "documentation_only",
+    "features": 29,
+    "acceptanceCases": 182,
+    "workPackages": 24,
+    "localLinks": 196,
+    "syntheticExamples": 3,
+    "productTestsExecuted": false,
+    "note": "Documentation/link check; planned acceptance counts are not executed product tests."
+  }
+}

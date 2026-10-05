@@ -17,6 +17,8 @@ The first useful release is deliberately complete in one narrow workflow: instal
 | [Controlled onboarding](ONBOARDING.md) | Broad but scoped discovery, profile review, source coverage, consent and deletion |
 | [Implementation plan](IMPLEMENTATION_PLAN.md) | Dependency-ordered work packages and release gates for a coding agent |
 | [Done list and interactive studios](implementation/DONE_LIST_AND_INTERACTIVE_STUDIOS.md) | Task-linked agent sessions, selected-source reconciliation, slideshow tutoring, mock interviews and reviewed application preparation |
+| [AI lecture mode](implementation/AI_LECTURE_MODE.md) | Delivered F08/F11 extension: reviewed selected-slide narration, actual-audio playback, quizzes, clarification, local MP4 and objective release checks |
+| [AI lecture verification](implementation/AI_LECTURE_VERIFICATION.json) | Source-bound full suite, actual Codex/narration/video, synthetic browser checks and fresh restore; each proof layer is labeled |
 | [Implementation status](IMPLEMENTATION_STATUS.md) | Code delivered, measured foundation evidence and remaining gates |
 | [Verification](VERIFICATION.md) | Deterministic fixtures, live checks, quality evaluation and evidence required for completion |
 | [Agent setup entry point](../../SETUP_LEARNBRIDGE.md) | Instructions for an agent setting up this repository for a student |
@@ -59,6 +61,8 @@ All 29 entries below are target specifications. Some have a smaller hosted prede
 | F27 | Durable workflows and reviewed actions | M1 core then M3 actions | [Foundation](FEATURES_FOUNDATION.md#f27-durable-workflows-and-reviewed-actions) |
 | F28 | Phone-to-local agent companion | Optional M3 extension after durable runs and agent execution | [Remote access](FEATURES_REMOTE_AND_ADOPTION.md#f28--phone-to-local-agent-companion) |
 | F29 | Website and local setup adoption measurement | M1 web/setup funnel, then M3 opt-in local activation | [Adoption](FEATURES_REMOTE_AND_ADOPTION.md#f29--website-and-local-setup-adoption-measurement) |
+
+The [AI lecture implementation](implementation/AI_LECTURE_MODE.md) extends F08 tutoring and F11 artifacts with bounded selected-PDF lessons and local linear MP4 export. It does not add a feature ID or imply that every target in those specifications is complete. See [implementation status](IMPLEMENTATION_STATUS.md) for shipped boundaries and source-bound evidence.
 
 ## Placement of the October 3 additions
 
