@@ -1,0 +1,102 @@
+{
+  "format": "learnbridge-reviewed-calendar-import-verification",
+  "schema_version": 1,
+  "checked_at": "2026-10-05T02:58:10.000Z",
+  "feature": "F05 explicit local ICS busy-source import and plan.with_calendar",
+  "implemented_scope": [
+    "One explicitly chosen bounded UTF-8 VCALENDAR file",
+    "Explicit UTC DTSTART/DTEND and DATE VALUE=DATE with student-chosen zone",
+    "Exclusive end, literal TEXT, all-event support/omission preview",
+    "Unique modern Intl midnight resolution with gap/fold refusal",
+    "Unchecked event selection and bounded reviewed busy interval",
+    "Atomic immutable selected-only busy-source creation and exact review receipt",
+    "Exact source id/revision/workflow hash pinned calendar-aware study proposal",
+    "Complete deterministic recomputation before plan acceptance and calendar export",
+    "Source forget invalidates use and never silently restores historical copies"
+  ],
+  "new_tests": [
+    { "path": "web/scripts/local-calendar-import-service.test.mjs", "passed": 15 },
+    { "path": "web/scripts/local-calendar-import-routes.test.mjs", "passed": 5 },
+    { "path": "web/scripts/local-calendar-import-ui.test.mjs", "passed": 8, "boundary": "Shipped DOM event handlers linked to actual service and private SQLite; browser DOM/control fixture" },
+    { "path": "web/scripts/local-calendar-import-http.test.mjs", "passed": 3, "boundary": "Actual paired loopback HTTP, private SQLite, restart and fresh-backup restore" }
+  ],
+  "new_tests_passed": 31,
+  "existing_tests_passed": 105,
+  "existing_calendar_export_tests_passed": 33,
+  "combined_tests_passed": 136,
+  "failed": 0,
+  "skipped": 0,
+  "combined_command": "node --test scripts/local-calendar-import-*.test.mjs scripts/local-calendar-export-*.test.mjs scripts/local-student-workspace.test.mjs scripts/local-workflow-storage.test.mjs scripts/local-academic-refresh*.test.mjs scripts/academic-refresh.test.mjs",
+  "independent_oracle": {
+    "script": "web/scripts/local-calendar-import-parser-check.mjs",
+    "parser": "icalendar 6.3.2 in existing isolated environment",
+    "timezone_boundary": "Python ZoneInfo exact midnight fold/gap round-trips",
+    "synthetic_file_cases": 6,
+    "passed": true,
+    "checks": ["UTC exclusive end", "Literal escaped TEXT", "Chosen-zone DATE end", "23-hour Toronto spring day", "25-hour Toronto fall day", "Leap day", "Pacific/Apia missing midnight", "America/Havana ambiguous midnight"],
+    "application_dependency_added": false
+  },
+  "actual_browser_proof": {
+    "mode": "native file picker, reviewed source, calendar-aware plan, separate acceptance, actual downloaded ICS",
+    "data": "synthetic calendar and task",
+    "busy_start": "2026-10-05T13:30:00Z",
+    "busy_end": "2026-10-05T14:30:00Z",
+    "buffer_minutes": 10,
+    "observed_block_start": "2026-10-05T14:40:00Z",
+    "observed_block_end": "2026-10-05T15:25:00Z",
+    "observed_block_minutes": 45,
+    "downloaded_bytes": 4084,
+    "downloaded_sha256": "d9457be46cf502d7ad4d1f1a3fd37ff0b19cef60e2130eeb6d2d12f42b925677",
+    "independent_download_parser": "icalendar 6.3.2",
+    "parsed_events": 1,
+    "attendee_or_alarm_emitted": false,
+    "provider_writes": 0,
+    "receipt": "/tmp/learnbridge-calendar-import-live.json",
+    "claim_limit": "Supported synthetic browser journey; no private provider access or general calendar compatibility claim"
+  },
+  "golden_planning_check": {
+    "timezone": "America/Toronto",
+    "lecture": "2026-10-06 09:00–10:00 local",
+    "buffer_minutes": 30,
+    "task_minutes": 90,
+    "availability": "09:00–12:00 local",
+    "observed_allocation": "10:30–12:00 local, 90 minutes, deficit 0",
+    "short_horizon": "11:30 local",
+    "observed_short_allocation": "10:30–11:30 local, 60 minutes, deficit 30"
+  },
+  "verified_negative_boundaries": [
+    "Malformed/nested structure and singleton/parameter errors",
+    "Recurrence, TZID, floating time, duration, cancelled/transparent events and unsupported components visible",
+    "Duplicate UIDs omit every ambiguous instance",
+    "File/event/line/component/nesting/private record/interval bounds",
+    "Accessor and sparse/duplicate index input without getter evaluation",
+    "No supported or overlapping selected busy windows cannot produce accepted source",
+    "Exact confirmation/review hash/revision/idempotency collision denial",
+    "Actual SQLite trigger rollback preserves preview and creates no partial source",
+    "Cancellation/revoked pairing after verified read prevents plan saving",
+    "Changed/forgotten exact source rejects workflow, acceptance replay and export",
+    "Task change rejects prior calendar-aware plan acceptance",
+    "File/zone/range/event/source/config changes abort pending UI work",
+    "Reset and late file/hash/response work cannot revive private controls or notices",
+    "Successful explicit new preview permits reviewed reimport after forget"
+  ],
+  "effects": {
+    "private_files_used": false,
+    "live_account_reads": 0,
+    "provider_requests_or_writes": 0,
+    "model_calls": 0,
+    "automatic_sharing_grants": 0,
+    "new_dependencies_or_migrations": 0,
+    "production_configuration_changed": false,
+    "original_plan_today_changed": false,
+    "commit_or_deployment_performed": false
+  },
+  "limitations": [
+    "Partial selected file snapshot; freshness, cloud ownership and complete availability unknown",
+    "2000–2100 date range with runtime modern Intl time-zone database",
+    "Recurrence, TZID/floating times, nested alarms and advanced calendar compatibility unavailable",
+    "No live provider calendar reads/writes, recurring synchronization or full F05 completion claim",
+    "Actual synthetic browser/download proof is bounded; compatibility with every external export remains unverified",
+    "Forgotten active source can remain in original previews, plans, history, downloads and backups"
+  ]
+}

@@ -1,0 +1,554 @@
+{
+  "schema_version": 1,
+  "verification": "LearnBridge reviewed productivity expansion",
+  "performed_at": "2026-10-05T03:27:29.544Z",
+  "status": "PASS_WITH_LIVE_GATES",
+  "code_commits": {
+    "local": "6f50339",
+    "hosted": "63e5e09",
+    "combined_code": "63e5e09fd12f384dee51efc73a78b184fc66e772",
+    "baseline": "bcf3919174c6dd2292a1910e40f3a1a9e46a7497"
+  },
+  "environment": {
+    "node": "v22.23.2",
+    "platform": "darwin",
+    "arch": "arm64",
+    "python": "3.12.14"
+  },
+  "automated": {
+    "command": "cd web && node --test --test-concurrency=2 scripts/*.test.mjs",
+    "tests": 1250,
+    "passed": 1250,
+    "failed": 0,
+    "skipped": 0,
+    "duration_ms": 117518.673,
+    "log_sha256": "a3a8b21decc8047d0b066e24b1ca4d82a3375c5dc132b0ed0e0ac682743837b1"
+  },
+  "builds": {
+    "local": {
+      "passed": true,
+      "static_assets": 27
+    },
+    "full_web_workspace": {
+      "passed": true,
+      "command": "cd web && npm run build",
+      "log_sha256": "0c7c9237c970c5b3da4b268e2a1c2eb3ab05151f14e8982853debe6046012861"
+    }
+  },
+  "clean_install": {
+    "schema_version": 1,
+    "suite": "local-clean-copy-offline-install-v1",
+    "evidence_type": "synthetic_fixture",
+    "status": "PASS",
+    "environment": {
+      "node": "v22.23.2",
+      "platform": "darwin",
+      "arch": "arm64",
+      "installed_driver": "13.0.3",
+      "sqlite": "3.53.4",
+      "child_node": "v22.23.2"
+    },
+    "scope": {
+      "copied_previous_node_modules": false,
+      "copied_environment_files": false,
+      "copied_personal_data": false,
+      "cloud_configuration_supplied": false,
+      "offline_cache_used": true,
+      "package_lifecycle_hooks_disabled": true
+    },
+    "phases": [
+      {
+        "id": "FI01_EXPLICIT_CLEAN_SOURCE_COPY",
+        "status": "PASS",
+        "duration_ms": 52
+      },
+      {
+        "id": "FI02_FRESH_LOCKED_OFFLINE_INSTALL",
+        "status": "PASS",
+        "duration_ms": 3643
+      },
+      {
+        "id": "FI03_BUILD_STATIC_DASHBOARD",
+        "status": "PASS",
+        "duration_ms": 52
+      },
+      {
+        "id": "FI04_CLOUD_FREE_SETUP_AND_DOCTOR",
+        "status": "PASS",
+        "duration_ms": 145
+      },
+      {
+        "id": "FI05_NEW_PROCESS_CREATES_SYNTHETIC_RECORDS",
+        "status": "PASS",
+        "duration_ms": 47
+      },
+      {
+        "id": "FI06_FRESH_PROCESS_READS_EXACT_SAVED_RECORDS",
+        "status": "PASS",
+        "duration_ms": 45
+      },
+      {
+        "id": "FI07_CLI_BACKUP_AND_FRESH_ROOT_RESTORE",
+        "status": "PASS",
+        "duration_ms": 135
+      },
+      {
+        "id": "FI08_INDEPENDENT_PROCESS_VERIFIES_RESTORED_RECORDS",
+        "status": "PASS",
+        "duration_ms": 46
+      },
+      {
+        "id": "FI09_FRESH_OFFICIAL_SDK_STDIO_DISCOVERY",
+        "status": "PASS",
+        "duration_ms": 243
+      }
+    ],
+    "limitations": [
+      "A clean disposable source copy installed from the existing offline npm cache; not a new computer or an online-download test.",
+      "Only this recorded OS, architecture and Node runtime were exercised.",
+      "Task/note persistence, static build, CLI lifecycle and actual SDK stdio discovery; real hosts, provider OAuth and personal onboarding are separate gates.",
+      "No fresh Python environment is copied or installed; selected-file acquisition requires a suitable project .venv and is verified separately."
+    ],
+    "source": {
+      "file_count": 124,
+      "source_digest": "1bac7ee222839dce287e2bc9bf69bd1ae4382b12e02764d28920cfa131ccdb3f",
+      "lock_sha256": "c5976bc94f4b80dee27d86f80f1520145594ed6880f539874015f9bccd4a1c74"
+    },
+    "observed": {
+      "tasks": 1,
+      "documents": 1,
+      "document_content_sha256": "6b3753692a884de653b1ad19639c7a1b4912c63fb3db43d13d610e742dbbb3d2",
+      "exact_records_survive_new_process": true,
+      "exact_records_survive_fresh_root_restore": true,
+      "static_assets_built_and_hash_matched": 27
+    },
+    "fixture_cleanup": true
+  },
+  "native_model_execution": {
+    "version": "0.154.0",
+    "model": "gpt-5.5",
+    "four_tool_turn": {
+      "state": "completed",
+      "created_at": "2026-10-05T02:22:33.257Z",
+      "finished_at": "2026-10-05T02:22:57.981Z",
+      "answer_sha256": "838b4ad1eed7bba9ee6fe98814692efc45e9e71820d4e27270d8063b069eae3b",
+      "tool_receipts": [
+        {
+          "tool": "learnbridge_status",
+          "status": "completed",
+          "failed": false,
+          "result_hash": "763a10f788cd087854e761a79e997ecc53ce34bea155db05cf12d5556d2e32ce",
+          "origin": "model"
+        },
+        {
+          "tool": "learnbridge_context",
+          "status": "completed",
+          "failed": false,
+          "result_hash": "6be7bbaf6900d3ce09005a71c8164beddf3f70822ae2d413f9955285785d5bcd",
+          "origin": "model"
+        },
+        {
+          "tool": "learnbridge_propose_task",
+          "status": "completed",
+          "failed": false,
+          "result_hash": "a4e9be0dc5815f1bbe8f0ff7519de48029093db4d9b3c5b49b2a141a5870cb0b",
+          "origin": "model"
+        },
+        {
+          "tool": "learnbridge_propose_document",
+          "status": "completed",
+          "failed": false,
+          "result_hash": "aa50939a7795c20033125e2ca880cd7cd079d828e2e4aa42b23d49094bd2d41f",
+          "origin": "model"
+        }
+      ],
+      "protocol": {
+        "model": "gpt-5.5",
+        "actual_model_requests": 4,
+        "matched_call_item_ids": true,
+        "completed_dynamic_items": 4,
+        "authoritative_turn_completion": true
+      },
+      "accepted_agent_tasks": 0,
+      "original_unchanged": true,
+      "source_snapshot": {
+        "codex-adapter.mjs": "2e948db1d2de1d72715e9499b7f5991bd1edfb4bb68306b7d0de7153933fa08a",
+        "codex-profile.mjs": "9abe8eddadb93fe760c99ac06dae4507d85e3bc618cb12db0d2b3555b9cd18a8",
+        "codex-tools.mjs": "41d932b3dd668588519b4fab22267ce5a0dc94c5d3c0e51a4b07299a30f3761c",
+        "host-turns.mjs": "5138c721902239418a0c09c0d0d6ea87d7b23ae8444d93dfee9f0aaf8afe9199",
+        "server.mjs": "47a60465110cd175cdca9f43567387a39c451b9668c129ee4d1cdaa8456f9f25"
+      }
+    },
+    "readable_read_only_turn": {
+      "state": "completed",
+      "created_at": "2026-10-05T02:46:35.623Z",
+      "finished_at": "2026-10-05T02:46:45.605Z",
+      "answer_sha256": "390e3cb4466647f5092bb8c5b8657a2d00c065575f764365b5b0c867181feaaa",
+      "tool_receipts": [
+        {
+          "tool": "learnbridge_status",
+          "status": "completed",
+          "failed": false,
+          "result_hash": "09cb27a5ddedf0c991abbd98e3a7e677080fa42d380946516aff45b88ddc4999",
+          "origin": "model"
+        },
+        {
+          "tool": "learnbridge_context",
+          "status": "completed",
+          "failed": false,
+          "result_hash": "6c7270f6d2932ae5d92a30bd78d8c20597c82fa1079cb773aa4818337562ab1d",
+          "origin": "model"
+        }
+      ],
+      "readable_answer": true,
+      "source_snapshot": {
+        "codex-adapter.mjs": "2e948db1d2de1d72715e9499b7f5991bd1edfb4bb68306b7d0de7153933fa08a",
+        "codex-profile.mjs": "1466a477f34ff14341ee0aba9da27f2e8d368cdcc07b40853b90389f028a8cb6",
+        "codex-tools.mjs": "41d932b3dd668588519b4fab22267ce5a0dc94c5d3c0e51a4b07299a30f3761c",
+        "host-turns.mjs": "5138c721902239418a0c09c0d0d6ea87d7b23ae8444d93dfee9f0aaf8afe9199"
+      }
+    },
+    "snapshot_notice": "Real turns ran on the recorded source snapshots before later task-provenance and scope-wide writing-policy guards. The adapter/tools/host modules retain their recorded hashes; profile readability was verified separately on its refined prompt. New guard behavior passed actual MCP/HTTP and storage tests in the final suite. This report does not claim a new live model turn on every final source file."
+  },
+  "browser_flows": {
+    "practice": {
+      "passed": true,
+      "answer_reveal_self_rating": true,
+      "due_after_rating": "2026-10-05",
+      "mastery_claim": false
+    },
+    "reminders": {
+      "passed": true,
+      "actual_background_tick": true,
+      "acknowledged_once": true,
+      "paused": true
+    },
+    "focus": {
+      "passed": true,
+      "observed_active_ms": 13439,
+      "planned_minutes": 25,
+      "completed_task_automatically": false
+    },
+    "calendar_import_and_export": {
+      "passed": true,
+      "input_source_sha256": "f05f755521ec4677a21c9f6099e1af3b335c6e97f93e5969e8d99e54d4d9928a",
+      "selected_busy_events": 1,
+      "unsupported_recurrence_visible": true,
+      "planned_start": "2026-10-05T14:40:00+00:00",
+      "planned_end": "2026-10-05T15:25:00+00:00",
+      "buffer_minutes": 10,
+      "actual_download_bytes": 4084,
+      "actual_download_sha256": "d9457be46cf502d7ad4d1f1a3fd37ff0b19cef60e2130eeb6d2d12f42b925677",
+      "independent_parser": "icalendar 6.3.2",
+      "provider_writes": 0
+    },
+    "expenses": {
+      "passed": true,
+      "selected_valid_rows": 3,
+      "invalid_precision_excluded": true,
+      "currency_totals_cents": {
+        "CAD": 750,
+        "USD": 200
+      },
+      "atomic_rollback_test": true
+    },
+    "rich_writing": {
+      "passed": true,
+      "formatted_word_bytes": 11230,
+      "word_independent_xml_and_native_read": true,
+      "standalone_latex_bytes": 3541,
+      "builtin_latex_compilation": "success",
+      "original_unchanged": true,
+      "limits": "One actual synthetic format fixture; no general layout certification."
+    },
+    "official_job_and_career_packet": {
+      "passed": true,
+      "live_official_greenhouse_metadata": true,
+      "live_exact_public_role_read": true,
+      "role_semantics": "Integration fixture, not a student internship recommendation.",
+      "actual_packet_bytes": 24687,
+      "actual_packet_sha256": "b58d5d891f29f1eb21764990ad22bf2fe082ac5e397a3fb68ca14ce744926bf3",
+      "required_unknown_fields": 4,
+      "employer_uploads": 0,
+      "submissions": 0
+    },
+    "public_docs_to_local": {
+      "passed": true,
+      "flow": "public Google Docs exact-link preview → explicit reviewed bundle download → actual browser file picker → local preview → separate owner confirmation → local note",
+      "source": {
+        "bytes": 233,
+        "sha256": "c42152e807afbef938b81141cfc21506721d59d1ea8ab8cf348add7418c2c267"
+      },
+      "download": {
+        "bytes": 1710,
+        "sha256": "2f29ac4a4f290779f796188126299ce9744c12ec238bed7b17e967ef5b5ff698"
+      },
+      "local": {
+        "receipt_revision": 3,
+        "state": "active",
+        "notes": 1,
+        "document_revision": 1,
+        "attributed_note_sha256": "be790f0fffa006995afe695b657227a0f1e27ca16ca2264ab97ed9c806c80add",
+        "source_prefix_exact": true
+      },
+      "ai_sharing_granted": false,
+      "provider_writes": 0
+    },
+    "student_administration": {
+      "passed": true,
+      "source": "student-pasted synthetic unverified source",
+      "requirement_status": "unknown",
+      "separately_accepted_tasks": 1,
+      "deadline": {
+        "precision": "date",
+        "original": "Deadline October 10, 2026.",
+        "date": "2026-10-10",
+        "timezone": "America/Toronto"
+      },
+      "official_eligibility_claim": false,
+      "provider_reads": 0,
+      "submissions": 0
+    },
+    "learning_plan_handoff": {
+      "passed": true,
+      "separate_acceptances": 2,
+      "tasks": [
+        {
+          "revision": 1,
+          "title": "Synthetic study: explain a base case",
+          "effort_minutes": 30,
+          "deadline": {
+            "precision": "date",
+            "date": "2026-10-10",
+            "timezone": "America/Toronto"
+          },
+          "dependency_count": 0
+        },
+        {
+          "revision": 1,
+          "title": "Synthetic study: trace factorial",
+          "effort_minutes": 45,
+          "deadline": {
+            "precision": "date",
+            "date": "2026-10-10",
+            "timezone": "America/Toronto"
+          },
+          "dependency_count": 1
+        }
+      ],
+      "academic_policy": {
+        "grading": "graded",
+        "ai_rule": "scaffolding_only"
+      },
+      "durable_source_receipts": 2,
+      "mastery_claim": false,
+      "task_provenance": "Current receipt/plan/session/snapshot pins are revalidated for source-aware exports and agent context; metadata-only task grants do not share underlying bodies."
+    },
+    "navigation": {
+      "passed": true,
+      "viewport_widths": [
+        390,
+        1280
+      ],
+      "horizontal_overflow": false,
+      "compact_mobile_picker": true,
+      "desktop_grouped_sections": true,
+      "new_section_scroll_resets": true,
+      "today_cards": 5
+    }
+  },
+  "fresh_browser_record_restore": {
+    "verified_at": "2026-10-05T03:16:21.328Z",
+    "synthetic": true,
+    "actual_browser_created_records": true,
+    "backup_schema": 5,
+    "backup_bytes": 991232,
+    "backup_sha256": "cd8f9bcb2cd7c2815259f4a0ba63272a9409d394857e59d6563a767962e25ad6",
+    "exact_tables": [
+      "records",
+      "document_revisions",
+      "workspace_records",
+      "task_proposals",
+      "agent_grants"
+    ],
+    "counts": {
+      "records": 8,
+      "document_revisions": 3,
+      "workspace_records": 45,
+      "task_proposals": 4,
+      "agent_grants": 6
+    },
+    "original_document_revision": 1,
+    "original_document_sha256": "488d61c4f4c6f890cbac055c17832f2d2f27e6599d425ded84ec9558b8414818",
+    "reopened_integrity": "ok",
+    "fresh_restore_exact": true,
+    "credential_profile_backed_up": false
+  },
+  "legacy_compatibility": {
+    "passed": true,
+    "source_files_unchanged": true,
+    "source_hash_rechecked_at": "2026-10-05T03:12:57.253Z",
+    "checks": 5,
+    "python_files": 16,
+    "actual_prior_runtime_checks": {
+      "passed": true,
+      "health_status": 200,
+      "health_body": "ok",
+      "host": "127.0.0.1",
+      "outbound_network": "blocked by isolated sitecustomize guard"
+    },
+    "limits": [
+      "Legacy compatibility only; no real school login or D2L course read is performed.",
+      "OAuth missing configuration is expected to fail closed; the historical Connect button exposes the expected ValueError in AppTest.",
+      "Invalid callback uses synthetic values with OAuth configuration absent and does not establish valid configured OAuth state validation."
+    ],
+    "provider_writes": 0
+  },
+  "design_validation": {
+    "status": "PASS",
+    "scope": "documentation_only",
+    "feature_specs": 29,
+    "planned_acceptance_cases": 182,
+    "work_packages": 24,
+    "not_product_tests": true
+  },
+  "publication": {
+    "website_new_email_route": "pending_vercel_cli_authorization",
+    "existing_public_website_preserved": true,
+    "cli_error": "Not authorized",
+    "provider_configuration_changed": false,
+    "production_migrations_applied": false,
+    "adoption_release_flag_enabled": false,
+    "phone_release_flag_enabled": false
+  },
+  "source_hashes": {
+    "web/apps/local-runtime/src/academic-task-routes.mjs": "4ce618fb2649c19aad3f80457333ed1cf75a03f480fa76ea31012fb67eac41d4",
+    "web/apps/local-runtime/src/academic-task-service.mjs": "fd6063b918e84854b7d94b361309e4750048ef2d340c4c79f92d3bc82c633f28",
+    "web/apps/local-runtime/src/admin-deadline-routes.mjs": "d158e44eb2f4454c57d1d81249e5aacd92cb06bc1d2f461f2c95da2b73846cb6",
+    "web/apps/local-runtime/src/admin-deadline-service.mjs": "d252ef239e15cd08d8ee0cf88a610c5fce1dd3ceb023c699b567110d29d66e39",
+    "web/apps/local-runtime/src/calendar-export-routes.mjs": "cda81cc16d803156b59405afaede8159342a5037ce2a1fd766568a3dd45d1ac3",
+    "web/apps/local-runtime/src/calendar-export-service.mjs": "3347d8eb3319031d07c2635f782664c030369b0fdcd783b8869e4bf4a897812b",
+    "web/apps/local-runtime/src/calendar-import-routes.mjs": "cfb9ef46b013b00f6ccce4bb6ea83e235d5ecc30633bf6b07a06b4aa0595a08c",
+    "web/apps/local-runtime/src/calendar-import-service.mjs": "3718a2cc49c2b8c23f50110d4dd4c92070ab3b787a814f1e2df3b276b2aec8ff",
+    "web/apps/local-runtime/src/career-packet-routes.mjs": "53dd262ec26056760a0c2ceef4f37f689cc52a67e75ea5062ef1edb6ffef52ac",
+    "web/apps/local-runtime/src/career-packet-service.mjs": "1980ffad3a5a94e1afdc2ccb85bcd9b034e55e81cb7fc3b063bcca796b071b9f",
+    "web/apps/local-runtime/src/cloud-onboarding.mjs": "8975786df5d81a2daf7c023f7535f34122fa5d97b3c4a9a7f50ef46aab3736d1",
+    "web/apps/local-runtime/src/codex-adapter.mjs": "2e948db1d2de1d72715e9499b7f5991bd1edfb4bb68306b7d0de7153933fa08a",
+    "web/apps/local-runtime/src/codex-profile.mjs": "1466a477f34ff14341ee0aba9da27f2e8d368cdcc07b40853b90389f028a8cb6",
+    "web/apps/local-runtime/src/codex-tools.mjs": "41d932b3dd668588519b4fab22267ce5a0dc94c5d3c0e51a4b07299a30f3761c",
+    "web/apps/local-runtime/src/expense-import-routes.mjs": "a26b4565573acdb75d57c27cf77dae131d60f36b3ee9c37753887aa997b24ac5",
+    "web/apps/local-runtime/src/expense-import-service.mjs": "30ec9e1802e921ca9c0dd6590f374d850710ddeedc93338455feb5679e4e4717",
+    "web/apps/local-runtime/src/focus-routes.mjs": "33aef795f22f56ead93e939a97c3dd330883ef6908a16061a44c480a7da799f3",
+    "web/apps/local-runtime/src/focus-service.mjs": "239591cc6b670d2581689632f8d6b1555b31d9081bf45b752e61fc6fb5f47a98",
+    "web/apps/local-runtime/src/host-turns.mjs": "5138c721902239418a0c09c0d0d6ea87d7b23ae8444d93dfee9f0aaf8afe9199",
+    "web/apps/local-runtime/src/plan-task-routes.mjs": "9d712467a786b1d068cfa6c8cd3a9bb8e924e9c063530085ebf4bc70062f2197",
+    "web/apps/local-runtime/src/plan-task-service.mjs": "47c768e3c29720d265c26576226b366fb4e4129675741595094105d8957d92d5",
+    "web/apps/local-runtime/src/practice-routes.mjs": "23a6497e9bf5b67dca74d22a90a2b8301ed82103ee8a0efd305a48145663f055",
+    "web/apps/local-runtime/src/practice-service.mjs": "a731b4acd1c29ef5bc4477261cc63080f40cad52382eb78d045fbee54080506c",
+    "web/apps/local-runtime/src/profile.mjs": "6a9ff7bf9dcc1cccd60a7c2ccce171a350a871e7c8c20d9ef89468ccc464d415",
+    "web/apps/local-runtime/src/public-job-routes.mjs": "91a1be16a27d9b27e361680bf995def799e12f0a51e1e98a74b27a0628086773",
+    "web/apps/local-runtime/src/public-job-service.mjs": "d2dd6d60ec4423e41f92659cd4fe82bc9e4b3369929135f3db7475273692b6d3",
+    "web/apps/local-runtime/src/reminder-routes.mjs": "096f553008344c21dc9e715014a2b00356e274b515727b927f8d462a986c174f",
+    "web/apps/local-runtime/src/reminder-service.mjs": "ebe8bdbd95fbe0927e864fe8b539fd1cfab2a878b817a43af4ec63f0ae517390",
+    "web/apps/local-runtime/src/rich-writing-artifact.mjs": "5b6d851e2f2fbe20310450874b1493fef64c50381c25d8848f839466cf3d0b6e",
+    "web/apps/local-runtime/src/rich-writing-routes.mjs": "e84ce8eaa2057719224e5d10240b6c1e44df3fd3b57688c7469d90fbb689addd",
+    "web/apps/local-runtime/src/server.mjs": "39ca05e5712ee770e6c5a3c543e00222f99c51465e909998ec27b0dd4acbafb6",
+    "web/apps/local-runtime/src/student-workspace.mjs": "2cae6e2be108f9d0a7ccdeeb42bd6fb468119a1feffb792d488943870cee2b18",
+    "web/apps/local-runtime/src/writing-routes.mjs": "9b5dc7b5bcdec9bf30a23ae5f750b36019b7e357a3d09f4f1d7daf739b39098d",
+    "web/apps/local/build.mjs": "3eec4a94b2c2f9bb6b13f66ffccc97581d7a1de154fb8cac8fbb232797af7659",
+    "web/apps/local/public/academic-tasks.js": "67e47d55d8e35e1acff6b9272dc41ad936f7fead66fc4e2ff95f47f0c8669cf5",
+    "web/apps/local/public/app.js": "8eef33dbd16df9a4976b47471dd57ad03f98e3dece51a62cae3581441c9dcb1c",
+    "web/apps/local/public/calendar-export.js": "cad97abd447ceb60bacb3f50e3d11027931cc9230af80cb81d6bfe5f3618a20b",
+    "web/apps/local/public/calendar-import.js": "a6b1e8636d75ed0a6f99d9341e4663d05edd5b1d6481279507d5dd5c5aa9383c",
+    "web/apps/local/public/career-packets.js": "5c2bac6b6857e5adbd5094fd3ee329cf7fd46877b055c31ca662cd4e99f87dcc",
+    "web/apps/local/public/cloud-onboarding.js": "5138981310c925ab3c55c86daa80a5b8a0a993424461f9b52ab9304eaa257aa0",
+    "web/apps/local/public/expense-import.js": "726892228ec79204bb37d65696a07ebfc1494b5055b8a9a3a49b997341ddefbb",
+    "web/apps/local/public/focus.js": "f70fd964910a401d887076d4ddf11545a28f1ed503cb3ba5dd06d90a3d74f0da",
+    "web/apps/local/public/index.html": "94bf14658c0f25f568dfbd792ab9d697494a5db13a45982b2f9e90a80b387993",
+    "web/apps/local/public/overview.js": "262137b1644f4e512b604d9ffeedd4a791c54f14d0b0869c4d2236b08adfc431",
+    "web/apps/local/public/plan-tasks.js": "44bcddce84c67e97433f2005937f2d4b3ceef6cb908c3293e27bf8cb80f4a058",
+    "web/apps/local/public/practice.js": "65a94655fb52a39dcd11c918de7cce6ba6779f659c06d60e580f7d80a5bd289b",
+    "web/apps/local/public/public-jobs.js": "4cf663b799c32ef426b949143e011bbc62c355a02ee0d5e7d400f95fc9a3f054",
+    "web/apps/local/public/reminders.js": "83ace5a2bf9cf93be603e73cc61aa8d91b72c55c936c684f6aed7b76337ec54b",
+    "web/apps/local/public/rich-writing.js": "355643b73c82b3aa231c9ee02aef1689a30a97c6d17ad86b2270611d6a434b06",
+    "web/apps/local/public/student-admin.js": "94075519de9c942a08ac4c64911c182ea409dfafb503522eadf7d4ebfba83caa",
+    "web/apps/local/public/styles.css": "d7d5992c0ba199b5ed6948e64157624a41c4ee75b08ce5df4575e783f7e11562",
+    "web/apps/local/public/writing.js": "0263d54c38e7ad7acb7fa3aa105e6ffa6b977a4ed3d31789ae8ae4ee5565545f",
+    "web/apps/web/src/app/api/email-onboarding/[action]/route.ts": "20f3e6f079951d98c1bb7e8e7eae78fa64392d7f260c634da7077fe277dd961c",
+    "web/apps/web/src/app/layout.tsx": "45ce63b2c1be552287631e4a1256e7af56b772679824381ef242cdbd0882baa5",
+    "web/apps/web/src/app/onboarding/email/email-onboarding-client.tsx": "2a31f4ef4030a0385eadd38c00ee67b736b3b056198129dd132b044a29ea2ef3",
+    "web/apps/web/src/app/onboarding/email/page.tsx": "d205be84718d96c98ac770df0ef529a202e79c1595c65e6290fc22daca620864",
+    "web/apps/web/src/app/setup/page.tsx": "9579dd5a1f01d62ba1084593af785030f567a88043815b34b10c8533144e66d5",
+    "web/apps/web/src/lib/server/email-onboarding-service.mjs": "1b91905ed8cb87c95c377fdaaa489e1698c6832c4eec2ea13c50acfafbfc5468",
+    "web/apps/web/src/lib/server/email-onboarding.ts": "cbb0472dbe2b768c4c942cbeccff9f3785463bcc4092afef83a453b1afb572da",
+    "web/packages/local-storage/src/index.mjs": "6d3a4d3df0aa1a8949aed7dd363733921f40489cde8b5494c865268cca99b8b4",
+    "web/scripts/academic-task-http.test.mjs": "0823d5f85663e5697c0c4ed4da21236d07d9666756f30005e835eae0970afddb",
+    "web/scripts/academic-task-routes.test.mjs": "b87dafe674de415cd0b8028bc2fa7336eece4499225c7eb50712dbfd32fd164b",
+    "web/scripts/academic-task-service.test.mjs": "a8de953a55a27e4c685974e8d13a30691953d1a3c7e0a541d799a1bc3ccdcacc",
+    "web/scripts/academic-task-ui.test.mjs": "5401715971c9f1d741231d890967464d29b87caa498e3455608cabc68f24117e",
+    "web/scripts/agent-mcp-grant-binding.test.mjs": "edf793099b6d795fd0d9284e3e045f8219eb95335cb22498ab1fcfc7dab2fcba",
+    "web/scripts/career-packet-http.test.mjs": "57298a9b1263e327befe6b594c5df6dfe9cdf47fdb522517433fd8771c53134d",
+    "web/scripts/career-packet-service.test.mjs": "dd7b2db2e2bd4384f556781b5bc816be8881f27607b0881eb2aa6cdd51e943cf",
+    "web/scripts/email-onboarding-hosted.test.mjs": "9e8e8570c28502cd14c95fbe056a1d5fb28ed2a41282189ed6bf8c1639fe079c",
+    "web/scripts/email-onboarding-local.test.mjs": "397ee05286bfb99965de504760dabf83532f86568df53867e9c28076ed289cf0",
+    "web/scripts/email-onboarding-ui.test.mjs": "2160127f77017e9d203244b9942cd914723b010f669b4d0f513bb77008710026",
+    "web/scripts/expense-import-http.test.mjs": "a3211cdf4c7be22586cb85bd1dc3f8c46df201928de0fb9d0ab10305722330ae",
+    "web/scripts/expense-import-service.test.mjs": "d512838ac88d0d238df625927ec347190f2b2632a346e3cb458f1c20d29a282a",
+    "web/scripts/fixtures/rich-writing-verify.py": "8b32982e59aaafc31c32a0b2f42fb468b6d51622a2239dccbc71797b4eebd989",
+    "web/scripts/local-agent-task-provenance.test.mjs": "fbf04781684e78010699702570937a0dac1a8bdf352c238f443d217208ecee7f",
+    "web/scripts/local-calendar-export-http.test.mjs": "d3fbbb95473b990392e739e6526779715e37216e9286d4377db5277ff210dd5d",
+    "web/scripts/local-calendar-export-learning-source.test.mjs": "c2acf5b06ef1e8fbf3539d4c33def35a548b719cca73a77b1cfb5b1ae3b15a83",
+    "web/scripts/local-calendar-export-parser-check.mjs": "680a382b270dfb9a6d5dab28e49174fca48f421405de7b5b680c34449585d955",
+    "web/scripts/local-calendar-export-routes.test.mjs": "2073142263c4f0c687154573522889c48cc47e8b9f3376b5784fb7cca247b469",
+    "web/scripts/local-calendar-export-service.test.mjs": "4f1fca8931feb94ae09a5fe18fdc4701e12ac9b1cb9ee2be3c974f02d9c41262",
+    "web/scripts/local-calendar-export-ui.test.mjs": "ef32923f66e30d92921c90cfb6e01816a4e677f4dd4b9349df3e277e01e153c9",
+    "web/scripts/local-calendar-import-http.test.mjs": "235c1abf146941d9e3d2e7a2336d0b1f0c7729fa90504904e69b8bcc18ff4b3f",
+    "web/scripts/local-calendar-import-parser-check.mjs": "1f5352762ffd4907ecba9c3085c744874de401810d4104a6fc5621c14993de48",
+    "web/scripts/local-calendar-import-routes.test.mjs": "796357da902c4636cf8865b195ccfab35daab1c8cd92cda1207a63d1251b4d49",
+    "web/scripts/local-calendar-import-service.test.mjs": "34e387d0aa8025d1bf309adfaae2f0e52eb57f8b9f9902fb3d6513b1cef25ae4",
+    "web/scripts/local-calendar-import-ui.test.mjs": "33ecbe9d23e13f3f818d168994fb7438c26222d8b11d956dba88a0dab5e0399d",
+    "web/scripts/local-codex-adapter.test.mjs": "c3759b23807c05cec1d33a3a39e6d7798d5ada673c17ee5fe716b7e65f2dc6ab",
+    "web/scripts/local-codex-model-catalog.test.mjs": "e7fc955cbd3c03500eb90d61255657889bb756e9f2cfd5fbd216a4fd17283fc0",
+    "web/scripts/local-codex-model-tools.test.mjs": "039e617689d7f03a525cac21a6e2b93d900e3f0a51bde46f9e5f433f1f1d3ef2",
+    "web/scripts/local-codex-profile-review.test.mjs": "e58abdeb6f2dc9887b92ec5a74613283e4bdb9c6045754b73e470c47410c2271",
+    "web/scripts/local-codex-profile.test.mjs": "afc5299f42b3b51aa9ae44f65452ec8928c8165901d2b48414a263b7661f3383",
+    "web/scripts/local-expense-import-storage.test.mjs": "3ec252a7ee1a1e6237290f09fd0a067c3aea239ecc7d16d3eab0a42e5da4b7b9",
+    "web/scripts/local-focus-http.test.mjs": "c64e3c45954ccc4dfb7438b9176414af3dd5e932bb15f488f2ca1f7903c5e881",
+    "web/scripts/local-focus-routes.test.mjs": "b92e137ffbc6d3347954222cc4c0559e31aa811efd4987505c184b52f72771d3",
+    "web/scripts/local-focus-service.test.mjs": "50c80dd9abbef375bcbc4401e3d4d7148498be0b627be92927b6bdae35d2a813",
+    "web/scripts/local-focus-ui.test.mjs": "eb4684e6a485452adf434102e29ffb943ca40faf83dced674e7e9129924dde66",
+    "web/scripts/local-overview-ui.test.mjs": "3734e0b8207237de89ce07c8f44e666f25f7f9ddcef32a3c54361417770cf79b",
+    "web/scripts/local-practice-http.test.mjs": "55d726b11f421ac5f0de15702bcc41c2b83a16e7c41fc92fb1618af67bcd6812",
+    "web/scripts/local-practice-service.test.mjs": "07e17ac88779423fcbdce4a3e893a9c0fa83949583ea62813ffb797467f9ea96",
+    "web/scripts/local-practice-ui.test.mjs": "87fd8b52873d687d19205681561fd9da7d2d46577d60e942bbc172c6d4a8b92d",
+    "web/scripts/local-profile.test.mjs": "d1c30bcef21812456bbb9e556a731260086cbb425c10a03acaa581e56656942c",
+    "web/scripts/local-reminder-http.test.mjs": "af6045de375e80477b4c53132f74fe66de0f5c9e52543e512857908abf65c217",
+    "web/scripts/local-reminder-routes.test.mjs": "ce95f050228b15310fa837c8e07a24102e76d1a56ad525542cdd55ffb3c6aec5",
+    "web/scripts/local-reminder-service.test.mjs": "8c472215eb2223c363710021e333ec9ae6b4cdbf015d399115cc66e6407a7347",
+    "web/scripts/local-reminder-ui.test.mjs": "a6aa9850ae6cfa4f5f628b3f8f98cf1f671139f96573f490f82dbbe2a0b3abb1",
+    "web/scripts/local-rich-writing-artifact.test.mjs": "3c8dd80d3c41c5f73f1f01cf7b2ec00bd36ef089aa2443ff0c70a5c0f3c32e4d",
+    "web/scripts/local-rich-writing-http.test.mjs": "52def1b6dde2291de2dc280918f5d8d6b65fa7eb40eea4b2efb4f6d1582c9af1",
+    "web/scripts/local-rich-writing-routes.test.mjs": "6883a0b9294d619263b694aa930d74d6c7d96fc91c7fda3fe4939a774b1caf7c",
+    "web/scripts/local-student-admin-http.test.mjs": "8fab8a0d734ed3f6f50d93917467cd45b4abc9c168e175120ede8a1f79878af3",
+    "web/scripts/local-student-admin-routes.test.mjs": "94446627212fda11851a562704286715f1398bf922e79b21ed8a5a9f43b73335",
+    "web/scripts/local-student-admin-service.test.mjs": "b86e793f624f3aaf182dd936636fb875d460723d18553dca5e0bf1214e660aa9",
+    "web/scripts/local-student-admin-ui.test.mjs": "a5255e4a29a6e10c7a6ed4b3771b9bae8dd51a28a64fe6dd8ac666cb72b61589",
+    "web/scripts/local-word-download-ui.test.mjs": "999f680ea3dcff477fd2327296f5009be3a82f610963033365222837aaea9774",
+    "web/scripts/plan-task-agent.test.mjs": "7bb971fcc9507088858bc800ec1cd3c9c144d6e08062037710a9bf05cf8506a1",
+    "web/scripts/plan-task-http.test.mjs": "92607ef400243a0c5a2459d2a1b9bdafc02c2e341e20d5f4581a74ae8270697c",
+    "web/scripts/plan-task-service.test.mjs": "17e692d45c10b6ad3add37ea625caafe5a917151f81fc05f3cc4ece14873275c",
+    "web/scripts/public-job-http.test.mjs": "ef36fc831450e28f31e334f0dccc291fa343095030f9072b9c4653cdcfcae521",
+    "web/scripts/public-job-service.test.mjs": "987793c5987d77f3b77cf0a83551c74cd4e68b2e1075b52614f69ac8226eb096",
+    "web/scripts/verify-local-install.mjs": "80d284445f4f6eb3847452f058b51c0b6a21495654f2c21f39ce61fb176a0246"
+  },
+  "limits": [
+    "Not all 29 feature designs are fully implemented. This report proves the listed exercised slices.",
+    "Real D2L SSO/MFA, selected-course read, expiry and disconnect remain per-account gates; configured transport and tests are not school authorization.",
+    "Selected Notion and Gmail bodies/file transfer plus a second hosted account require their own live checks. Public Docs exact-link transfer is verified.",
+    "Each student needs normal official host login, compatible Codex version/account entitlement and exact expiring source consent. Embedded Claude/native resume are not implemented.",
+    "Supervised browser/ATS, native voice/capture, PDF output, richer sync and general artifact-format certification remain pending.",
+    "Phone/adoption stay disabled until production SQL/session/concurrency/retention and real device checks pass.",
+    "Local feature verification covers macOS arm64; Linux is experimental and Windows unsupported.",
+    "A project license is an owner decision; no third-party MCP/browser/ATS project source was vendored."
+  ]
+}

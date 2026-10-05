@@ -1,0 +1,45 @@
+{
+  "format": "learnbridge-source-aware-calendar-handoff-verification",
+  "schema_version": 1,
+  "checked_at": "2026-10-05T03:17:00.000Z",
+  "feature": "Source-bound calendar exports of separately human-accepted learning-plan tasks",
+  "new_test_path": "web/scripts/local-calendar-export-learning-source.test.mjs",
+  "new_tests_passed": 15,
+  "existing_calendar_import_export_tests_passed": 64,
+  "handoff_tests_passed": 24,
+  "combined_tests_passed": 103,
+  "failed": 0,
+  "skipped": 0,
+  "command": "node --test scripts/local-calendar-export-*.test.mjs scripts/local-calendar-import-*.test.mjs scripts/plan-task-*.test.mjs",
+  "receipt": "/tmp/learnbridge-calendar-learning-regressions.tap",
+  "verified": [
+    "Exact independent original task-create proof and paired review bound into calendar provenance",
+    "Current accepted catch-up plan, tutoring session and academic snapshot revisions/hashes",
+    "No selected lecture body or unselected course body in preview or file",
+    "Snapshot edits, newer same-owner sources, source/session/plan forget and revoked acceptance deny new preview/download/replay",
+    "Tampered original create hash denies sourced task export",
+    "Manual title/deadline/effort edits remain explicitly labeled with immutable original reviewed source",
+    "Forgetting handoff preview preserves independent provenance and deduplication receipt",
+    "Unrelated selected manual task does not expand or depend on unselected stale source",
+    "Interrupted committed task refuses export until exact separate human recovery; no automatic receipt completion",
+    "Unknown-effort unscheduled learning task pins saved plan capacity without entering another task's event",
+    "Actual accepted plan.with_calendar binds reviewed busy source and learning origin independently",
+    "Restart and fresh backup restore preserve exact payload and no-effect replay",
+    "Actual paired HTTP preview/download/restart/source revocation returns conflict and preserves exactly one task"
+  ],
+  "effects": {
+    "task_writes_by_exporter": 0,
+    "provider_reads_or_writes": 0,
+    "model_calls": 0,
+    "automatic_learning_acceptance_or_receipt_finalization": 0,
+    "personal_file_or_account_access": false,
+    "new_dependencies_or_migrations": 0,
+    "commit_or_deployment_performed": false
+  },
+  "limits": [
+    "Synthetic sources and real local storage/HTTP; no private provider compatibility claim",
+    "Direct learning catch-up plan export remains unavailable; tasks require separate exact human handoff",
+    "Downloaded files and retained local previews/history/backups may outlive active source forgetting",
+    "Calendar-file preparation is not calendar-provider import/readback"
+  ]
+}
