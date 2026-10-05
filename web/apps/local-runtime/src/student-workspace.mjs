@@ -7,6 +7,7 @@ import { planStudyWork, rankToday } from '../../../packages/local-academic/src/p
 import { createWorkflowRunner, workflowHash } from './workflows.mjs';
 import { profileCandidate, profileView, reviewProfileFact, profileContext } from './profile.mjs';
 import { createLearningService } from './learning-service.mjs';
+import { resolveCalendarBusySource } from './calendar-import-service.mjs';
 
 const fail = code => { throw new LearnBridgeError(code); };
 const ACADEMIC_HISTORY_LIMIT = 128;
@@ -36,6 +37,33 @@ export function createStudentWorkspace(store) {
     const record = value.kind === 'task' ? store.getTask(value.id) : value.kind === 'workspace_record' ? store.getWorkspaceRecord(value.id) : null;
     return record ? { revision: record.revision, version_hash: workflowHash(record) } : null;
   };
+  function calendarInput(input) {
+    object(input, ['calendar_source', 'availability', 'timezone', 'now', 'horizonEnd', 'maxDailyMinutes', 'bufferMinutes', 'minBlockMinutes', 'request_key']);
+    if (typeof input.request_key !== 'string' || !/^[A-Za-z0-9_-]{8,80}$/.test(input.request_key)
+      || !Array.isArray(input.availability) || !input.availability.length || input.availability.length > 100) fail('INVALID_INPUT');
+    const source = resolveCalendarBusySource(store, input.calendar_source);
+    const { calendar_source, request_key, ...configuration } = input;
+    // The planner's descriptor-safe clone rejects nested accessors/sparse arrays
+    // before this recipe examines any caller-provided interval property.
+    planStudyWork({ ...configuration, busy: source.data.busy, tasks: tasks() });
+    if (!instant(input.now) || !instant(input.horizonEnd) || input.horizonEnd > source.data.scope.end
+      || input.availability.some(row => !instant(row.start) || !instant(row.end) || row.start < source.data.scope.start || row.end > input.horizonEnd)) fail('INVALID_INPUT');
+    return { source, configuration: { ...configuration, busy: source.data.busy } };
+  }
+  const calendarPlan = input => planStudyWork({ ...calendarInput(input).configuration, tasks: tasks() });
+  function verifyCalendarPlan(record) {
+    if (!record || record.kind !== 'plan' || record.data.format !== 'calendar_study_plan_v1') fail('SCOPE_DENIED');
+    const run = store.getRun(record.data.run_id), allocate = store.listRunSteps(record.data.run_id).find(step => step.key === 'allocate');
+    if (!run || run.recipe_id !== 'plan.with_calendar' || run.state !== 'completed' || !allocate || allocate.state !== 'verified'
+      || workflowHash(run.input.calendar_source) !== workflowHash(record.data.calendar_source)
+      || workflowHash(allocate.result) !== workflowHash(record.data.plan)
+      || workflowHash(calendarPlan(run.input)) !== workflowHash(record.data.plan)) fail('REVISION_CONFLICT');
+    const pins = run.source_pins.filter(pin => pin.kind === 'workspace_record');
+    if (pins.length !== 1 || pins[0].id !== record.data.calendar_source.id || pins[0].revision !== record.data.calendar_source.revision
+      || pins[0].version_hash !== record.data.calendar_source.version_hash || !resolvePin(pins[0])
+      || workflowHash(resolvePin(pins[0])) !== workflowHash({ revision: pins[0].revision, version_hash: pins[0].version_hash })) fail('REVISION_CONFLICT');
+    return record;
+  }
   const runner = createWorkflowRunner({ store, resolvePin, recipes: {
     'plan.today': {
       version: '1', budget: { tool_calls: 10, model_calls: 0, bytes: 256000, max_duration_ms: 300000 },
@@ -52,6 +80,20 @@ export function createStudentWorkspace(store) {
         { key: 'save_preview', kind: 'local_write', idempotent: true, verification_method: 'sqlite_plan_readback.v1',
           execute: ({ results, run_id }) => store.createWorkspaceRecord({ kind: 'plan', title: 'Study plan preview',
             data: { state: 'proposal', run_id, plan: results.allocate } }, { idempotencyKey: `plan-${run_id}` }),
+          verify: ({ result }) => store.getWorkspaceRecord(result.id) },
+      ],
+    },
+    'plan.with_calendar': {
+      version: '1', budget: { tool_calls: 10, model_calls: 0, bytes: 256000, max_duration_ms: 300000 },
+      validate(input) { calendarPlan(input); return structuredClone(input); },
+      pins(input) { const source = calendarInput(input).source; return [...tasks().map(task => pin('task', task)), pin('workspace_record', source)]; },
+      steps: [
+        { key: 'allocate', kind: 'read', verification_method: 'selected_calendar_planner_recomputation.v1',
+          execute: ({ input }) => calendarPlan(input), verify: ({ input }) => calendarPlan(input) },
+        { key: 'save_preview', kind: 'local_write', idempotent: true, verification_method: 'sqlite_calendar_plan_readback.v1',
+          execute: ({ input, results, run_id }) => store.createWorkspaceRecord({ kind: 'plan', title: 'Study plan with selected calendar busy times',
+            data: { format: 'calendar_study_plan_v1', state: 'proposal', run_id, calendar_source: input.calendar_source,
+              calendar_coverage: 'partial_selected_busy_snapshot', plan: results.allocate } }, { idempotencyKey: `calendar-plan-${run_id}` }),
           verify: ({ result }) => store.getWorkspaceRecord(result.id) },
       ],
     },
@@ -234,6 +276,7 @@ export function createStudentWorkspace(store) {
   return {
     runner,
     library,
+    verifyCalendarPlan,
     today: () => rankToday({ tasks: tasks(), timezone: store.identity.timezone, now: new Date().toISOString() }),
     listProfiles: () => profileView(store.listWorkspaceRecords({ kind: 'profile_fact' }), { resolveEvidence: evidence }),
     createProfile(input, options) {
@@ -303,6 +346,12 @@ export function createStudentWorkspace(store) {
       return { stream: history.stream, item: { ...metadata, snapshot: record.data.snapshot },
         notice: metadata.status === 'historical' ? 'This retained export is historical and is excluded from current search and tutoring.' : 'This is the current saved export. Its retrieval time and coverage are source-reported.' };
     },
+    getCurrentSnapshot(id) {
+      // Trusted selected-record lookup: validate the exact source and current
+      // head without opening unrelated retained academic content.
+      if (!uuid(id)) fail('INVALID_INPUT');
+      return currentSnapshot(store.getWorkspaceRecord(id));
+    },
     listSnapshots() {
       const records = academicRecords().filter(record => record.data.format === 'academic_snapshot');
       const result = []; const visited = new Set();
@@ -345,13 +394,16 @@ export function createStudentWorkspace(store) {
       const { snapshot_ids, course_ids, ...reference } = input;
       return resolveAcademicCitation(library({ snapshot_ids, course_ids }), { ...reference, courseIds: course_ids });
     },
-    listPlans: () => store.listWorkspaceRecords({ kind: 'plan' }),
+    listPlans: () => store.listWorkspaceRecords({ kind: 'plan' }).filter(record => record.data.plan?.format === 'learnbridge-study-plan' && record.data.plan.schema_version === 1),
     acceptPlan(id, input) {
       object(input, ['expected_revision', 'plan_hash']);
       if (store.getWorkspaceRecord(id)?.data.format === 'learning_catchup') {
         return createLearningService({ store, getLibrary: library }).acceptCatchUp(id, input);
       }
-      const record = store.getWorkspaceRecord(id); if (!record || record.kind !== 'plan' || input.plan_hash !== record.data.plan.plan_hash) fail('REVISION_CONFLICT');
+      const record = store.getWorkspaceRecord(id); if (!record || record.kind !== 'plan' || record.data.plan?.format !== 'learnbridge-study-plan' || input.plan_hash !== record.data.plan.plan_hash) fail('REVISION_CONFLICT');
+      if (record.data.format === 'calendar_study_plan_v1') {
+        verifyCalendarPlan(record);
+      }
       if (record.data.state === 'accepted' && [record.revision, record.revision - 1].includes(input.expected_revision)) return record;
       const current = tasks();
       if (record.data.plan.task_versions.some(version => current.find(task => task.id === version.id)?.revision !== version.revision)

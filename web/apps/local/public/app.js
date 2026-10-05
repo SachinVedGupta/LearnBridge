@@ -1,4 +1,5 @@
 'use strict';
+import { mountOverviewUI } from './overview.js';
 
 // All private state is in memory. Session credentials are HTTP-only cookies;
 // the request nonce is obtained from the paired runtime, never browser storage.
@@ -9,13 +10,14 @@ let activeConfirmation = null;
 let hostPoll;
 Object.assign(state, { profiles: [], snapshots: [], plans: [], runs: [], profileContextPreview: null, today: null });
 const extensionUIs = new Map();
+const overviewUI = mountOverviewUI({ root: $('today-activity'), request, element, navigate });
 async function loadExtension(page) {
-  if (!['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote'].includes(page)) return;
+  if (!['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote', 'practice', 'reminders', 'academic-tasks', 'public-jobs', 'career-packets', 'calendar-export', 'focus', 'expense-import', 'calendar-import', 'student-admin', 'plan-tasks'].includes(page)) return;
   const nonce = state.nonce;
   if (!extensionUIs.has(page)) {
     const module = await import(`/${page}.js`);
     if (!state.sessionReady || state.nonce !== nonce || state.page !== page) return;
-    const mount = { career: module.mountCareerUI, learning: module.mountLearningUI, life: module.mountLifeUI, writing: module.mountWritingUI, research: module.mountResearchUI, productivity: module.mountProductivityUI, onboarding: module.mountOnboardingUI, ai: module.mountAiUI, d2l: module.mountD2lUI, 'cloud-onboarding': module.mountCloudOnboardingUI, remote: module.mountRemoteUI }[page];
+    const mount = { career: module.mountCareerUI, learning: module.mountLearningUI, life: module.mountLifeUI, writing: module.mountWritingUI, research: module.mountResearchUI, productivity: module.mountProductivityUI, onboarding: module.mountOnboardingUI, ai: module.mountAiUI, d2l: module.mountD2lUI, 'cloud-onboarding': module.mountCloudOnboardingUI, remote: module.mountRemoteUI, practice: module.mountPracticeUI, reminders: module.mountRemindersUI, 'academic-tasks': module.mountAcademicTasksUI, 'public-jobs': module.mountPublicJobsUI, 'career-packets': module.mountCareerPacketsUI, 'calendar-export': module.mountCalendarExportUI, focus: module.mountFocusUI, 'expense-import': module.mountExpenseImportUI, 'calendar-import': module.mountCalendarImportUI, 'student-admin': module.mountStudentAdminUI, 'plan-tasks': module.mountPlanTasksUI }[page];
     if (!extensionUIs.has(page)) extensionUIs.set(page, mount({ root: $(`${page}-workspace`), request, element, busy, confirmAction, message, navigate }));
   }
   await extensionUIs.get(page).refresh();
@@ -25,15 +27,15 @@ class ApiError extends Error {
   constructor(status, code, message) { super(message); this.status = status; this.code = code; }
 }
 
-async function request(path, { method = 'GET', body, bootstrap = false, idempotencyKey } = {}) {
+async function request(path, { method = 'GET', body, bootstrap = false, idempotencyKey, signal } = {}) {
   const requestNonce = state.nonce;
   const headers = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
   if (!bootstrap && state.nonce) headers['X-LearnBridge-Nonce'] = state.nonce;
   let response;
-  try { response = await fetch(`${API}${path}`, { method, headers, credentials: 'same-origin', cache: 'no-store', ...(body === undefined ? {} : { body: JSON.stringify(body) }) }); }
-  catch { throw new ApiError(0, 'RUNTIME_UNAVAILABLE', 'The local runtime is unavailable. Check that the LearnBridge launcher is running, then try again.'); }
+  try { response = await fetch(`${API}${path}`, { method, headers, credentials: 'same-origin', cache: 'no-store', signal, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }); }
+  catch (error) { if (signal?.aborted || error?.name === 'AbortError') throw new ApiError(0, 'REQUEST_CANCELLED', 'This request was cancelled after the selection changed. Refresh saved items before retrying a change.'); throw new ApiError(0, 'RUNTIME_UNAVAILABLE', 'The local runtime is unavailable. Check that the LearnBridge launcher is running, then try again.'); }
   let data;
   try { data = await response.json(); }
   catch { throw new ApiError(response.status, 'INVALID_RESPONSE', 'The local runtime returned an unexpected response. Try refreshing this page.'); }
@@ -146,6 +148,7 @@ function showPair() {
   state.documents = [];
   state.sources = []; state.sourceEntries = []; state.inventory = null; state.academicPreview = null; state.grants = []; state.proposals = [];
   state.profiles = []; state.snapshots = []; state.plans = []; state.runs = []; state.profileContextPreview = null; $('profile-export').hidden = true;
+  overviewUI.reset();
   for (const module of extensionUIs.values()) module.reset();
   for (const id of ['profile-list', 'profile-context-choices', 'course-snapshots', 'course-choices', 'course-results', 'plan-list', 'workflow-list']) $(id).replaceChildren();
   for (const id of ['profile-context', 'course-citation', 'workflow-detail']) { $(id).textContent = ''; $(id).hidden = true; }
@@ -197,18 +200,21 @@ async function openWorkspace(session) {
 
 function navigate(page) {
   if (state.page === 'remote' && page !== 'remote') extensionUIs.get('remote')?.pause?.();
-  if (!['today', 'notes', 'sources', 'agents', 'setup', 'courses', 'planning', 'profile', 'career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote'].includes(page)) return;
+  if (!['today', 'notes', 'sources', 'agents', 'setup', 'courses', 'planning', 'profile', 'career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote', 'practice', 'reminders', 'academic-tasks', 'public-jobs', 'career-packets', 'calendar-export', 'focus', 'expense-import', 'calendar-import', 'student-admin', 'plan-tasks'].includes(page)) return;
+  const changed = state.page !== page;
   state.page = page;
+  $('mobile-page-selector').value = page;
   for (const section of document.querySelectorAll('.page')) section.hidden = section.id !== `page-${page}`;
   for (const button of document.querySelectorAll('.nav-item')) {
     if (button.dataset.page === page) button.setAttribute('aria-current', 'page');
     else button.removeAttribute('aria-current');
   }
   message('global-message', '');
+  if (changed) { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); $('main').focus({ preventScroll: true }); }
   const refresh = { today: loadTasks, notes: loadDocuments, courses: loadCourses, planning: loadPlanning, profile: loadProfile,
     agents: async () => { await Promise.all([loadTasks(), loadDocuments(), loadSources(), loadAgentReview()]); renderGrantSelection(); } }[page];
   if (refresh) refresh().catch(error => message('global-message', error.message, true));
-  if (['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote'].includes(page)) loadExtension(page).catch(error => message('global-message', error.message, true));
+  if (['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote', 'practice', 'reminders', 'academic-tasks', 'public-jobs', 'career-packets', 'calendar-export', 'focus', 'expense-import', 'calendar-import', 'student-admin', 'plan-tasks'].includes(page)) loadExtension(page).catch(error => message('global-message', error.message, true));
 }
 
 async function loadTasks() {
@@ -216,6 +222,7 @@ async function loadTasks() {
   if (!Array.isArray(data.items)) throw new ApiError(0, 'INVALID_RESPONSE', 'The saved task list could not be read. Try refreshing.');
   state.tasks = data.items; state.today = today;
   renderTasks();
+  if (state.page === 'today') await overviewUI.refresh();
 }
 
 function taskAction(task, label, action, className = 'quiet compact') {
@@ -512,6 +519,7 @@ $('new-task-form').addEventListener('submit', event => {
   });
 });
 
+$('mobile-page-selector').addEventListener('change', event => navigate(event.currentTarget.value));
 $('refresh-tasks').addEventListener('click', event => busy(event.currentTarget, loadTasks).catch(error => message('global-message', error.message, true)));
 $('refresh-status').addEventListener('click', event => busy(event.currentTarget, loadStatus).catch(error => message('global-message', error.message, true)));
 $('new-note-button').addEventListener('click', () => newNote());

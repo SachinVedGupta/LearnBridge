@@ -6,7 +6,7 @@
     <meta name="color-scheme" content="light">
     <title>LearnBridge · Local workspace</title>
     <link rel="stylesheet" href="/styles.css">
-    <script src="/app.js" defer></script>
+    <script type="module" src="/app.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to workspace</a>
@@ -32,18 +32,34 @@
         <div class="brand"><span class="brand-mark" aria-hidden="true">L</span><span>LearnBridge</span></div>
         <p class="edition"><span class="status-dot" aria-hidden="true"></span> Local workspace</p>
         <nav class="navigation" aria-label="Main">
+          <p class="nav-group-title">Your day</p>
           <button class="nav-item" type="button" data-page="today" aria-current="page"><span aria-hidden="true">◷</span> Today</button>
-          <button class="nav-item" type="button" data-page="onboarding"><span aria-hidden="true">◇</span> Get started</button>
           <button class="nav-item" type="button" data-page="notes"><span aria-hidden="true">▤</span> Notes</button>
+          <button class="nav-item" type="button" data-page="focus">Focus timer</button>
+          <button class="nav-item" type="button" data-page="reminders">Reminders</button>
+          <p class="nav-group-title">School</p>
           <button class="nav-item" type="button" data-page="courses"><span aria-hidden="true">▥</span> Courses</button>
+          <button class="nav-item" type="button" data-page="academic-tasks">Course deadlines</button>
           <button class="nav-item" type="button" data-page="planning"><span aria-hidden="true">◴</span> Study plan</button>
-          <button class="nav-item" type="button" data-page="profile"><span aria-hidden="true">○</span> My profile</button>
+          <button class="nav-item" type="button" data-page="calendar-import">Import busy calendar</button>
+          <button class="nav-item" type="button" data-page="calendar-export">Calendar exports</button>
           <button class="nav-item" type="button" data-page="learning"><span aria-hidden="true">◇</span> Learning</button>
+          <button class="nav-item" type="button" data-page="plan-tasks">Learning next steps</button>
+          <button class="nav-item" type="button" data-page="practice">Spaced practice</button>
+          <p class="nav-group-title">Career</p>
+          <button class="nav-item" type="button" data-page="public-jobs">Find internships</button>
           <button class="nav-item" type="button" data-page="career"><span aria-hidden="true">↗</span> Career</button>
+          <button class="nav-item" type="button" data-page="career-packets">Application packets</button>
+          <p class="nav-group-title">Life and projects</p>
           <button class="nav-item" type="button" data-page="life"><span aria-hidden="true">☀</span> Daily life</button>
+          <button class="nav-item" type="button" data-page="student-admin">Student administration</button>
+          <button class="nav-item" type="button" data-page="expense-import">Import expenses</button>
           <button class="nav-item" type="button" data-page="writing"><span aria-hidden="true">✎</span> Writing</button>
           <button class="nav-item" type="button" data-page="research"><span aria-hidden="true">⌕</span> Research</button>
           <button class="nav-item" type="button" data-page="productivity"><span aria-hidden="true">☷</span> Updates & projects</button>
+          <p class="nav-group-title">Your workspace</p>
+          <button class="nav-item" type="button" data-page="onboarding"><span aria-hidden="true">◇</span> Get started</button>
+          <button class="nav-item" type="button" data-page="profile"><span aria-hidden="true">○</span> My profile</button>
           <button class="nav-item" type="button" data-page="sources"><span aria-hidden="true">⊕</span> Sources</button>
           <button class="nav-item" type="button" data-page="ai">Local AI</button>
           <button class="nav-item" type="button" data-page="d2l">School connection</button>
@@ -52,6 +68,7 @@
           <button class="nav-item" type="button" data-page="agents"><span aria-hidden="true">↔</span> Agent &amp; review</button>
           <button class="nav-item" type="button" data-page="setup"><span aria-hidden="true">◇</span> Setup &amp; capabilities</button>
         </nav>
+        <div class="mobile-navigation"><label for="mobile-page-selector">Workspace section</label><select id="mobile-page-selector"><optgroup label="Your day"><option value="today">Today</option><option value="notes">Notes</option><option value="focus">Focus timer</option><option value="reminders">Reminders</option></optgroup><optgroup label="School"><option value="courses">Courses</option><option value="academic-tasks">Course deadlines</option><option value="planning">Study plan</option><option value="calendar-import">Import busy calendar</option><option value="calendar-export">Calendar exports</option><option value="learning">Learning</option><option value="plan-tasks">Learning next steps</option><option value="practice">Spaced practice</option></optgroup><optgroup label="Career"><option value="public-jobs">Find internships</option><option value="career">Career</option><option value="career-packets">Application packets</option></optgroup><optgroup label="Life and projects"><option value="life">Daily life</option><option value="student-admin">Student administration</option><option value="expense-import">Import expenses</option><option value="writing">Writing</option><option value="research">Research</option><option value="productivity">Updates &amp; projects</option></optgroup><optgroup label="Your workspace"><option value="onboarding">Get started</option><option value="profile">My profile</option><option value="sources">Sources</option><option value="ai">Local AI</option><option value="d2l">School connection</option><option value="cloud-onboarding">Cloud sources</option><option value="remote">Phone access</option><option value="agents">Agent &amp; review</option><option value="setup">Setup &amp; capabilities</option></optgroup></select></div>
         <div class="sidebar-bottom">
           <p class="local-note">Saved on this computer.<br>No automatic cloud sync.</p>
           <button id="logout-button" class="button quiet" type="button">Disconnect browser</button>
@@ -71,6 +88,7 @@
             <div class="summary-card"><span class="summary-label">Due today</span><strong id="today-count">0</strong><span>based on your date</span></div>
             <div class="summary-card"><span class="summary-label">Completed</span><strong id="completed-count">0</strong><span>progress worth keeping</span></div>
           </div>
+          <div id="today-activity" class="secondary-grid" aria-label="Workspace activity"></div>
           <section class="panel task-panel" aria-labelledby="tasks-title">
             <div class="panel-heading"><h2 id="tasks-title">Your next steps</h2><button id="refresh-tasks" class="button quiet" type="button">Refresh</button></div>
             <form id="new-task-form" class="task-create">
@@ -86,7 +104,7 @@
               <button type="button" data-filter="all" class="filter-button" aria-pressed="false">All</button>
             </div>
             <div id="task-list" class="task-list" aria-live="polite"></div>
-            <p class="panel-footnote">These are tasks you create. No connected app is scanned or changed.</p>
+            <p class="panel-footnote">Tasks you create or explicitly accept appear here. Connected apps are not changed when you manage a local task.</p>
           </section>
           <div class="secondary-grid">
             <section class="panel small-panel"><p class="eyebrow">THINK ON PAPER</p><h2>A home for your notes</h2><p>Keep a study outline, assignment questions or a plan you can return to.</p><button class="button secondary" type="button" data-page="notes">Open notes <span aria-hidden="true">→</span></button></section>
@@ -144,7 +162,7 @@
 
         <section id="page-profile" class="page" aria-labelledby="profile-title" hidden>
           <div class="page-heading"><div><h1 id="profile-title">You, in your words.</h1><p>Confirm useful facts. Keep conflicts and uncertainty visible.</p></div><button id="refresh-profile" class="button secondary" type="button">Refresh profile</button></div>
-          <section class="panel"><h2>Add a fact to review</h2><p class="field-help">These are your own statements. Nothing is inferred from your files, account or task activity. Confirming a fact saves it locally; agent sharing remains a separate choice.</p><form id="profile-form"><label for="profile-field">Field</label><select id="profile-field"><option value="name">Name</option><option value="university">University</option><option value="program">Program</option><option value="graduation">Graduation</option><option value="experience">Experience</option><option value="goals">Goals</option><option value="learning_preferences">Learning preferences</option><option value="timezone">Timezone</option><option value="availability">Availability</option><option value="dietary_preferences">Dietary preferences</option><option value="budget_preferences">Budget preferences</option><option value="eligibility">Career eligibility</option></select><label for="profile-value">Your statement</label><textarea id="profile-value" rows="3" required maxlength="2000"></textarea><button class="button primary" type="submit">Save candidate for review</button></form><p id="profile-message" class="notice" role="status" hidden></p></section>
+          <section class="panel"><h2>Add a fact to review</h2><p class="field-help">These are your own statements. Nothing is inferred from your files, account or task activity. Confirming a fact saves it locally; agent sharing remains a separate choice.</p><form id="profile-form"><label for="profile-field">Field</label><select id="profile-field"><option value="name">Name</option><option value="email">Career contact email (single address)</option><option value="university">University</option><option value="program">Program</option><option value="graduation">Graduation</option><option value="experience">Experience</option><option value="goals">Goals</option><option value="learning_preferences">Learning preferences</option><option value="timezone">Timezone</option><option value="availability">Availability</option><option value="dietary_preferences">Dietary preferences</option><option value="budget_preferences">Budget preferences</option><option value="eligibility">Career eligibility</option></select><label for="profile-value">Your statement</label><textarea id="profile-value" rows="3" required maxlength="2000"></textarea><button class="button primary" type="submit">Save candidate for review</button></form><p id="profile-message" class="notice" role="status" hidden></p></section>
           <section class="panel source-panel"><h2>Your facts and review</h2><div id="profile-list"></div></section>
           <section class="panel source-panel"><h2>Preview selected context</h2><p class="field-help">Select confirmed facts below. The purpose filter excludes unrelated information. This preview stays on this computer.</p><form id="profile-context-form"><label for="profile-purpose">Purpose</label><select id="profile-purpose"><option value="learning">Learning</option><option value="career">Career</option><option value="general">General planning</option><option value="meals">Meals</option><option value="budget">Budget</option></select><div id="profile-context-choices"></div><button class="button secondary" type="submit">Preview locally</button></form><pre id="profile-context" class="source-text" hidden></pre><button id="profile-export" class="button secondary" type="button" hidden>Save reviewed context as a private note</button></section>
         </section>
@@ -160,6 +178,17 @@
           <section class="panel source-panel"><h2>Connect your existing agent</h2><p class="field-help">Run <code>npm run local:agents -- --destination codex</code> (or <code>claude</code>) in the repository to preview project-only settings. Follow the setup guide to apply the reviewed preview and approve MCP in your host. Existing subscriptions remain with their official apps.</p></section>
         </section>
 
+        <section id="page-practice" class="page" aria-labelledby="practice-title" hidden><div class="page-heading"><div><h1 id="practice-title">Practice a little, remember more.</h1><p>Use your own source-pinned cards and record how each review went.</p></div></div><div id="practice-workspace"></div></section>
+        <section id="page-academic-tasks" class="page" aria-labelledby="academic-tasks-title" hidden><div class="page-heading"><div><h1 id="academic-tasks-title">Turn course deadlines into a plan.</h1><p>Inspect selected courses, check each deadline and review tasks before adding them.</p></div></div><div id="academic-tasks-workspace"></div></section>
+        <section id="page-public-jobs" class="page" aria-labelledby="public-jobs-title" hidden><div class="page-heading"><div><h1 id="public-jobs-title">Find your next opportunity.</h1><p>Choose an official employer board and read openings before saving them locally.</p></div></div><div id="public-jobs-workspace"></div></section>
+        <section id="page-career-packets" class="page" aria-labelledby="career-packets-title" hidden><div class="page-heading"><div><h1 id="career-packets-title">Prepare your application.</h1><p>Bring together a selected official posting, confirmed facts and reviewed writing.</p></div></div><div id="career-packets-workspace"></div></section>
+        <section id="page-calendar-export" class="page" aria-labelledby="calendar-export-title" hidden><div class="page-heading"><div><h1 id="calendar-export-title">Put your plan on your calendar.</h1><p>Review task deadlines or accepted study blocks and download a calendar file.</p></div></div><div id="calendar-export-workspace"></div></section>
+        <section id="page-plan-tasks" class="page" aria-labelledby="plan-tasks-page-title" hidden><div class="page-heading"><div><h1 id="plan-tasks-page-title">Turn your learning plan into a next step.</h1><p>Choose accepted plan topics and review each task before adding it to Today.</p></div></div><div id="plan-tasks-workspace"></div></section>
+        <section id="page-student-admin" class="page" aria-labelledby="student-admin-page-title" hidden><div class="page-heading"><div><h1 id="student-admin-page-title">Stay on top of student paperwork.</h1><p>Review requirements, keep unknowns visible and choose a next step.</p></div></div><div id="student-admin-workspace"></div></section>
+        <section id="page-calendar-import" class="page" aria-labelledby="calendar-import-page-title" hidden><div class="page-heading"><div><h1 id="calendar-import-page-title">Plan around your day.</h1><p>Review a calendar file and choose which busy times your study plan should respect.</p></div></div><div id="calendar-import-workspace"></div></section>
+        <section id="page-expense-import" class="page" aria-labelledby="expense-import-page-title" hidden><div class="page-heading"><div><h1 id="expense-import-page-title">Keep spending in view.</h1><p>Preview a CSV you choose and add only the expenses you review.</p></div></div><div id="expense-import-workspace"></div></section>
+        <section id="page-focus" class="page" aria-labelledby="focus-page-title" hidden><div class="page-heading"><div><h1 id="focus-page-title">Make space to focus.</h1><p>Choose a session, track its timer and take breaks at your pace.</p></div></div><div id="focus-workspace"></div></section>
+        <section id="page-reminders" class="page" aria-labelledby="reminders-page-title" hidden><div class="page-heading"><div><h1 id="reminders-page-title">Keep deadlines in view.</h1><p>Choose local tasks and activate quiet reminders while LearnBridge is running.</p></div></div><div id="reminders-workspace"></div></section>
         <section id="page-learning" class="page" aria-labelledby="learning-title" hidden><div class="page-heading"><div><h1 id="learning-title">Learn it, then explain it.</h1><p>Prepare source-cited sessions for your agent and keep your own attempts.</p></div></div><div id="learning-workspace"></div></section>
         <section id="page-career" class="page" aria-labelledby="career-title" hidden><div class="page-heading"><div><h1 id="career-title">Your next opportunity.</h1><p>Save postings, prepare factual drafts and practise with evidence.</p></div></div><div id="career-workspace"></div></section>
         <section id="page-life" class="page" aria-labelledby="life-title" hidden><div class="page-heading"><div><h1 id="life-title">Make room for daily life.</h1><p>Plan meals, keep routines and review your spending.</p></div></div><div id="life-workspace"></div></section>

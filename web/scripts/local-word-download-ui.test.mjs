@@ -63,7 +63,7 @@ function fixture({ state = 'accepted', modelOutput = false } = {}) {
     warning: 'Synthetic Word text; visual review remains pending.' } };
 }
 
-function harness(t, value = fixture(), { intercept, digest } = {}) {
+function harness(t, value = fixture(), { intercept, digest, confirm } = {}) {
   const calls = [], downloads = [], created = [], revoked = [], timers = new Map(), jobs = []; let timerIndex = 0;
   const root = new Node('main'), records = [clone(value.record)], rows = () => records.map(record => ({
     id: record.id, title: record.title, revision: record.revision, state: record.data.state, source_count: record.data.source_documents.length, stale: false,
@@ -92,7 +92,7 @@ function harness(t, value = fixture(), { intercept, digest } = {}) {
     element: (tag, className, text) => new Node(tag, className, text, node => { if (node.tagName === 'a') downloads.push(node); }),
     busy(button, action) {
       button.disabled = true; const job = Promise.resolve().then(action).finally(() => { button.disabled = false; }); jobs.push(job); return job;
-    }, confirmAction: async () => { throw new Error('Word download must not trigger an unrelated confirmation or write'); } });
+    }, confirmAction: confirm || (async () => { throw new Error('Word download must not trigger an unrelated confirmation or write'); }) });
   t.after(() => { ui.reset(); for (const undo of restore.reverse()) undo(); });
   const startClick = (text, index = 0) => { const button = byButton(root, text, index); assert.equal(button.disabled, false); fire(button); return jobs.at(-1).catch(() => {}); };
   return { root, ui, records, calls, downloads, created, revoked, timers, startClick,
@@ -202,4 +202,23 @@ test('WORD-UI11: session reset immediately revokes every retained Word URL and l
   h.cleanup(); assert.deepEqual(h.revoked, [...urls, ...urls]);
   assert.equal(h.created.length, 2); assert.equal(h.downloads.length, 2); assert.equal(walk(h.root).some(node => node.tagName === 'a'), false);
   h.ui.reset(); assert.equal(h.revoked.length, 4, 'Reset does not retain already revoked URLs');
+});
+
+
+test('WRITING-UI12: accepting an exact proposal shows current export controls without a false stale warning', async t => {
+  const accepted = fixture(), pending = clone(accepted); pending.record.revision = 1; pending.record.data.state = 'awaiting_review'; delete pending.record.data.accepted_note;
+  let h; h = harness(t, pending, { confirm: async () => true, intercept: (path, options) => {
+    if (path.endsWith('/accept')) {
+      assert.deepEqual(options.body, { expected_revision: 1, payload_hash: pending.record.data.payload_hash });
+      h.records[0] = clone(accepted.record); return { item: clone(accepted.record) };
+    }
+    if (path.endsWith('/export-docx')) return clone(accepted.receipt);
+  } });
+  await h.open(); const ack = walk(h.root).find(n => n.tagName === 'input' && n.type === 'checkbox' && n.parent?.textContent.includes('I reviewed the entire exact draft')); assert.ok(ack); ack.checked = true;
+  await h.click('Keep as a private alternative');
+  assert.equal(byButton(h.root, 'Download formatted Word (.docx)').disabled, false);
+  assert.equal(byButton(h.root, 'Download printable LaTeX source (.tex)').disabled, false);
+  assert.doesNotMatch(h.status.textContent, /writing item changed|Cached draft text was cleared/);
+  await h.click(wordButton); assert.equal(h.downloads.length, 1);
+  assert.deepEqual(Buffer.from(await h.created[0].blob.arrayBuffer()), accepted.bytes);
 });

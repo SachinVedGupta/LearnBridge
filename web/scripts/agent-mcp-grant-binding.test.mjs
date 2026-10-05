@@ -107,7 +107,8 @@ test('MGB06: real embedded runtime lease binds one grant and logout refuses late
   const turn = (await call('/host-turns', { grant_id: own.id, prompt: 'Explain my selected note.', confirmed: true })).item; await began;
   const before = (await call('/agent-grants')).items.find(item => item.id === other.id); assert.equal(before.used_bytes, 0);
   await assert.rejects(requestAgentControl(root, 'codex', 'context', { grant_id: other.id }, { embeddedLease: leaseId }), { code: 'CONSENT_REQUIRED' });
-  const status = await bridge.tool('learnbridge_status'); assert.equal(status.failed, false); assert.deepEqual(status.value.grants.map(grant => grant.id), [own.id]);
+  // Possessing a live lease is insufficient: only a broker-minted one-use exact permit may execute.
+  const status = await bridge.tool('learnbridge_status'); assert.equal(status.failed, true); assert.equal(status.value.error.code, 'SCOPE_DENIED');
   assert.equal(JSON.stringify(await call('/ai/status')).includes(leaseId), false); assert.equal(JSON.stringify(await call('/host-turns')).includes(leaseId), false);
   await call('/logout', {});
   assert.equal((await bridge.tool('learnbridge_context', { grant_id: own.id })).failed, true); assert.equal((await bridge.tool('learnbridge_propose_task', { grant_id: own.id, title: 'Must not queue after browser logout', idempotency_key: 'synthetic-logout-lease' })).failed, true);

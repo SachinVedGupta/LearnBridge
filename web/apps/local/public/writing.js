@@ -1,3 +1,4 @@
+import { mountRichWritingControls } from './rich-writing.js';
 // Plain text only: preparation and proposals are not verified model answers.
 // Exact paired student review is required before saving an alternative or edit.
 export async function verifyWordDownload(result, record) {
@@ -36,7 +37,7 @@ export async function verifyWordDownload(result, record) {
 export function mountWritingUI({ root, request, element, busy, confirmAction, message }) {
   const $ = (tag, className, text) => element(tag, className, text);
   const state = { generation: 0, documents: [], items: [], current: null, selections: new Map(), retries: new Map(), downloads: new Set() };
-  let fieldIndex = 0;
+  let fieldIndex = 0, richControls = null;
   const status = $('p', 'notice'); status.id = 'writing-status'; status.setAttribute('role', 'status'); status.hidden = true;
   const notice = (text, error = false) => message ? message(status.id, text, error) : (status.textContent = text, status.hidden = !text, status.classList.toggle('error', error));
   root.replaceChildren($('p', 'notice', 'Prepare writing instructions for your official Codex or Claude host, then review its actual draft here. Selected local documents are private until you separately approve a sharing grant in Agent & review. This screen does not generate a draft or contact an agent by itself.'), status);
@@ -73,7 +74,7 @@ export function mountWritingUI({ root, request, element, busy, confirmAction, me
   const prepare = button('Prepare private writing recipe', true); prepare.type = 'submit'; recipeForm.append(prepare);
   recipeForm.addEventListener('submit', event => { event.preventDefault(); action(prepare, async () => {
     const body = { title: recipeTitle.value, kind: recipeKind.value, request: instruction.value, academic_policy: recipePolicy.value, source_documents: selected() }, generation = state.generation;
-    const data = await request('/writing/recipes', { method: 'POST', body, idempotencyKey: retry('recipe', body) }); if (generation !== state.generation) return; state.retries.delete('recipe'); await refresh(); if (generation !== state.generation) return; showItem(data.item); notice('Writing recipe saved privately. Review and export it, then choose sharing separately in Agent & review.');
+    const data = await request('/writing/recipes', { method: 'POST', body, idempotencyKey: retry('recipe', body) }); if (generation !== state.generation) return; state.retries.delete('recipe'); showItem(data.item); await refresh(); if (generation !== state.generation) return; notice('Writing recipe saved privately. Review and export it, then choose sharing separately in Agent & review.');
   }); });
   const proposalPanel = panel('3. Add an actual draft for review', 'Paste your work or the actual response from your agent. Agent drafts remain unverified model output. An agent connected through LearnBridge can also create a proposal here after you grant access to a selected source.');
   const proposalForm = $('form', 'career-form'); proposalPanel.append(proposalForm); const draftTitle = field(proposalForm, 'Draft title', { required: true }), draftKind = select(proposalForm, 'Draft purpose', kinds), draftPolicy = select(proposalForm, 'Academic policy for this draft', policies), origin = select(proposalForm, 'Who produced this draft?', [['agent_paste', 'Actual agent response, pasted for review'], ['student', 'My own work']]), draft = field(proposalForm, 'Exact draft text', { multiline: true, required: true, max: 60000 });
@@ -81,7 +82,7 @@ export function mountWritingUI({ root, request, element, busy, confirmAction, me
   proposalForm.addEventListener('submit', event => { event.preventDefault(); action(propose, async () => {
     if (new TextEncoder().encode(draft.value).byteLength > 60000) throw new Error('Keep this draft below 60 KB of UTF-8 text.');
     const body = { title: draftTitle.value, kind: draftKind.value, draft_text: draft.value, source_documents: selected(), academic_policy: draftPolicy.value, origin: origin.value }, generation = state.generation;
-    const data = await request('/writing/proposals', { method: 'POST', body, idempotencyKey: retry('proposal', body) }); if (generation !== state.generation) return; state.retries.delete('proposal'); await refresh(); if (generation !== state.generation) return; showItem(data.item); notice('Unreviewed proposal saved. Check the entire draft and its selected sources before accepting it.');
+    const data = await request('/writing/proposals', { method: 'POST', body, idempotencyKey: retry('proposal', body) }); if (generation !== state.generation) return; state.retries.delete('proposal'); showItem(data.item); await refresh(); if (generation !== state.generation) return; notice('Unreviewed proposal saved. Check the entire draft and its selected sources before accepting it.');
   }); });
   const savedPanel = panel('Saved writing', 'Private recipes and drafts survive restart. If a pinned source or accepted copy changes, its cached content is unavailable in this view. Local revision history, separately exported notes and backups may retain copies.');
   const refreshButton = button('Refresh writing'); savedPanel.append(refreshButton); refreshButton.addEventListener('click', () => action(refreshButton, refresh)); const itemList = $('div'); savedPanel.append(itemList);
@@ -91,6 +92,7 @@ export function mountWritingUI({ root, request, element, busy, confirmAction, me
     const list = $('ul'); for (const source of references) list.append($('li', '', `${source.title} · selected revision ${source.revision} · ${policyLabel(source.academic_policy)}`)); parent.append(list);
   }
   function showItem(record) {
+    richControls?.reset(); richControls = null;
     state.current = record; currentPanel.hidden = false; currentPanel.replaceChildren($('h2', '', record.title), $('p', 'field-help', `${record.data.state.replaceAll('_', ' ')} · ${policyLabel(record.data.academic_policy)} · revision ${record.revision}`)); sourceSummary(currentPanel, record.data.source_documents);
     if (record.data.format === 'writing_recipe') {
       const recipe = record.data.recipe; currentPanel.append($('p', '', recipe.request), $('p', 'field-help', 'The host must enforce these tool and sharing boundaries. This recipe does not grant authority by itself.'));
@@ -114,7 +116,7 @@ export function mountWritingUI({ root, request, element, busy, confirmAction, me
       function attachReview(control, endpoint, confirmation, success) { control.addEventListener('click', () => action(control, async () => {
         if (!reviewed.checked) throw new Error('Review the entire draft and confirm the exact review before accepting.'); const generation = state.generation;
         if (!await confirmAction(confirmation, { confirmLabel: endpoint === 'apply-revision' ? 'Apply exact revision' : 'Keep private alternative' })) return; if (generation !== state.generation) return;
-        const data = await request(`/writing/items/${record.id}/${endpoint}`, { method: 'POST', body: exactBody(record) }); if (generation !== state.generation) return; await refresh(); if (generation !== state.generation) return; showItem(data.item); notice(success);
+        const data = await request(`/writing/items/${record.id}/${endpoint}`, { method: 'POST', body: exactBody(record) }); if (generation !== state.generation) return; showItem(data.item); await refresh(); if (generation !== state.generation) return; notice(success);
       })); }
       attachReview(alternative, 'accept', 'Save the exact draft as a new private Markdown note with its provenance? The selected original documents remain unchanged. Factual accuracy stays yours to verify.', 'Exact reviewed alternative saved privately and read back. Original sources were preserved.');
       if (payload.kind === 'revision' && record.data.source_documents.length === 1 && record.data.academic_policy !== 'graded_restricted') {
@@ -122,17 +124,19 @@ export function mountWritingUI({ root, request, element, busy, confirmAction, me
       }
       const reject = button('Reject this draft'); if (!needsReconciliation) controls.append(reject); reject.addEventListener('click', () => action(reject, async () => {
         const generation = state.generation; if (!await confirmAction('Mark this exact proposal as rejected? No document text will be changed. The draft remains in private history.', { confirmLabel: 'Reject draft' })) return; if (generation !== state.generation) return;
-        const data = await request(`/writing/items/${record.id}/reject`, { method: 'POST', body: exactBody(record) }); if (generation !== state.generation) return; await refresh(); if (generation !== state.generation) return; showItem(data.item); notice('Draft rejected. Source documents were not changed.');
+        const data = await request(`/writing/items/${record.id}/reject`, { method: 'POST', body: exactBody(record) }); if (generation !== state.generation) return; showItem(data.item); await refresh(); if (generation !== state.generation) return; notice('Draft rejected. Source documents were not changed.');
       }));
     } else if (['accepted', 'applied_revision'].includes(record.data.state)) {
       currentPanel.append($('p', 'notice', record.data.state === 'applied_revision' ? 'Exact reviewed revision saved to the source. Original history is retained.' : 'Exact reviewed alternative saved as a private note. Original sources are unchanged.'));
+      const richGeneration = state.generation;
+      richControls = mountRichWritingControls({ parent: currentPanel, record, request, element, busy, notice, isCurrent: () => state.generation === richGeneration && state.current?.id === record.id && state.current?.revision === record.revision, registerDownload: url => state.downloads.add(url), unregisterDownload: url => state.downloads.delete(url) });
       const download = button('Download reviewed Markdown', true); currentPanel.append(download); download.addEventListener('click', () => action(download, async () => {
         const generation = state.generation, result = await request(`/writing/items/${record.id}/export`, { method: 'POST', body: exactBody(record) }); if (generation !== state.generation) return;
         const bytes = new TextEncoder().encode(result.text), digest = await crypto.subtle.digest('SHA-256', bytes); if (generation !== state.generation) return; const exactHash = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, '0')).join('');
         if (bytes.byteLength !== result.byte_length || exactHash !== result.sha256 || result.mime !== 'text/markdown; charset=utf-8' || !/^[\p{L}\p{N}._-]+\.md$/u.test(result.filename)) throw new Error('The export did not match its saved text and filename. No download was prepared.');
         const url = URL.createObjectURL(new Blob([bytes], { type: result.mime })); state.downloads.add(url); const link = $('a', 'button secondary', 'Download exact saved Markdown'); link.href = url; link.download = result.filename; currentPanel.append(link); link.click(); setTimeout(() => { URL.revokeObjectURL(url); state.downloads.delete(url); link.remove(); }, 30000); notice(`Verified Markdown download prepared: ${result.filename}. ${result.warning}`);
       }));
-      currentPanel.append($('p', 'field-help', 'Word text preserves this saved copy and its source evidence. Markdown syntax stays literal; review layout in your document app. PDF and rich document conversion are not available yet.'));
+      currentPanel.append($('p', 'field-help', 'Word text preserves this saved copy and its source evidence. Markdown syntax stays literal; review layout in your document app. Formatted Word and LaTeX source are available below; PDF compilation is separate.'));
       const word = button('Download Word text (.docx)'); currentPanel.append(word); word.addEventListener('click', () => action(word, async () => {
         const generation = state.generation;
         const result = await request(`/writing/items/${record.id}/export-docx`, { method: 'POST', body: exactBody(record) });
@@ -159,8 +163,8 @@ export function mountWritingUI({ root, request, element, busy, confirmAction, me
   }
   async function refresh() {
     const generation = state.generation, [documents, items] = await Promise.all([request('/writing/documents'), request('/writing/items')]); if (generation !== state.generation) return; state.documents = documents.items; state.items = items.items; showSources(); renderItems();
-    if (state.current && !state.items.some(row => row.id === state.current.id && row.revision === state.current.revision && !row.stale)) { state.current = null; currentPanel.replaceChildren(); currentPanel.hidden = true; notice('This writing item changed, or its pinned source is unavailable. Cached draft text was cleared from this view. Reopen a current item to review it.'); }
+    if (state.current && !state.items.some(row => row.id === state.current.id && row.revision === state.current.revision && !row.stale)) { richControls?.reset(); richControls = null; state.generation++; state.current = null; currentPanel.replaceChildren(); currentPanel.hidden = true; notice('This writing item changed, or its pinned source is unavailable. Cached draft text was cleared from this view. Reopen a current item to review it.'); }
   }
-  function reset() { state.generation++; state.documents = []; state.items = []; state.current = null; state.selections.clear(); state.retries.clear(); for (const url of state.downloads) URL.revokeObjectURL(url); state.downloads.clear(); sourceBox.replaceChildren(); itemList.replaceChildren(); currentPanel.replaceChildren(); currentPanel.hidden = true; recipeForm.reset(); proposalForm.reset(); notice(''); }
+  function reset() { richControls?.reset(); richControls = null; state.generation++; state.documents = []; state.items = []; state.current = null; state.selections.clear(); state.retries.clear(); for (const url of state.downloads) URL.revokeObjectURL(url); state.downloads.clear(); sourceBox.replaceChildren(); itemList.replaceChildren(); currentPanel.replaceChildren(); currentPanel.hidden = true; recipeForm.reset(); proposalForm.reset(); notice(''); }
   return { refresh, reset };
 }

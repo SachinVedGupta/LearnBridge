@@ -37,6 +37,19 @@ const ALLOWLIST = Object.freeze([
   'web/apps/local-runtime/src/productivity-routes.mjs',
   'web/apps/local-runtime/src/codex-adapter.mjs',
   'web/apps/local-runtime/src/codex-profile.mjs',
+  'web/apps/local-runtime/src/codex-tools.mjs',
+  'web/apps/local-runtime/src/practice-service.mjs', 'web/apps/local-runtime/src/practice-routes.mjs',
+  'web/apps/local-runtime/src/reminder-service.mjs', 'web/apps/local-runtime/src/reminder-routes.mjs',
+  'web/apps/local-runtime/src/academic-task-service.mjs', 'web/apps/local-runtime/src/academic-task-routes.mjs',
+  'web/apps/local-runtime/src/public-job-service.mjs', 'web/apps/local-runtime/src/public-job-routes.mjs',
+  'web/apps/local-runtime/src/plan-task-service.mjs', 'web/apps/local-runtime/src/plan-task-routes.mjs',
+  'web/apps/local-runtime/src/admin-deadline-service.mjs', 'web/apps/local-runtime/src/admin-deadline-routes.mjs',
+  'web/apps/local-runtime/src/calendar-import-service.mjs', 'web/apps/local-runtime/src/calendar-import-routes.mjs',
+  'web/apps/local-runtime/src/expense-import-service.mjs', 'web/apps/local-runtime/src/expense-import-routes.mjs',
+  'web/apps/local-runtime/src/focus-service.mjs', 'web/apps/local-runtime/src/focus-routes.mjs',
+  'web/apps/local-runtime/src/calendar-export-service.mjs', 'web/apps/local-runtime/src/calendar-export-routes.mjs',
+  'web/apps/local-runtime/src/career-packet-service.mjs', 'web/apps/local-runtime/src/career-packet-routes.mjs',
+  'web/apps/local-runtime/src/rich-writing-artifact.mjs', 'web/apps/local-runtime/src/rich-writing-routes.mjs',
   'web/apps/local-runtime/src/cloud-onboarding.mjs',
   'web/apps/local-runtime/src/cloud-onboarding-routes.mjs',
   'web/apps/local-runtime/src/d2l-browser.mjs',
@@ -55,12 +68,13 @@ const ALLOWLIST = Object.freeze([
   'web/packages/local-academic/src/library.mjs', 'web/packages/local-academic/src/refresh.mjs', 'web/packages/local-academic/src/planning.mjs',
   'web/packages/local-academic/src/tutoring.mjs',
   'web/apps/local/build.mjs', 'web/apps/local/public/index.html',
-  'web/apps/local/public/app.js', 'web/apps/local/public/styles.css',
+  'web/apps/local/public/app.js', 'web/apps/local/public/overview.js', 'web/apps/local/public/styles.css',
   'web/apps/local/public/career.js', 'web/apps/local/public/learning.js',
   'web/apps/local/public/life.js', 'web/apps/local/public/writing.js',
   'web/apps/local/public/research.js', 'web/apps/local/public/productivity.js',
   'web/apps/local/public/onboarding.js',
   'web/apps/local/public/ai.js', 'web/apps/local/public/d2l.js',
+  'web/apps/local/public/practice.js', 'web/apps/local/public/reminders.js', 'web/apps/local/public/rich-writing.js', 'web/apps/local/public/academic-tasks.js', 'web/apps/local/public/public-jobs.js', 'web/apps/local/public/career-packets.js', 'web/apps/local/public/calendar-export.js', 'web/apps/local/public/focus.js', 'web/apps/local/public/expense-import.js', 'web/apps/local/public/calendar-import.js', 'web/apps/local/public/student-admin.js', 'web/apps/local/public/plan-tasks.js',
   'web/apps/local/public/cloud-onboarding.js', 'web/apps/local/public/remote.js',
 ]);
 const PREFIX = 'learnbridge-clean-install-fixture-';
@@ -90,6 +104,7 @@ const report = {
 let parent;
 let parentIdentity;
 let marker;
+let verifiedStaticAssetCount = 0;
 
 class VerificationFailure extends Error {
   constructor(code) { super(code); this.code = code; }
@@ -231,10 +246,12 @@ async function main() {
 
   await phase('FI03_BUILD_STATIC_DASHBOARD', async () => {
     await child(process.execPath, [join(copiedWeb, 'apps/local/build.mjs')], { cwd: checkout });
-    for (const name of ['index.html', 'app.js', 'styles.css', 'career.js', 'learning.js', 'life.js', 'writing.js', 'research.js', 'productivity.js', 'onboarding.js', 'ai.js', 'd2l.js', 'cloud-onboarding.js', 'remote.js']) {
+    for (const name of ['index.html', 'app.js', 'overview.js', 'styles.css', 'career.js', 'learning.js', 'life.js', 'writing.js', 'research.js', 'productivity.js', 'onboarding.js', 'ai.js', 'd2l.js', 'cloud-onboarding.js', 'remote.js', 'practice.js', 'reminders.js', 'rich-writing.js', 'academic-tasks.js', 'public-jobs.js', 'career-packets.js', 'calendar-export.js', 'focus.js', 'expense-import.js', 'calendar-import.js', 'student-admin.js', 'plan-tasks.js']) {
       assert.equal(digest(await readFile(join(copiedWeb, 'apps/local/dist', name))), digest(await readFile(join(copiedWeb, 'apps/local/public', name))));
     }
-    assert.deepEqual(await inventory(join(copiedWeb, 'apps/local/dist')), ['ai.js', 'app.js', 'career.js', 'cloud-onboarding.js', 'd2l.js', 'index.html', 'learning.js', 'life.js', 'onboarding.js', 'productivity.js', 'remote.js', 'research.js', 'styles.css', 'writing.js']);
+    const builtAssets = await inventory(join(copiedWeb, 'apps/local/dist'));
+    assert.deepEqual(builtAssets, ['academic-tasks.js', 'ai.js', 'app.js', 'calendar-export.js', 'calendar-import.js', 'career-packets.js', 'career.js', 'cloud-onboarding.js', 'd2l.js', 'expense-import.js', 'focus.js', 'index.html', 'learning.js', 'life.js', 'onboarding.js', 'overview.js', 'plan-tasks.js', 'practice.js', 'productivity.js', 'public-jobs.js', 'reminders.js', 'remote.js', 'research.js', 'rich-writing.js', 'student-admin.js', 'styles.css', 'writing.js']);
+    verifiedStaticAssetCount = builtAssets.length;
   });
 
   const cli = join(copiedWeb, 'apps/local-runtime/src/cli.mjs');
@@ -311,7 +328,7 @@ async function main() {
   });
   report.observed = { tasks: 1, documents: 1, document_content_sha256: saved.content_sha256,
     exact_records_survive_new_process: true, exact_records_survive_fresh_root_restore: true,
-    static_assets_built_and_hash_matched: 14 };
+    static_assets_built_and_hash_matched: verifiedStaticAssetCount };
   report.status = 'PASS';
 }
 

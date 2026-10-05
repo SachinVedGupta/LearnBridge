@@ -24,7 +24,7 @@ function fixture(t, mutate, academicPolicy = 'learning_support') {
     document_proposals: [{ source_document_id: source.document.id, source_revision: source.document.revision, source_sha256: source.sha256,
       title: 'Synthetic conceptual outline', draft: 'Explain the central idea in your own words.', purpose: 'outline', academic_policy: academicPolicy === 'graded_restricted' ? 'graded_scaffolding' : 'learning_support' }] };
   mutate?.(output, { source, other }); const calls = [], adapters = []; const writing = createWritingService({ store });
-  const service = createCodexProfile({ store, profileRoot: join(parent, 'owned-codex-profile'), adapterFactory(input) {
+  const service = createCodexProfile({ store, executionMode: 'structured', profileRoot: join(parent, 'owned-codex-profile'), adapterFactory(input) {
     const adapter = { closed: false, project: input.projectRoot }; adapters.push(adapter);
     return { async initialize() { return { state: 'available' }; }, async startThread() { assert.equal(input.authorize(), true); },
       async callLearnBridgeTool(tool, args) {
@@ -97,7 +97,7 @@ test('CP08: a late account check cannot restore authority during official logout
   const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
   const accountRead = deferred(), accountStarted = deferred(), logout = deferred(), logoutStarted = deferred();
   const adapters = []; let cancelled = 0, loggedOut = 0;
-  const service = createCodexProfile({ store, profileRoot: join(parent, 'owned-profile'), adapterFactory(input) {
+  const service = createCodexProfile({ store, executionMode: 'structured', profileRoot: join(parent, 'owned-profile'), adapterFactory(input) {
     const state = { project: input.projectRoot, closed: false }; adapters.push(state);
     return {
       async initialize() { return { state: 'requires_auth' }; },

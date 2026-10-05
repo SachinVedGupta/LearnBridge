@@ -36,3 +36,26 @@ test('source version change, deletion and expiry invalidate fact use without era
 test('impossible calendar timestamps fail with a stable input error', () => {
   assert.throws(() => profileCandidate({ field: 'goals', value: 'Learn', expires_at: '2026-13-01T00:00:00.000Z' }, { now }), e => e.code === 'INVALID_INPUT');
 });
+
+// Contact details are explicit career facts, never inferred from a sign-in or generic eligibility statement.
+test('career contact email is an exact reviewed fact and only selected career context exposes it', () => {
+  const record = make('contact', 'email', 'Student+career@example.edu');
+  assert.equal(record.data.value, 'Student+career@example.edu');
+  assert.deepEqual(record.data.purposes, ['career']);
+  assert.equal(profileContext([record], { purpose: 'career', allowedIds: [], now }).length, 0);
+  assert.equal(profileContext([record], { purpose: 'general', allowedIds: ['contact'], now }).length, 0);
+  assert.equal(profileContext([record], { purpose: 'career', allowedIds: ['contact'], now })[0].value, record.data.value);
+});
+test('malformed or multi-address email candidates and corrections are denied', () => {
+  const fact = profileCandidate({ field: 'email', value: 'student@example.edu' }, { now });
+  for (const value of ['a@example.edu, b@example.edu', 'a\n@example.edu', '.a@example.edu', 'a..b@example.edu', 'a@example', 'a@-example.edu', 'a@ex_ample.edu', 'a@example.edu\r\nBCC: other@example.edu']) {
+    assert.throws(() => profileCandidate({ field: 'email', value }, { now }), e => e.code === 'INVALID_INPUT');
+    assert.throws(() => reviewProfileFact(fact, { decision: 'correct', fingerprint: profileHash(fact), value }, { reviewer: 'fixture-student', now }), e => e.code === 'INVALID_INPUT');
+  }
+  assert.throws(() => profileCandidate({ field: 'email', value: 'student@example.edu', purposes: ['general'] }, { now }), e => e.code === 'INVALID_INPUT');
+});
+test('conflicting reviewed career emails remain excluded until the student resolves them', () => {
+  const a = make('a', 'email', 'first@example.edu'), b = make('b', 'email', 'second@example.edu');
+  assert.ok(profileView([a,b], { now }).every(r => r.conflict));
+  assert.deepEqual(profileContext([a,b], { purpose: 'career', allowedIds: ['a','b'], now }), []);
+});

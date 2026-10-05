@@ -11,7 +11,29 @@ import { randomUUID, createHash } from 'node:crypto';
 import { createStudentWorkspace } from './student-workspace.mjs';
 import { workflowHash } from './workflows.mjs';
 import { handleCareerRoute } from './career-routes.mjs';
+import { createPublicJobService } from './public-job-service.mjs';
+import { handlePublicJobRoute } from './public-job-routes.mjs';
+import { createCareerPacketService } from './career-packet-service.mjs';
+import { handleCareerPacketRoute } from './career-packet-routes.mjs';
+import { createCalendarExportService } from './calendar-export-service.mjs';
+import { handleCalendarExportRoute } from './calendar-export-routes.mjs';
+import { createFocusService, FOCUS_LIMITS } from './focus-service.mjs';
+import { handleFocusRoute } from './focus-routes.mjs';
+import { createExpenseImportService } from './expense-import-service.mjs';
+import { handleExpenseImportRoute } from './expense-import-routes.mjs';
+import { createCalendarImportService } from './calendar-import-service.mjs';
+import { handleCalendarImportRoute } from './calendar-import-routes.mjs';
+import { createAdminDeadlineService } from './admin-deadline-service.mjs';
+import { handleAdminDeadlineRoute } from './admin-deadline-routes.mjs';
+import { createPlanTaskService } from './plan-task-service.mjs';
+import { handlePlanTaskRoute } from './plan-task-routes.mjs';
 import { handleLearningRoute } from './learning-routes.mjs';
+import { handlePracticeRoute } from './practice-routes.mjs';
+import { createAcademicTaskService } from './academic-task-service.mjs';
+import { handleAcademicTaskRoute } from './academic-task-routes.mjs';
+import { createReminderService, REMINDER_LIMITS } from './reminder-service.mjs';
+import { handleRemindersRoute } from './reminder-routes.mjs';
+import { handleRichWritingRoute } from './rich-writing-routes.mjs';
 import { handleLifeRoute } from './life-routes.mjs';
 import { createWritingService } from './writing-service.mjs';
 import { handleWritingRoute } from './writing-routes.mjs';
@@ -34,6 +56,7 @@ const builtRoot = new URL('../../local/dist/', import.meta.url);
 const assets = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],
   ['/index.html', ['index.html', 'text/html; charset=utf-8']],
+  ['/overview.js', ['overview.js', 'text/javascript; charset=utf-8']],
   ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
   ['/styles.css', ['styles.css', 'text/css; charset=utf-8']],
   ['/career.js', ['career.js', 'text/javascript; charset=utf-8']],
@@ -47,6 +70,18 @@ const assets = new Map([
   ['/d2l.js', ['d2l.js', 'text/javascript; charset=utf-8']],
   ['/cloud-onboarding.js', ['cloud-onboarding.js', 'text/javascript; charset=utf-8']],
   ['/remote.js', ['remote.js', 'text/javascript; charset=utf-8']],
+  ['/practice.js', ['practice.js', 'text/javascript; charset=utf-8']],
+  ['/reminders.js', ['reminders.js', 'text/javascript; charset=utf-8']],
+  ['/rich-writing.js', ['rich-writing.js', 'text/javascript; charset=utf-8']],
+  ['/academic-tasks.js', ['academic-tasks.js', 'text/javascript; charset=utf-8']],
+  ['/public-jobs.js', ['public-jobs.js', 'text/javascript; charset=utf-8']],
+  ['/career-packets.js', ['career-packets.js', 'text/javascript; charset=utf-8']],
+  ['/calendar-export.js', ['calendar-export.js', 'text/javascript; charset=utf-8']],
+  ['/focus.js', ['focus.js', 'text/javascript; charset=utf-8']],
+  ['/expense-import.js', ['expense-import.js', 'text/javascript; charset=utf-8']],
+  ['/calendar-import.js', ['calendar-import.js', 'text/javascript; charset=utf-8']],
+  ['/student-admin.js', ['student-admin.js', 'text/javascript; charset=utf-8']],
+  ['/plan-tasks.js', ['plan-tasks.js', 'text/javascript; charset=utf-8']],
 ]);
 const base = '/api/local/v1';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -101,7 +136,7 @@ function failure(response, error) {
 export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairingTtlMs,
   // Trusted programmatic dependency injection for native acquisition barriers.
   // The launcher/HTTP/MCP surfaces never accept an adapter or executable.
-  sourceAdapter = { describeRoot, inventorySource, readSelectedEntry, readSelectedPdf, readSelectedOffice, probeSourceCapability, probePdfCapability, probeOfficeCapability },
+  publicJobFetch, sourceAdapter = { describeRoot, inventorySource, readSelectedEntry, readSelectedPdf, readSelectedOffice, probeSourceCapability, probePdfCapability, probeOfficeCapability },
   // Trusted fixture seam only; the CLI/HTTP/MCP never accepts execution configuration.
   hostAdapter, codexProfileOptions = {}, d2lBrowserFactory,
   remoteOptions = { enabled: process.env.LEARNBRIDGE_PHONE_ACCESS === 'true' } } = {}) {
@@ -110,12 +145,25 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
   let studentWorkspace;
   let hostTurns;
   let onboardingRoutes;
-  let cloudOnboardingRoutes, d2lRoutes, codexProfile, remoteRoutes;
+  let cloudOnboardingRoutes, d2lRoutes, codexProfile, remoteRoutes, reminders, academicTasks, publicJobService, calendarExports, careerPackets, focus, expenseImports, calendarImports, studentAdmin, planTasks;
   const embeddedLeases = new Map();
-  try { store.recoverInterruptedRuns(); studentWorkspace = createStudentWorkspace(store);
+  try { store.recoverInterruptedRuns(); studentWorkspace = createStudentWorkspace(store); reminders = createReminderService({ store }); academicTasks = createAcademicTaskService({ store, studentWorkspace }); publicJobService = createPublicJobService({ store, ...(publicJobFetch ? { fetchImpl: publicJobFetch } : {}) });
+    focus = createFocusService({ store });
+    expenseImports = createExpenseImportService({ store });
+    calendarImports = createCalendarImportService({ store, studentWorkspace });
+    studentAdmin = createAdminDeadlineService({ store, studentWorkspace });
+    planTasks = createPlanTaskService({ store, getLibrary: studentWorkspace.library });
+    store.bindAgentTaskProvenance(taskId => planTasks.taskProvenance(taskId));
+    calendarExports = createCalendarExportService({ store, studentWorkspace });
+    careerPackets = createCareerPacketService({ store, publicJobService });
     codexProfile = createCodexProfile({ store, ...codexProfileOptions, leaseFactory: (grantId, authorize) => {
-      const id = randomUUID(); embeddedLeases.set(id, { grantId, authorize });
-      return { id, release: () => embeddedLeases.delete(id) };
+      const id = randomUUID(), lease = { grantId, authorize, permit: null }; embeddedLeases.set(id, lease);
+      return { id, release: () => embeddedLeases.delete(id), permitTool: (tool, args) => {
+        const command = { learnbridge_status: 'status', learnbridge_context: 'context', learnbridge_propose_task: 'propose_task', learnbridge_propose_document: 'propose_document' }[tool];
+        if (!command || embeddedLeases.get(id) !== lease || authorize() !== true || lease.permit) throw new LearnBridgeError('SCOPE_DENIED');
+        const permit = { command, fingerprint: workflowHash(args ?? {}), used: false }; lease.permit = permit;
+        return () => { if (lease.permit === permit) lease.permit = null; };
+      } };
     } });
     hostTurns = createHostTurns({ store, ...(hostAdapter || { enabled: true, execute: codexProfile.execute, capability: codexProfile.status }) });
     onboardingRoutes = createOnboardingRoutes({ store, studentWorkspace });
@@ -165,7 +213,18 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         { id: 'library', label: 'Course library', state: 'available', detail: 'Reviewed export comparisons, immutable history, unchanged-content deduplication and current-course search with exact citations. Dates and coverage are source-reported; live university authentication remains a separate gate.' },
         { id: 'workflows', label: 'Durable local workflows', state: 'available', detail: 'Saved step journal, cumulative budgets, cancellation and restart recovery for registered local recipes. Unverified model turns remain disabled.' },
         { id: 'learning', label: 'Learning and catch-up', state: 'available', detail: 'Selected-course cited host recipes, your actual attempts and reviewed feedback, capacity-aware catch-up plans. A recorded check does not establish mastery.' },
-        { id: 'writing', label: 'Writing review', state: 'available', detail: 'Source-pinned drafts, private alternatives and exact revisions with preserved originals. Reviewed Markdown and Word text downloads preserve source hashes. Rich formatting, PDF and general Office conversion remain unavailable.' },
+        { id: 'practice', label: 'Spaced practice', state: 'available', detail: 'Source-pinned cards, explicit answer/reveal/self-rating and persistent due scheduling. Ratings are self-reported; mastery is not inferred.' },
+        { id: 'reminders', label: 'Local reminders', state: 'available', detail: 'Opt-in selected-task checks with a durable in-app inbox while this runtime runs. Paused by default; no provider reads or sleeping-laptop notifications.' },
+        { id: 'academic_tasks', label: 'Reviewed course tasks', state: 'available', detail: 'Choose current course versions and inspect exact deadlines. Save pending suggestions, then separately accept them into Today; unknown or conflicting dates stay unresolved.' },
+        { id: 'plan-tasks', label: 'Reviewed learning next steps', state: 'available', detail: 'Choose topics from an accepted current catch-up plan, then review and accept one local task at a time. Source and dependency pins stay exact. No mastery or calendar-action inference.' },
+        { id: 'student-admin', label: 'Student administration', state: 'available', detail: 'Review student-pasted requirements and deadlines, keep eligibility facts explicit, and separately accept one local next-step task. No scholarship verification or application submission.' },
+        { id: 'calendar-import', label: 'Reviewed busy calendar import', state: 'available', detail: 'Choose and review supported local ICS events, then plan around those exact busy windows. Unsupported recurrence and time zones remain visible omissions. No provider access or calendar changes.' },
+        { id: 'expense-import', label: 'Reviewed expense CSV import', state: 'available', detail: 'Choose a local UTF-8 CSV, review invalid and duplicate rows, and confirm selected expenses. Exact currency totals and refunds; no bank access or exchange-rate assumptions.' },
+        { id: 'focus', label: 'Focus timer', state: 'available', detail: 'Start, pause, resume and end a local timer. Observed runtime duration stays separate from planned time; sleep gaps and downtime are excluded. This does not measure attention or mastery.' },
+        { id: 'calendar_export', label: 'Reviewed calendar files', state: 'available', detail: 'Download selected task deadlines or exact accepted study blocks as reviewed ICS with source pins. No calendar account is changed; external import remains your choice.' },
+        { id: 'public_jobs', label: 'Official job discovery', state: 'available', detail: 'Choose a supported Greenhouse or Lever employer board, search bounded public metadata, and read selected current postings. Source presence does not establish suitability or eligibility.' },
+        { id: 'career_packets', label: 'Application preparation packets', state: 'available', detail: 'Review one current official posting, selected confirmed career facts and accepted Writing drafts. Missing fields stay visible. Private text downloads do not fill, upload or submit an application.' },
+        { id: 'writing', label: 'Writing review', state: 'available', detail: 'Source-pinned drafts, private alternatives and exact revisions with preserved originals. Reviewed Markdown and Word text downloads preserve source hashes. Formatted Word and escaped LaTeX source support a bounded Markdown subset. PDF rendering and general Office conversion remain separate.' },
         { id: 'research', label: 'Evidence research', state: 'available', detail: 'Selected local passages or student-pasted excerpts, exact quotes, conflicts and reviewed cited reports. No website freshness or factual accuracy is inferred.' },
         { id: 'career', label: 'Career preparation', state: 'available', detail: 'Selected postings, factual application drafts, interview attempts and local follow-up tasks. Live role availability and application submission are separate.' },
         { id: 'life', label: 'Daily life', state: 'available', detail: 'Pantry and grocery quantities, self-reported routines, confirmed currency-specific expenses and manual travel checklists.' },
@@ -176,12 +235,16 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         { id: 'pdf', label: 'Selected PDF handouts', state: sourceCapability.state === 'available' && pdfCapability.state === 'available' ? 'available' : 'unsupported', detail: 'macOS PDF text imports preserve physical page citations and partial coverage. Native prerequisites are checked; each selected import verifies extraction. Scans require a separate text export; no OCR or password collection.' },
         { id: 'office', label: 'Selected Word and PowerPoint handouts', state: sourceCapability.state === 'available' && officeCapability.state === 'available' ? 'available' : 'unsupported', detail: 'Selected DOCX paragraphs and PPTX presentation-order slides with exact original/text hashes. Always partial text coverage: layout, visuals and recorded omissions require review of the original. No external links, macros or passwords are used.' },
         { id: 'academic', label: 'Avenue / D2L', state: d2lRoutes.capability?.().state || 'requires_auth', detail: 'Connect a separate visible school browser, personally complete SSO, then verify your school account and select exact courses and categories before previewing read-only results.' },
-        { id: 'cloud_onboarding', label: 'Selected cloud sources', state: 'available', detail: 'Export selected Google Docs or Notion pages from your signed-in LearnBridge account, then review the exact text and reported owner before importing locally. Cloud freshness and profile facts remain subject to review.' },
+        { id: 'cloud_onboarding', label: 'Selected cloud sources', state: 'available', detail: 'Export selected Google Docs, Notion pages or Gmail messages from your signed-in LearnBridge account, then review the exact text and reported owner before importing locally. Cloud freshness and profile facts remain subject to review.' },
         { id: 'remote', label: 'Phone companion', state: remoteOptions.enabled ? 'requires_auth' : 'unavailable', detail: 'Optional outward HTTPS pairing, bounded local Codex requests and separately reviewed text results. Requires live relay, account, device and cleanup verification before public release. The laptop is never exposed as a public listener.' },
         { id: 'telemetry', label: 'Local usage reporting', state: 'unavailable', detail: 'Off by default. Setup, doctor, tasks and agent sharing do not report local activity or enroll measurement.' },
       ],
     };
   };
+  const reminderTimer = setInterval(() => { if (!closing) { try { reminders.drain(); } catch { /* Retry on the next bounded tick; no private diagnostics. */ } } }, REMINDER_LIMITS.tick_interval_ms);
+  reminderTimer.unref?.();
+  const focusTimer = setInterval(() => { if (!closing) { try { focus.observe(); } catch { /* Retry later without exposing private diagnostics. */ } } }, FOCUS_LIMITS.tick_interval_ms);
+  focusTimer.unref?.();
   const server = createServer(async (request, response) => {
     setHeaders(response);
     try {
@@ -262,6 +325,46 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         const result = await handler.handle({ route, method: request.method, privateBody, session });
         stillAuthorized(); if (result) return json(response, result.status, result.data);
       }
+      if (route.startsWith('/public-jobs/')) {
+        noQuery(url);
+        const result = await handlePublicJobRoute({ route, method: request.method, privateBody, store, session, publicJobService, stillAuthorized });
+        stillAuthorized(); if (result) return json(response, result.status, result.data);
+      }
+      if (route === '/career-packets' || route.startsWith('/career-packets/')) {
+        noQuery(url);
+        const result = await handleCareerPacketRoute({ route, method: request.method, privateBody, store, session, publicJobService, careerPacketService: careerPackets, stillAuthorized, idempotencyKey: idempotency(request).idempotencyKey });
+        stillAuthorized(); if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/plan-tasks/')) {
+        noQuery(url);
+        const result = await handlePlanTaskRoute({ route, method: request.method, privateBody, store, getLibrary: studentWorkspace.library, planTaskService: planTasks, session, stillAuthorized, idempotencyKey: idempotency(request).idempotencyKey });
+        stillAuthorized(); if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/student-admin/')) {
+        noQuery(url);
+        const result = await handleAdminDeadlineRoute({ route, method: request.method, privateBody, service: studentAdmin, session, stillAuthorized, idempotencyKey: idempotency(request).idempotencyKey });
+        stillAuthorized(); if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/calendar-import/')) {
+        noQuery(url);
+        const result = await handleCalendarImportRoute({ route, method: request.method, privateBody, service: calendarImports, session, stillAuthorized, sourceOperation, idempotencyKey: idempotency(request).idempotencyKey });
+        stillAuthorized(); if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/expense-import/')) {
+        noQuery(url);
+        const result = await handleExpenseImportRoute({ route, method: request.method, privateBody, store, session, expenseImportService: expenseImports, stillAuthorized, idempotencyKey: idempotency(request).idempotencyKey });
+        stillAuthorized(); if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/focus/')) {
+        noQuery(url);
+        const result = await handleFocusRoute({ route, method: request.method, privateBody, service: focus, session, stillAuthorized, idempotencyKey: idempotency(request).idempotencyKey });
+        stillAuthorized(); if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/calendar-export/')) {
+        noQuery(url);
+        const result = await handleCalendarExportRoute({ route, method: request.method, privateBody, service: calendarExports, session, stillAuthorized, idempotencyKey: idempotency(request).idempotencyKey });
+        stillAuthorized(); if (result) return json(response, result.status, result.data);
+      }
       if (route.startsWith('/career/')) {
         noQuery(url);
         const result = await handleCareerRoute({ route, method: request.method, privateBody, store, session,
@@ -279,6 +382,18 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
           getLibrary: studentWorkspace.library, idempotencyKey: idempotency(request).idempotencyKey });
         if (result) return json(response, result.status, result.data);
       }
+      if (route.startsWith('/academic-tasks/')) {
+        noQuery(url);
+        const result = await handleAcademicTaskRoute({ route, method: request.method, privateBody, service: academicTasks, session, stillAuthorized, idempotencyKey: idempotency(request).idempotencyKey });
+        if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/practice/') || route.startsWith('/reminders/')) {
+        noQuery(url);
+        const result = route.startsWith('/practice/')
+          ? await handlePracticeRoute({ route, method: request.method, privateBody, store, session, idempotencyKey: idempotency(request).idempotencyKey })
+          : await handleRemindersRoute({ route, method: request.method, privateBody, service: reminders, session, stillAuthorized, idempotencyKey: idempotency(request).idempotencyKey });
+        if (result) return json(response, result.status, result.data);
+      }
       if (route.startsWith('/life/')) {
         noQuery(url);
         const result = await handleLifeRoute({ route, method: request.method, privateBody, store, session,
@@ -287,6 +402,8 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
       }
       if (route.startsWith('/writing/')) {
         noQuery(url);
+        const rich = await handleRichWritingRoute({ route, method: request.method, privateBody, store, session });
+        if (rich) return json(response, rich.status, rich.data);
         const result = await handleWritingRoute({ route, method: request.method, privateBody, store, session,
           idempotencyKey: idempotency(request).idempotencyKey });
         if (result) return json(response, result.status, result.data);
@@ -624,6 +741,7 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
   const close = () => {
     if (closePromise) return closePromise;
     closing = true;
+    clearInterval(reminderTimer); clearInterval(focusTimer); reminders.dispose(); focus.dispose(); publicJobService.close();
     policy?.clear();
     academicPreviews.clear();
     onboardingRoutes.clear();
@@ -662,6 +780,10 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
       if (closing) throw new HttpError(503, 'OFFLINE', 'The local runtime is stopping.');
       const lease = embeddedLease ? embeddedLeases.get(embeddedLease) : null;
       if (embeddedLease && (!lease || destination !== 'codex' || lease.authorize() !== true || (command !== 'status' && data?.grant_id !== lease.grantId))) throw new HttpError(403, 'CONSENT_REQUIRED', 'This embedded request no longer has its exact reviewed authority.');
+      if (lease) {
+        if (!lease.permit || lease.permit.used || lease.permit.command !== command || lease.permit.fingerprint !== workflowHash(data ?? {})) throw new HttpError(403, 'SCOPE_DENIED', 'This embedded tool call was not issued by the scoped broker.');
+        lease.permit.used = true;
+      }
       if (command === 'status') {
         if (data !== undefined) plainBody(data, []);
         return { edition: 'local', version: LOCAL_VERSION, destination, healthy: store.integrity().integrity === 'ok',
@@ -687,9 +809,13 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         const kinds = { study_note: 'study_guide', outline: 'outline', revision: 'revision', general: 'markdown_artifact' };
         const policies = { learning_support: 'learning_support', graded_scaffolding: 'graded_restricted', not_applicable: 'unrestricted' };
         if (!Object.hasOwn(kinds, data.purpose) || !Object.hasOwn(policies, data.academic_policy)) throw new HttpError(400, 'INVALID_INPUT', 'Invalid writing policy.');
+        const scopePolicy = store.assertAgentAcademicPolicy({ destination, grant_id: data.grant_id }).academic_policy;
+        if (scopePolicy === 'graded_restricted' && !['study_note', 'outline'].includes(data.purpose)) throw new HttpError(403, 'SCOPE_DENIED', 'The selected context permits conceptual study support only.');
+        const effectivePolicy = scopePolicy === 'graded_restricted' ? 'graded_restricted'
+          : scopePolicy === 'learning_support' && policies[data.academic_policy] === 'unrestricted' ? 'learning_support' : policies[data.academic_policy];
         const proposal = createWritingService({ store }).createProposal({ title: data.title, kind: kinds[data.purpose], draft_text: data.draft,
           source_documents: [{ id: source.document_id, revision: source.revision, sha256: source.sha256 }],
-          academic_policy: policies[data.academic_policy], origin: 'agent_paste' },
+          academic_policy: effectivePolicy, origin: 'agent_paste' },
           { idempotencyKey: `${destination}-${createHash('sha256').update(data.idempotency_key).digest('hex')}`, agentOrigin: destination, grantId: data.grant_id });
         return { id: proposal.id, revision: proposal.revision, state: proposal.data.state, payload_hash: proposal.data.payload_hash,
           source_document_id: source.document_id, accepted_document: null, next_step: 'Review the exact alternative in Writing. The original is unchanged.' };

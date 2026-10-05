@@ -7,7 +7,10 @@ export async function handleWritingRoute({ route, method, privateBody, store, id
   if (!session || typeof session.nonce !== 'string' || !session.nonce) throw new LearnBridgeError('AUTH_REQUIRED');
   const service = createWritingService({ store }); const denied = () => { throw new LearnBridgeError('INVALID_INPUT'); };
   if (route === '/writing/documents') { if (method !== 'GET') denied(); return { status: 200, data: { items: service.documents() } }; }
-  if (route === '/writing/items') { if (method !== 'GET') denied(); return { status: 200, data: { items: service.list(), capabilities: service.capabilities() } }; }
+  if (route === '/writing/items') { if (method !== 'GET') denied(); return { status: 200, data: { items: service.list(), capabilities: { ...service.capabilities(),
+    formatted_docx: { state: 'available', processing: 'bounded_markdown_subset', verification: 'pinned_source_and_deterministic_ooxml', visual_review: 'pending' },
+    latex: { state: 'available', processing: 'escaped_standalone_source', compilation: 'not_run', visual_review: 'pending', next_action: 'Download reviewed LaTeX source, then compile and review it separately.' },
+  } } }; }
   if (route === '/writing/recipes') { if (method !== 'POST') denied(); const body = await privateBody(['title', 'kind', 'request', 'source_documents', 'academic_policy'], ['title', 'kind', 'request', 'source_documents', 'academic_policy'], 16000); return { status: 201, data: { item: service.createRecipe(body, { idempotencyKey }) } }; }
   if (route === '/writing/proposals') { if (method !== 'POST') denied(); const body = await privateBody(['title', 'kind', 'draft_text', 'source_documents', 'academic_policy', 'origin'], ['title', 'kind', 'draft_text', 'source_documents', 'academic_policy', 'origin'], 80000); return { status: 201, data: { item: service.createProposal(body, { idempotencyKey }) } }; }
   const match = /^\/writing\/items\/([^/]+)(?:\/(recipe-export|accept|apply-revision|reject|export|export-docx))?$/.exec(route); if (!match) return null;

@@ -1,0 +1,86 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import Database from 'better-sqlite3';
+import {LocalStore} from '../packages/local-storage/src/index.mjs';
+import {createStudentWorkspace} from '../apps/local-runtime/src/student-workspace.mjs';
+import {createCalendarImportService,parseCalendarFile,calendarMidnight,calendarSourcePin,resolveCalendarBusySource} from '../apps/local-runtime/src/calendar-import-service.mjs';
+import {createCalendarExportService} from '../apps/local-runtime/src/calendar-export-service.mjs';
+export const event=(uid='selected',extra='',times='DTSTART:20261006T170000Z\r\nDTEND:20261006T180000Z')=>`BEGIN:VEVENT\r\nUID:${uid}\r\nDTSTAMP:20261004T160000Z\r\nSUMMARY:${uid}\r\n${times}\r\n${extra?extra+'\r\n':''}END:VEVENT\r\n`;
+export const calendar=(events,extra='')=>`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Synthetic test//EN\r\n${extra}${events}END:VCALENDAR\r\n`;
+const request=content=>({filename:'selected.ics',content,timezone:'America/Toronto'}),range={start:'2026-10-06T16:00:00.000Z',end:'2026-10-06T20:00:00.000Z'};
+function fixture(t){const root=mkdtempSync(join(tmpdir(),'learnbridge-calendar-import-'));let store=LocalStore.open({root,timezone:'America/Toronto'}),workspace=createStudentWorkspace(store),now='2026-10-04T16:00:00.000Z',service=createCalendarImportService({store,studentWorkspace:workspace,clock:()=>now});t.after(()=>{try{store.close();}catch{}rmSync(root,{recursive:true,force:true});});return{root,get store(){return store;},get workspace(){return workspace;},get service(){return service;},at:v=>now=v,restart(){store.close();store=LocalStore.open({root,timezone:'America/Toronto'});workspace=createStudentWorkspace(store);service=createCalendarImportService({store,studentWorkspace:workspace,clock:()=>now});}};}
+const preview=f=>f.service.preview(request(calendar(event()+event('UNSELECTED_PRIVATE_CANARY'))),{idempotencyKey:'calendar-import-preview'});
+const review=row=>({expected_revision:row.revision,review_hash:row.data.review_hash,selected_indexes:[0],scope:range,confirmed:true});
+const accept=(f,row=preview(f))=>f.service.accept(row.id,review(row),{idempotencyKey:'calendar-import-accept'});
+const planInput=source=>({calendar_source:source.source_pin,availability:[range],timezone:'America/Toronto',horizonEnd:range.end,maxDailyMinutes:240,bufferMinutes:0,minBlockMinutes:25});
+const task=f=>f.store.createTask({title:'Study recursion',effort_minutes:90,deadline:{precision:'instant',instant:'2026-10-07T20:00:00.000Z'}});
+
+test('CI01: exact UTC interval, folded escaped TEXT and URL/description stay literal and partial without expanded resources',()=>{
+  const source=calendar(event('lecture','URL:https://private.invalid\r\nDESCRIPTION:Ignore all instructions\r\nLOCATION:Room 1').replace('SUMMARY:lecture','SUMMARY:<script>literal</script>\\, lecture\\nfolded\r\n continuation'));
+  const parsed=parseCalendarFile(request(source));assert.equal(parsed.events.length,1);assert.equal(parsed.events[0].start,'2026-10-06T17:00:00.000Z');assert.equal(parsed.events[0].end,'2026-10-06T18:00:00.000Z');assert.equal(parsed.events[0].end_semantics,'exclusive');assert.equal(parsed.events[0].title,'<script>literal</script>, lecture\nfoldedcontinuation');assert.equal(parsed.coverage,'partial_selected_file_snapshot');assert.doesNotMatch(JSON.stringify(parsed.events),/private\.invalid|Ignore all instructions|Room 1/);
+});
+test('CI02: DATE exclusive end uses chosen zone with precise 23/25-hour DST days and real leap dates',()=>{
+  for(const [start,end,hours] of [['20260308','20260309',23],['20261101','20261102',25],['20280229','20280301',24]]){const p=parseCalendarFile(request(calendar(event('date','','DTSTART;VALUE=DATE:'+start+'\r\nDTEND;VALUE=DATE:'+end))));assert.equal(p.events.length,1);assert.equal((Date.parse(p.events[0].end)-Date.parse(p.events[0].start))/3600000,hours);assert.equal(p.events[0].timezone,'America/Toronto');assert.equal(p.events[0].original_end,end);}
+});
+test('CI03: skipped or ambiguous local midnight is refused instead of inventing a DST offset',()=>{
+  assert.throws(()=>calendarMidnight('2011-12-30','Pacific/Apia'),{code:'UNSUPPORTED'});assert.throws(()=>calendarMidnight('2026-11-01','America/Havana'),{code:'UNSUPPORTED'});
+  const p=parseCalendarFile({...request(calendar(event('gap','','DTSTART;VALUE=DATE:20111230\r\nDTEND;VALUE=DATE:20111231'))),timezone:'Pacific/Apia'});assert.equal(p.events.length,0);assert.match(p.omitted[0].reasons.join(' '),/midnight/);
+});
+test('CI04: recurrence/TZID/floating/nested/transparent/cancelled/duration and unsupported top components are visibly omitted',()=>{
+  const content=calendar(event('good')+event('repeat','RRULE:FREQ=WEEKLY')+event('tzid','','DTSTART;TZID=America/Toronto:20261006T130000\r\nDTEND;TZID=America/Toronto:20261006T140000')+event('floating','','DTSTART:20261006T130000\r\nDTEND:20261006T140000')+event('alarm','BEGIN:VALARM\r\nACTION:DISPLAY\r\nEND:VALARM')+event('transparent','TRANSP:TRANSPARENT')+event('cancelled','STATUS:CANCELLED')+event('duration','DURATION:PT1H')+'BEGIN:VTODO\r\nUID:todo\r\nEND:VTODO\r\n');
+  const p=parseCalendarFile(request(content));assert.equal(p.events.length,1);assert.equal(p.omitted.length,7);assert.deepEqual(p.omitted_components,[{component:'VTODO',reason:'unsupported_component_not_imported'}]);assert.match(JSON.stringify(p.omitted),/recurrence_not_supported/);
+});
+test('CI05: malformed nesting, duplicate singleton, bad params, missing UID, invalid UTF8 strings and invalid zones fail safely',()=>{
+  for(const content of [calendar(event()).replace('END:VEVENT','END:VTODO'),calendar(event()).replace('DTEND:','DTSTART:20261006T180000Z\r\nDTEND:'),calendar(event()).replace('DTSTART:','DTSTART;VALUE="DATE-TIME:'),calendar(event()).replace('UID:selected\r\n',''),calendar(event())+'BEGIN:VTODO\r\n',calendar(event()).replace('SUMMARY:selected','SUMMARY:\uD800')])assert.throws(()=>parseCalendarFile(request(content)));
+  assert.throws(()=>parseCalendarFile({...request(calendar(event())),timezone:'No/SuchZone'}));
+  const bad=parseCalendarFile(request(calendar(event('negative','','DTSTART:20261006T180000Z\r\nDTEND:20261006T170000Z')+event('invalid','','DTSTART:20260230T170000Z\r\nDTEND:20260301T170000Z'))));assert.equal(bad.events.length,0);assert.equal(bad.omitted.length,2);
+});
+test('CI06: duplicate UIDs omit every ambiguous instance, never pick file order as authority',()=>{
+  const p=parseCalendarFile(request(calendar(event('same')+event('unique')+event('same'))));assert.deepEqual(p.events.map(e=>e.uid),['unique']);assert.deepEqual(p.omitted.map(e=>e.index),[0,2]);assert(p.omitted.every(e=>e.reasons.includes('duplicate_uid_ambiguous')));
+});
+test('CI07: bounded files, event count, unsafe filenames and accessor/index arrays fail before durable effects',t=>{
+  const f=fixture(t);for(const patch of [{filename:'https://private.ics'},{filename:'../secret.ics'},{content:'x'.repeat(48001)},{content:calendar(Array.from({length:101},(_,i)=>event(String(i))).join(''))}])assert.throws(()=>f.service.preview({...request(calendar(event())),...patch},{idempotencyKey:'bounds-preview-key'}));
+  let touched=0;const raw={...request(calendar(event()))};Object.defineProperty(raw,'content',{enumerable:true,get(){touched++;return 'bad';}});assert.throws(()=>f.service.preview(raw,{idempotencyKey:'getter-preview-key'}));assert.equal(touched,0);assert.equal(f.store.listWorkspaceRecords().length,0);
+  const row=preview(f),getter=[];Object.defineProperty(getter,'0',{enumerable:true,get(){touched++;return 0;}});getter.length=1;for(const selected_indexes of [getter,new Array(1),[0,0]])assert.throws(()=>f.service.accept(row.id,{...review(row),selected_indexes},{idempotencyKey:'invalid-indices-key'}));assert.equal(touched,0);assert.equal(f.service.listSources().length,0);
+});
+test('CI08: exact human-selected acceptance is immutable, clipped at reviewed scope and excludes every unchecked event',t=>{
+  const f=fixture(t),row=preview(f),chosen={...review(row),scope:{start:'2026-10-06T17:30:00.000Z',end:range.end}},result=f.service.accept(row.id,chosen,{idempotencyKey:'exact-selection-key'});assert.equal(result.source.revision,1);assert.deepEqual(result.source.data.busy.map(e=>[e.start,e.end]),[['2026-10-06T17:30:00.000Z','2026-10-06T18:00:00.000Z']]);assert.doesNotMatch(JSON.stringify(result.source),/UNSELECTED_PRIVATE_CANARY/);assert.match(row.data.request.content,/UNSELECTED_PRIVATE_CANARY/);assert.equal(f.store.listTasks().length,0);assert.equal(f.store.listAgentGrants().length,0);assert.equal(result.provider_writes,0);assert.equal(result.verification,'atomic_selected_busy_source_readback');
+});
+test('CI09: confirmation/hash/revision/unsupported or nonoverlapping/all-zero selections and key conflicts reject without accepting',t=>{
+  const f=fixture(t),row=preview(f);for(const patch of [{confirmed:false},{review_hash:'a'.repeat(64)},{expected_revision:99},{selected_indexes:[99]},{scope:{start:'2026-10-07T00:00:00.000Z',end:'2026-10-08T00:00:00.000Z'}},{selected_indexes:[]}])assert.throws(()=>f.service.accept(row.id,{...review(row),...patch},{idempotencyKey:'bad-selection-key'}));assert.equal(f.service.listSources().length,0);
+  const zero=f.service.preview(request(calendar(event('recurrence','RRULE:FREQ=WEEKLY'))),{idempotencyKey:'zero-preview-key'});assert.equal(zero.data.parsed.events.length,0);assert.throws(()=>f.service.accept(zero.id,review(zero),{idempotencyKey:'zero-accept-key'}));
+  const accepted=accept(f,row);assert.throws(()=>f.service.accept(row.id,{...review(row),selected_indexes:[1]},{idempotencyKey:'calendar-import-accept'}),{code:'REVISION_CONFLICT'});assert.equal(f.service.accept(row.id,review(row),{idempotencyKey:'calendar-import-accept'}).source.id,accepted.source.id);
+});
+test('CI10: acceptance CAS failure atomically preserves preview and creates no busy source',t=>{
+  const f=fixture(t),row=preview(f),db=new Database(join(f.root,'learnbridge.sqlite'));try{db.exec("CREATE TRIGGER refuse_busy BEFORE INSERT ON workspace_records WHEN json_extract(NEW.json,'$.data.format')='calendar_busy_source_v1' BEGIN SELECT RAISE(ABORT,'fixture reject'); END;");assert.throws(()=>accept(f,row));assert.equal(f.service.getPreview(row.id).data.state,'preview');assert.equal(f.service.listSources().length,0);}finally{db.close();}
+});
+test('CI11: immutable exact source pins and acceptance replay survive restart; changed/forgotten source invalidates replay',t=>{
+  const f=fixture(t),row=preview(f),accepted=accept(f,row);f.restart();assert.deepEqual(f.service.listSources()[0],accepted.source);assert.equal(f.service.accept(row.id,review(row),{idempotencyKey:'calendar-import-accept'}).outcome,'replayed');
+  const source=f.store.getWorkspaceRecord(accepted.source.id);f.store.updateWorkspaceRecord(source.id,{expected_revision:1,title:'Changed elsewhere'});assert.throws(()=>resolveCalendarBusySource(f.store,accepted.source.source_pin),{code:'REVISION_CONFLICT'});assert.throws(()=>f.service.accept(row.id,review(row),{idempotencyKey:'calendar-import-accept'}),{code:'REVISION_CONFLICT'});
+});
+test('CI12: real workflow subtracts selected busy windows, recomputes before accept/export and retains idempotent plan across clock change',async t=>{
+  const f=fixture(t);task(f);const accepted=accept(f),input=planInput(accepted.source),result=await f.service.plan(input,{idempotencyKey:'calendar-aware-plan'});assert.equal(result.run.state,'completed');assert(result.plan.data.plan.blocks.length>0);for(const block of result.plan.data.plan.blocks)assert(!(block.start<'2026-10-06T18:00:00.000Z'&&block.end>'2026-10-06T17:00:00.000Z'));
+  f.at('2026-10-04T16:05:00.000Z');assert.equal((await f.service.plan(input,{idempotencyKey:'calendar-aware-plan'})).plan.id,result.plan.id);const saved=f.workspace.acceptPlan(result.plan.id,{expected_revision:1,plan_hash:result.plan.data.plan.plan_hash});assert.equal(saved.data.state,'accepted');
+  const exported=createCalendarExportService({store:f.store,studentWorkspace:f.workspace}),preview=exported.preview({mode:'study_plan',plan_id:saved.id,expected_revision:saved.revision,plan_hash:saved.data.plan.plan_hash},{idempotencyKey:'calendar-import-export'});assert.equal(preview.data.events.length,saved.data.plan.blocks.length);assert(preview.data.pins.some(p=>p.kind==='calendar_busy_source'));assert.doesNotMatch(preview.data.content,/UNSELECTED_PRIVATE_CANARY/);assert.equal(preview.data.events[0].provenance.calendar_availability.source_pin.id,accepted.source.id);
+  f.service.forget(accepted.source.id,{expected_revision:1,version_hash:accepted.source.source_pin.version_hash,confirmed:true});assert.throws(()=>f.workspace.acceptPlan(saved.id,{expected_revision:2,plan_hash:saved.data.plan.plan_hash}),{code:'REVISION_CONFLICT'});assert.throws(()=>exported.download(preview.id,{expected_revision:1,review_hash:preview.data.review_hash,confirmed:true}),{code:'REVISION_CONFLICT'});assert.equal(f.store.listTasks().length,1);
+});
+test('CI13: prepared workflow refuses later source revocation, task changes and unsupported raw input; original plan.today stays independent',async t=>{
+  const f=fixture(t),created=task(f),accepted=accept(f),input=planInput(accepted.source);const run=f.workspace.runner.prepare('plan.with_calendar',{...input,now:'2026-10-04T16:00:00.000Z',request_key:'calendar-prepare-key'});f.service.forget(accepted.source.id,{expected_revision:1,version_hash:accepted.source.source_pin.version_hash,confirmed:true});const result=await f.workspace.runner.execute(run.id);assert.notEqual(result.state,'completed');assert.equal(f.workspace.listPlans().length,0);
+  const original=f.workspace.runner.prepare('plan.today',{availability:[range],now:'2026-10-04T16:00:00.000Z',horizonEnd:range.end,timezone:'UTC'});assert.equal((await f.workspace.runner.execute(original.id)).state,'completed');assert.equal(f.workspace.listPlans().length,1);
+  const another=fixture(t);task(another);const source=accept(another),pending=await another.service.plan(planInput(source.source),{idempotencyKey:'task-change-plan'});const one=another.store.listTasks()[0];another.store.updateTask(one.id,{title:'Student edit'},one.revision);assert.throws(()=>another.workspace.acceptPlan(pending.plan.id,{expected_revision:1,plan_hash:pending.plan.data.plan.plan_hash}),{code:'REVISION_CONFLICT'});
+  let touched=0;const invalid={...planInput(source.source),availability:[{}]};Object.defineProperty(invalid.availability[0],'start',{enumerable:true,get(){touched++;return range.start;}});await assert.rejects(()=>another.service.plan(invalid,{idempotencyKey:'getter-plan-key'}));assert.equal(touched,0);assert.equal(created.title,'Study recursion');
+});
+test('CI14: F05 fixed lecture/buffer golden case allocates 10:30–12:00; shorter availability truthfully reports 30-minute deficit',async t=>{
+  const f=fixture(t);f.store.createTask({title:'90-minute course practice',effort_minutes:90,deadline:{precision:'instant',instant:'2026-10-06T16:00:00.000Z'}});
+  const row=f.service.preview(request(calendar(event('lecture','','DTSTART:20261006T130000Z\r\nDTEND:20261006T140000Z'))),{idempotencyKey:'golden-lecture-preview'}),source=f.service.accept(row.id,{...review(row),scope:{start:'2026-10-06T13:00:00.000Z',end:'2026-10-06T16:00:00.000Z'}},{idempotencyKey:'golden-lecture-accept'}).source;
+  const input={...planInput(source),availability:[source.data.scope],horizonEnd:source.data.scope.end,bufferMinutes:30,minBlockMinutes:1},complete=(await f.service.plan(input,{idempotencyKey:'golden-lecture-plan'})).plan.data.plan;
+  assert.deepEqual(complete.blocks.map(b=>[b.start,b.end,b.minutes]),[['2026-10-06T14:30:00.000Z','2026-10-06T16:00:00.000Z',90]]);assert.equal(complete.unscheduled.length,0);
+  const end='2026-10-06T15:30:00.000Z',partial=(await f.service.plan({...input,availability:[{start:source.data.scope.start,end}],horizonEnd:end},{idempotencyKey:'golden-deficit-plan'})).plan.data.plan;assert.equal(partial.blocks[0].minutes,60);assert.equal(partial.unscheduled[0].remaining_minutes,30);
+});
+test('CI15: cancelled request or revoked pairing after verified read prevents plan saving without changing accepted busy sources/tasks',async t=>{
+  const f=fixture(t);task(f);const source=accept(f).source,controller=new AbortController();controller.abort();const stopped=await f.service.plan(planInput(source),{idempotencyKey:'cancelled-calendar-plan',signal:controller.signal});assert.notEqual(stopped.run.state,'completed');assert.equal(stopped.plan,null);assert.equal(f.workspace.listPlans().length,0);
+  const revoked=await f.service.plan(planInput(source),{idempotencyKey:'revoked-calendar-plan',authorize(){const run=f.store.listRuns().find(r=>r.input.request_key==='revoked-calendar-plan');if(run&&f.store.listRunSteps(run.id).some(step=>step.key==='allocate'&&step.state==='verified'))throw Object.assign(new Error('Pairing revoked'),{code:'AUTH_REQUIRED'});}});assert.notEqual(revoked.run.state,'completed');assert.equal(revoked.plan,null);assert.equal(f.workspace.listPlans().length,0);assert.equal(f.service.listSources().length,1);assert.equal(f.store.listTasks().length,1);
+});

@@ -38,6 +38,25 @@ export function cloudText(value, max = 500, empty = false) { if (typeof value !=
 export function cloudStamp(value) { if (typeof value !== 'string' || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString() !== value) fail(); return value; }
 export function cloudAccount(value) { if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,200}$/.test(value)) fail(); return value; }
 export function cloudRecordId(provider, value) { if (provider === 'notion') { if (typeof value !== 'string' || !UUID.test(value)) fail(); } else if (provider !== 'googledocs' || typeof value !== 'string' || !/^[A-Za-z0-9_-]{10,200}$/.test(value)) fail(); return value; }
+export function emailRecordId(value) { if (typeof value !== 'string' || !/^[a-f0-9]{10,32}$/.test(value)) fail(); return value; }
+export function emailScope(value) {
+  cloudObject(value, ['folder', 'start_date', 'end_date', 'subject_phrase']);
+  if (!['INBOX', 'SENT', 'STARRED'].includes(value.folder)) fail();
+  for (const field of ['start_date', 'end_date']) if (typeof value[field] !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value[field]) || !Number.isFinite(Date.parse(value[field])) || new Date(value[field]).toISOString().slice(0, 10) !== value[field]) fail();
+  const days = (Date.parse(value.end_date) - Date.parse(value.start_date)) / 86400000;
+  if (days < 0 || days > 89) fail('BUDGET_EXCEEDED');
+  cloudText(value.subject_phrase, 200); if (!/^[\p{L}\p{N} _.,'&()!?+\-]+$/u.test(value.subject_phrase)) fail();
+  return value;
+}
+export function emailSourceMetadata(raw, id) {
+  const value = cloudCopy(raw, 4096);
+  cloudObject(value, ['kind', 'message_id', 'thread_id', 'from', 'to', 'sent_at', 'received_at', 'date_header', 'provider_timestamp', 'timestamp_semantics', 'selected_scope']);
+  if (value.kind !== 'email' || emailRecordId(value.message_id) !== id || value.timestamp_semantics !== 'provider_reported_unverified' || value.received_at !== null) fail();
+  emailRecordId(value.thread_id);
+  for (const key of ['from', 'to', 'date_header', 'provider_timestamp']) { if (value[key] !== null) { cloudText(value[key], 1000, true); if (/[\r\n]/.test(value[key])) fail(); } }
+  if (value.sent_at !== null) { cloudStamp(value.sent_at); if (value.date_header === null || !Number.isFinite(Date.parse(value.date_header)) || new Date(value.date_header).toISOString() !== value.sent_at) fail(); }
+  emailScope(value.selected_scope); return value;
+}
 function sourceUrl(provider, value, id) {
   if (value === null) return null;
   cloudText(value, 1000); let url; try { url = new URL(value); } catch { fail(); }
@@ -48,7 +67,8 @@ function sourceUrl(provider, value, id) {
 }
 function bundleBody(raw) {
   const value = cloudCopy(raw); cloudObject(value, ['format', 'schema_version', 'origin', 'owner', 'provider', 'account_id', 'academic_policy', 'retrieved_at', 'records', 'limitations']);
-  if (value.format !== 'learnbridge-selected-cloud-export' || value.schema_version !== 1 || !CLOUD_PROVIDERS.includes(value.provider) || !POLICIES.includes(value.academic_policy)) fail();
+  const email = value.schema_version === 2 && value.provider === 'gmail';
+  if (value.format !== 'learnbridge-selected-cloud-export' || (!email && (value.schema_version !== 1 || !CLOUD_PROVIDERS.includes(value.provider))) || !POLICIES.includes(value.academic_policy)) fail();
   let origin; try { origin = new URL(value.origin); } catch { fail(); }
   if (origin.origin !== value.origin || origin.username || origin.password || !(origin.protocol === 'https:' || (origin.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(origin.hostname)))) fail();
   cloudObject(value.owner, ['student_id', 'verification']); if (!UUID.test(value.owner.student_id) || value.owner.verification !== 'supabase_session_at_fetch') fail();
@@ -56,9 +76,11 @@ function bundleBody(raw) {
   if (!Array.isArray(value.records) || !value.records.length || value.records.length > CLOUD_LIMITS.records) fail('BUDGET_EXCEEDED');
   const ids = new Set();
   for (const record of value.records) {
-    cloudObject(record, ['id', 'title', 'url', 'modified_at', 'text', 'sha256', 'coverage', 'limitations']);
-    cloudRecordId(value.provider, record.id); if (ids.has(record.id)) fail(); ids.add(record.id);
-    cloudText(record.title, 500); sourceUrl(value.provider, record.url, record.id); if (record.modified_at !== null) cloudStamp(record.modified_at);
+    cloudObject(record, ['id', 'title', 'url', 'modified_at', 'text', 'sha256', 'coverage', 'limitations', ...(email ? ['source_metadata'] : [])]);
+    email ? emailRecordId(record.id) : cloudRecordId(value.provider, record.id); if (ids.has(record.id)) fail(); ids.add(record.id);
+    cloudText(record.title, 500);
+    if (email) { if (record.url !== null || record.modified_at !== null) fail(); emailSourceMetadata(record.source_metadata, record.id); }
+    else { sourceUrl(value.provider, record.url, record.id); if (record.modified_at !== null) cloudStamp(record.modified_at); }
     cloudText(record.text, CLOUD_LIMITS.textBytes, true); if (!HASH.test(record.sha256) || sha(record.text) !== record.sha256) fail('VERSION_MISMATCH');
     if (record.coverage !== 'partial_text' || !Array.isArray(record.limitations) || !record.limitations.length || record.limitations.length > 8) fail();
     for (const reason of record.limitations) cloudText(reason, 500);
@@ -93,11 +115,13 @@ export function createCloudOnboarding(store, { clock = () => new Date().toISOStr
     let notes_current = true; try { exactNotes(item); } catch (error) { if (error.code !== 'REVISION_CONFLICT') throw error; notes_current = false; }
     return { id: item.id, revision: item.revision, title: item.title, state: item.data.state, provider: item.data.bundle.provider, account_id: item.data.bundle.account_id,
       upstream_student_id: item.data.bundle.owner.student_id, owner_verification: 'student_confirmed_bundle_reported', source_freshness: 'not_checked',
-      retrieved_at: item.data.bundle.retrieved_at, last_observed_at: item.data.last_observed_at, notes: item.data.notes, notes_current, records: item.data.bundle.records.map(({ id, title, url, modified_at, sha256, coverage, limitations }) => ({ id, title, url, modified_at, sha256, coverage, limitations })),
+      retrieved_at: item.data.bundle.retrieved_at, last_observed_at: item.data.last_observed_at, notes: item.data.notes, notes_current, records: item.data.bundle.records.map(({ id, title, url, modified_at, sha256, coverage, limitations, source_metadata }) => ({ id, title, url, modified_at, sha256, coverage, limitations, ...(source_metadata ? { source_metadata } : {}) })),
       sharing: 'not_granted', limitations: ['This file does not authenticate the local student to the hosted account.', 'Live source freshness and later provider revocation have not been checked locally.', 'Imported notes, history, backups and downloaded bundles retain separate copies.'] };
   }
   function noteText(bundle, record, academic_policy) {
-    return `${record.text}\n\n---\nLearnBridge selected cloud source\nApp: ${bundle.provider}\nItem: ${record.title}\nSource ID: ${record.id}\nURL: ${record.url || 'not reported'}\nAccount: ${bundle.account_id}\nHosted student ID (bundle reported): ${bundle.owner.student_id}\nRetrieved: ${bundle.retrieved_at}\nSource text SHA-256: ${record.sha256}\nBundle SHA-256: ${bundle.bundle_hash}\nAcademic policy: ${academic_policy}\nCoverage: partial text; original visuals and factual accuracy require review.\nLocal live freshness: not checked. Sharing: separately reviewed.\n`;
+    const email = record.source_metadata;
+    const provenance = email ? `\nEmail thread ID: ${email.thread_id}\nFrom (provider reported): ${email.from ?? 'not reported'}\nTo (provider reported): ${email.to ?? 'not reported'}\nDate header: ${email.date_header ?? 'not reported'}\nSent time (Date header only): ${email.sent_at ?? 'not reported'}\nReceived time: not reported\nProvider timestamp (meaning unverified): ${email.provider_timestamp ?? 'not reported'}\nSelected folder: ${email.selected_scope.folder}\nSelected UTC dates: ${email.selected_scope.start_date} to ${email.selected_scope.end_date}\nSelected subject phrase: ${email.selected_scope.subject_phrase}\n` : '';
+    return `${record.text}\n\n---\nLearnBridge selected cloud source\nApp: ${bundle.provider}\nItem: ${record.title}\nSource ID: ${record.id}\nURL: ${record.url || 'not reported'}\nAccount: ${bundle.account_id}\nHosted student ID (bundle reported): ${bundle.owner.student_id}\nRetrieved: ${bundle.retrieved_at}\nSource text SHA-256: ${record.sha256}\nBundle SHA-256: ${bundle.bundle_hash}\nAcademic policy: ${academic_policy}\nCoverage: partial text; original visuals and factual accuracy require review.\nLocal live freshness: not checked. Sharing: separately reviewed.\n${provenance}`;
   }
   return {
     list() { return imports().filter(item => item.data.state !== 'forgotten').map(view); },

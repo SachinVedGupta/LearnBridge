@@ -26,7 +26,7 @@ function fixture(t, mode = 'normal') {
       async startTurn({ prompt, outputSchema }) { assert.ok(prompt.includes('prepared approved context'));assert.equal(outputSchema.type,'object'); if (mode === 'revoke') signedIn = false; return { completion: Promise.resolve(result) }; },
       async close() { call.closed = true; } };
   };
-  const service = createCodexProfile({ store, profileRoot, adapterFactory });
+  const service = createCodexProfile({ store, executionMode: 'structured', profileRoot, adapterFactory });
   t.after(async () => { await service.stop(); store.close(); rmSync(parent, { recursive: true, force: true }); });
   return { service, store, parent, profileRoot, calls, adapterFactory, signIn: () => { signedIn = true; }, release: () => release?.() };
 }
@@ -57,8 +57,8 @@ test('CP03 an answer without selected-context proof is rejected instead of marke
 });
 test('CP04 another student, unmarked directory or profile inside a backup is rejected', async t => {
   const { store, parent } = fixture(t); const root = join(parent, 'unowned'); mkdirSync(root, { mode: 0o700 }); writeFileSync(join(root, 'auth.json'), 'PRIVATE_TOKEN_CANARY', { mode: 0o600 });
-  const other = createCodexProfile({ store, profileRoot: root }); await assert.rejects(other.connect(auth));
-  assert.throws(() => createCodexProfile({ store, profileRoot: join(store.root, 'auth') }), { code: 'SCOPE_DENIED' });
+  const other = createCodexProfile({ store, executionMode: 'structured', profileRoot: root }); await assert.rejects(other.connect(auth));
+  assert.throws(() => createCodexProfile({ store, executionMode: 'structured', profileRoot: join(store.root, 'auth') }), { code: 'SCOPE_DENIED' });
 });
 test('CP05 disconnect uses official logout and source execution remains disabled after browser reset', async t => {
   const { service, signIn, calls } = fixture(t); await service.connect(auth); signIn(); await service.check(auth);
