@@ -1,0 +1,58 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { rmSync } from 'node:fs';
+import { setTimeout as delay } from 'node:timers/promises';
+import { startRuntime } from '../apps/local-runtime/src/server.mjs';
+import { requestAgentControl } from '../apps/local-runtime/src/ipc.mjs';
+import { LocalStore } from '../packages/local-storage/src/index.mjs';
+import { block, exact, lectureFixture, sha } from './fixtures/lecture-test-support.mjs';
+
+// This exercises the actual loopback authentication, routes, broker, SQLite,
+// binary response and logout. Model/native output is explicitly synthetic.
+async function httpFixture(t, options = {}) {
+  const f = lectureFixture(t, { ...options, autoCleanup: false });
+  await f.service.close(); await f.host.drain(); f.store.close(); const hostReads = []; let runtime;
+  t.after(async () => { await runtime?.close(); rmSync(f.parent, { recursive: true, force: true }); });
+  runtime = await startRuntime({ dataRoot: f.root, port: 0, sourceAdapter: { probeSourceCapability: async () => ({ state: 'available', detail: 'Synthetic fixture only' }), readSelectedPdfAsset: async (_, __, ___, selected) => f.asset(f.entry, selected.physicalPage, { signal: selected.signal }) }, lectureMediaFactory: () => f.media, hostAdapter: { enabled: true, execute: async input => {
+    const context = await requestAgentControl(input.dataRoot, 'codex', 'context', { grant_id: input.grantId }); hostReads.push({ context, prompt: input.prompt, tool_policy: input.toolPolicy }); input.onProgress({ phase: 'tool', tool: 'learnbridge_context', state: 'finished' }); const text = block(f.payload()); return { state: 'completed', complete: true, text, output_sha256: sha(text), tool_receipts: [{ tool: 'learnbridge_context', status: 'completed', failed: false, result_hash: sha(JSON.stringify(context)), origin: 'model' }], host_version: 'synthetic_http_fixture_not_live' };
+  } } });
+  const endpoint = runtime.origin + '/api/local/v1';
+  const paired = await fetch(endpoint + '/pair', { method: 'POST', headers: { origin: runtime.origin, 'content-type': 'application/json' }, body: JSON.stringify({ code: runtime.createPairingCode() }) }); assert.equal(paired.status, 200); const cookie = paired.headers.get('set-cookie').split(';')[0], nonce = (await paired.json()).nonce;
+  const headers = (method = 'GET', additional = {}) => ({ cookie, 'x-learnbridge-nonce': nonce, ...(method === 'GET' ? {} : { origin: runtime.origin, 'content-type': 'application/json', 'idempotency-key': randomUUID() }), ...additional });
+  const raw = (path, { method = 'GET', body, additional = {} } = {}) => fetch(endpoint + path, { method, headers: headers(method, additional), ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+  const call = async (path, body, options = {}) => { const response = await raw(path, { method: body === undefined ? 'GET' : 'POST', body, ...options }); return { status: response.status, data: await response.json(), headers: response.headers }; };
+  const wait = async (id, field, expected) => { let view; for (let n = 0; n < 150; n++) { const fetched = await call(`/lectures/${id}`); assert.equal(fetched.status, 200); view = fetched.data; if (view[field].state === expected) return view; if (view[field].state === 'failed') throw Error(`Synthetic ${field} failed: ${view[field].error_code}`); await delay(5); } throw Error(`Synthetic ${field} did not settle: ${view[field].state}`); };
+  const create = async () => { const result = await call(`/course-studio/sessions/${f.studio.id}/lectures`, { expected_revision: f.studio.revision, studio_hash: f.studio.data.studio_hash, pages: [1, 2], title: 'Synthetic HTTP recursion lecture', quiz_every: 2, confirmed: true }); assert.equal(result.status, 201); return result.data.item; };
+  const accepted = async () => {
+    const created = await create(), note = created.context_document;
+    const shared = await call('/agent-grants', { destination: 'codex', task_ids: [], document_ids: [note.id], source_entry_ids: [], expected_records: { tasks: [], documents: [{ id: note.id, revision: note.revision }], source_entries: [] }, max_bytes: 256000, expires_in_minutes: 30 }); assert.equal(shared.status, 201);
+    const preview = await call(`/lectures/${created.item.id}/preview-run`, exact(created)); assert.equal(preview.status, 200);
+    const running = await call(`/lectures/${created.item.id}/run`, { ...exact(created), grant_id: shared.data.grant.id, prompt_sha256: preview.data.prompt_sha256, confirmed: true }); assert.equal(running.status, 202); const generated = await wait(created.item.id, 'generation', 'ready_for_review');
+    const reviewed = await call(`/lectures/${created.item.id}/review-preview`); assert.equal(reviewed.status, 200); const saved = await call(`/lectures/${created.item.id}/accept`, { ...exact(generated), output_sha256: reviewed.data.output_sha256, pack_hash: reviewed.data.pack_hash, confirmed: true }); assert.equal(saved.status, 200); return saved.data.item;
+  };
+  const audio = async view => { const request = await call(`/lectures/${view.item.id}/audio`, { ...exact(view), voice: 'Samantha', rate: 180, confirmed: true }); assert.equal(request.status, 202); return wait(view.item.id, 'audio', 'ready'); };
+  return { ...f, runtime, endpoint, cookie, nonce, hostReads, headers, raw, call, wait, create, accepted, audio };
+}
+
+test('LH01 actual paired HTTP lecture generation/review/audio/progress/quiz/video roundtrip preserves separate gates', { timeout: 30000 }, async t => {
+  const f = await httpFixture(t); assert.equal((await fetch(f.endpoint + '/lectures/capability')).status, 401); let view = await f.accepted(); assert.equal(f.hostReads.length, 1); assert.equal(f.hostReads[0].tool_policy, 'read_only'); assert.equal(f.hostReads[0].context.documents.length, 1); assert.equal(f.hostReads[0].context.source_entries.length, 0); assert(!JSON.stringify(f.hostReads).includes('UNSELECTED_LECTURE_PRIVATE_CANARY')); assert.equal(view.chapters.length, 2); assert.equal('answer' in view.chapters[1].quiz, false); assert.equal(f.mediaCalls.length, 0);
+  view = await f.audio(view); const response = await f.raw(`/lectures/${view.item.id}/chapters/p1/audio`); assert.equal(response.status, 200); assert.equal(response.headers.get('content-type'), 'audio/wav'); assert.equal(response.headers.get('cache-control'), 'private, no-store'); const bytes = Buffer.from(await response.arrayBuffer()); assert.deepEqual(bytes, Buffer.from('SYNTHETIC_AUDIO_1')); assert.equal(Number(response.headers.get('content-length')), bytes.length); assert.match(response.headers.get('content-disposition'), /^inline;/); assert(!response.headers.get('access-control-allow-origin'));
+  let changed = await f.call(`/lectures/${view.item.id}/progress`, { ...exact(view), chapter_index: 1, position_seconds: 0, state: 'quiz', completed_chapter_ids: ['p1'] }); assert.equal(changed.status, 200); view = changed.data.item;
+  const tooSoon = await f.call(`/lectures/${view.item.id}/progress`, { ...exact(view), chapter_index: 1, position_seconds: 3, state: 'finished', completed_chapter_ids: ['p1', 'p2'] }); assert.equal(tooSoon.status, 403); const answered = await f.call(`/lectures/${view.item.id}/answer`, { ...exact(view), quiz_id: 'q2', response: 'A base case prevents another recursive call at zero.' }); assert.equal(answered.status, 200); assert.equal(answered.data.reference_answer, 'A base case.'); assert.equal(answered.data.attempt.data.exact_student_response, 'A base case prevents another recursive call at zero.'); assert.equal(answered.data.attempt.data.mastery_claim, false); view = answered.data.item;
+  changed = await f.call(`/lectures/${view.item.id}/progress`, { ...exact(view), chapter_index: 1, position_seconds: 3, state: 'finished', completed_chapter_ids: ['p1', 'p2'] }); assert.equal(changed.status, 200); view = changed.data.item; assert.equal(view.mastery_claim, false);
+  const exported = await f.call(`/lectures/${view.item.id}/export-video`, { ...exact(view), confirmed: true }); assert.equal(exported.status, 202); view = await f.wait(view.item.id, 'export', 'ready'); const video = await f.raw(`/lectures/${view.item.id}/video`); assert.equal(video.status, 200); assert.equal(video.headers.get('content-type'), 'video/mp4'); assert.match(video.headers.get('content-disposition'), /^attachment;/); assert.equal(video.headers.get('cache-control'), 'private, no-store'); assert.deepEqual(Buffer.from(await video.arrayBuffer()), Buffer.from('SYNTHETIC_MP4')); assert.equal(f.mediaCalls.filter(item => item.operation === 'audio').length, 1); assert.equal(f.mediaCalls.filter(item => item.operation === 'video').length, 1);
+  const tasks = await f.call('/tasks'); assert.equal(tasks.status, 200); assert.equal(tasks.data.items.length, 0); await f.runtime.close(); const restored = LocalStore.open({ root: f.root }); try { assert.equal(restored.getWorkspaceRecord(view.item.id).data.progress.state, 'finished'); const attempt = restored.getWorkspaceRecord(answered.data.attempt.id); assert.equal(attempt.data.exact_student_response, answered.data.attempt.data.exact_student_response); assert.equal(restored.integrity().integrity, 'ok'); } finally { restored.close(); }
+});
+
+test('LH02 binary media denies missing/wrong nonce, outside origin, arbitrary query/path, wrong method and revoked sources', { timeout: 30000 }, async t => {
+  const f = await httpFixture(t), view = await f.audio(await f.accepted()), path = `/lectures/${view.item.id}/chapters/p1/audio`;
+  for (const headers of [{ cookie: f.cookie }, { ...f.headers(), 'x-learnbridge-nonce': 'wrong-nonce' }, { ...f.headers(), origin: 'https://untrusted.example' }]) { const result = await fetch(f.endpoint + path, { headers }); assert([401, 403].includes(result.status)); assert.equal(result.headers.get('content-type'), 'application/json; charset=utf-8'); assert(!Buffer.from(await result.arrayBuffer()).includes(Buffer.from('SYNTHETIC_AUDIO'))); }
+  assert.equal((await f.raw(path + '?path=/etc/passwd')).status, 400); assert.equal((await f.raw(path + '?nonce=must-not-appear-in-urls')).status, 400); assert.equal((await f.raw(path, { method: 'POST', body: {} })).status, 400); assert.equal((await f.raw(`/lectures/${view.item.id}/chapters/p999/audio`)).status, 501);
+  const revoke = await f.call(`/sources/${f.folder.id}/revoke`, { expected_revision: f.folder.revision }); assert.equal(revoke.status, 200); const unavailable = await f.raw(path); assert.equal(unavailable.status, 403); assert(!JSON.stringify(await unavailable.json()).includes(f.pages[0].text)); assert.equal(f.mediaCalls.filter(item => item.operation === 'audio').length, 1);
+});
+
+test('LH03 logging out cancels a pending native job and discards a late successful media result', { timeout: 30000 }, async t => {
+  let release; const f = await httpFixture(t, { mediaDelay: () => new Promise(resolve => { release = resolve; }), ignoreMediaCancellation: true }), view = await f.accepted(); const started = await f.call(`/lectures/${view.item.id}/audio`, { ...exact(view), voice: 'Samantha', rate: 180, confirmed: true }); assert.equal(started.status, 202); for (let n = 0; !release && n < 50; n++) await delay(2); assert(release);
+  const logout = f.call('/logout', {}); await delay(10); release(); assert.equal((await logout).status, 200); assert.equal(f.cache.size, 0); assert(f.mediaCalls.some(item => item.operation === 'remove')); const denied = await f.raw(`/lectures/${view.item.id}/chapters/p1/audio`); assert.equal(denied.status, 401); assert(!Buffer.from(await denied.arrayBuffer()).includes(Buffer.from('SYNTHETIC_AUDIO')));
+});

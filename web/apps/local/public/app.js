@@ -29,7 +29,8 @@ class ApiError extends Error {
   constructor(status, code, message) { super(message); this.status = status; this.code = code; }
 }
 
-async function request(path, { method = 'GET', body, bootstrap = false, idempotencyKey, signal } = {}) {
+async function request(path, { method = 'GET', body, bootstrap = false, idempotencyKey, signal, responseType = 'json' } = {}) {
+  if (!['json', 'blob'].includes(responseType)) throw new ApiError(0, 'INVALID_INPUT', 'Choose a supported local response.');
   const requestNonce = state.nonce;
   const headers = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -38,6 +39,15 @@ async function request(path, { method = 'GET', body, bootstrap = false, idempote
   let response;
   try { response = await fetch(`${API}${path}`, { method, headers, credentials: 'same-origin', cache: 'no-store', signal, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }); }
   catch (error) { if (signal?.aborted || error?.name === 'AbortError') throw new ApiError(0, 'REQUEST_CANCELLED', 'This request was cancelled after the selection changed. Refresh saved items before retrying a change.'); throw new ApiError(0, 'RUNTIME_UNAVAILABLE', 'The local runtime is unavailable. Check that the LearnBridge launcher is running, then try again.'); }
+  if (response.ok && responseType === 'blob') {
+    const mime = response.headers.get('content-type')?.split(';')[0], declared = Number(response.headers.get('content-length'));
+    if (!['audio/wav','video/mp4'].includes(mime) || !Number.isSafeInteger(declared) || declared < 1 || declared > 80_000_000) throw new ApiError(0, 'INVALID_RESPONSE', 'This local media response is unavailable or too large.');
+    const reader = response.body.getReader(), chunks = []; let count = 0;
+    try { while (true) { const part = await reader.read(); if (part.done) break; count += part.value.byteLength; if (count > declared || !state.sessionReady || state.nonce !== requestNonce || signal?.aborted) throw new ApiError(401, 'AUTH_REQUIRED', 'The local media selection ended.'); chunks.push(part.value); } if (count !== declared) throw new ApiError(0, 'INVALID_RESPONSE', 'The local media download was interrupted.'); }
+    catch (error) { await reader.cancel().catch(() => {}); throw error; }
+    if (!state.sessionReady || state.nonce !== requestNonce) throw new ApiError(401, 'AUTH_REQUIRED', 'Pair this browser again to continue.');
+    return new Blob(chunks, {type:mime});
+  }
   let data;
   try { data = await response.json(); }
   catch { throw new ApiError(response.status, 'INVALID_RESPONSE', 'The local runtime returned an unexpected response. Try refreshing this page.'); }

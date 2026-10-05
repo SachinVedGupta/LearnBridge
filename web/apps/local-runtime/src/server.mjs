@@ -48,6 +48,9 @@ import { createDynamicTaskAIService } from './dynamic-task-ai-service.mjs';
 import { handleDynamicTaskAIRoute } from './dynamic-task-ai-routes.mjs';
 import { createCourseStudioService } from './course-studio-service.mjs';
 import { handleCourseStudioRoute } from './course-studio-routes.mjs';
+import { createLectureService } from './lecture-service.mjs';
+import { handleLectureRoute } from './lecture-routes.mjs';
+import { createLectureMedia } from './lecture-media.mjs';
 import { createLearningService } from './learning-service.mjs';
 import { createInterviewStudioService } from './interview-studio-service.mjs';
 import { handleInterviewStudioRoute } from './interview-studio-routes.mjs';
@@ -78,6 +81,8 @@ const assets = new Map([
   ['/dynamic-tasks.js', ['dynamic-tasks.js', 'text/javascript; charset=utf-8']],
   ['/course-studio.js', ['course-studio.js', 'text/javascript; charset=utf-8']],
   ['/course-studio.css', ['course-studio.css', 'text/css; charset=utf-8']],
+  ['/lecture-player.js', ['lecture-player.js', 'text/javascript; charset=utf-8']],
+  ['/lecture-player.css', ['lecture-player.css', 'text/css; charset=utf-8']],
   ['/interview-studio.js', ['interview-studio.js', 'text/javascript; charset=utf-8']],
   ['/leetcode.js', ['leetcode.js', 'text/javascript; charset=utf-8']],
   ['/leetcode.css', ['leetcode.css', 'text/css; charset=utf-8']],
@@ -130,12 +135,20 @@ function setHeaders(response) {
   response.setHeader('Referrer-Policy', 'no-referrer');
   response.setHeader('X-Frame-Options', 'DENY');
   response.setHeader('Permissions-Policy', 'camera=(), microphone=(self), geolocation=()');
-  response.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; object-src 'none'");
+  response.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src blob:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; object-src 'none'");
 }
 function json(response, status, value) {
   response.statusCode = status;
   response.setHeader('Content-Type', 'application/json; charset=utf-8');
   response.end(JSON.stringify(value));
+}
+function binary(response,result) {
+  if (!Buffer.isBuffer(result.bytes) || result.bytes.length < 1 || result.bytes.length > 80_000_000 || !['audio/wav','video/mp4'].includes(result.mime)) throw new LearnBridgeError('VERSION_MISMATCH');
+  response.statusCode = result.status;
+  response.setHeader('Content-Type',result.mime);
+  response.setHeader('Content-Length',result.bytes.length);
+  response.setHeader('Content-Disposition',result.mime==='video/mp4'?'attachment; filename="learnbridge-lecture.mp4"':'inline; filename="lecture-slide.wav"');
+  response.end(result.bytes);
 }
 function failure(response, error) {
   if (response.headersSent || response.destroyed) return;
@@ -162,14 +175,14 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
   // The launcher/HTTP/MCP surfaces never accept an adapter or executable.
   publicJobFetch, sourceAdapter = { describeRoot, inventorySource, readSelectedEntry, readSelectedPdf, readSelectedPdfAsset, readSelectedOffice, probeSourceCapability, probePdfCapability, probeOfficeCapability },
   // Trusted fixture seam only; the CLI/HTTP/MCP never accepts execution configuration.
-  hostAdapter, codexProfileOptions = {}, d2lBrowserFactory, leetcodeClientFactory, leetcodeBrowserFactory,
+  hostAdapter, codexProfileOptions = {}, d2lBrowserFactory, leetcodeClientFactory, leetcodeBrowserFactory, lectureMediaFactory,
   remoteOptions = { enabled: process.env.LEARNBRIDGE_PHONE_ACCESS === 'true' } } = {}) {
   if (typeof dataRoot !== 'string' || !Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Invalid local runtime options.');
   const store = LocalStore.open({ root: dataRoot, repositoryRoot, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' });
   let studentWorkspace;
   let hostTurns;
   let taskSessions;
-  let dynamicTasks, dynamicTaskAI, courseStudio, interviewStudio, applicationBrowser, leetcodeRoutes, codingPractice;
+  let dynamicTasks, dynamicTaskAI, courseStudio, lectures, interviewStudio, applicationBrowser, leetcodeRoutes, codingPractice;
   let onboardingRoutes;
   let cloudOnboardingRoutes, d2lRoutes, codexProfile, remoteRoutes, reminders, academicTasks, publicJobService, calendarExports, careerPackets, focus, expenseImports, calendarImports, studentAdmin, planTasks;
   const embeddedLeases = new Map();
@@ -196,6 +209,9 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
     dynamicTaskAI = createDynamicTaskAIService({ store, dynamicTasks, hostTurns });
     taskSessions = createTaskSessionService({ store, hostTurns, provenance: taskId => ({ plan: planTasks.taskProvenance(taskId), dynamic: dynamicTasks.taskProvenance(taskId) }), applicationProgress: sessionId => applicationBrowser?.progressForTaskSession(sessionId) ?? [] });
     courseStudio = createCourseStudioService({ store, learningService: createLearningService({ store, getLibrary: studentWorkspace.library }), hostTurns,
+      ...(typeof sourceAdapter.readSelectedPdfAsset === 'function' ? { readPdfAsset: async (entry, physicalPage, { signal } = {}) => sourceAdapter.readSelectedPdfAsset(store.getSource(entry.source_id).descriptor, store.getSourceInventory(entry.inventory_id).inventory, entry.entry_id, { physicalPage, signal }) } : {}) });
+    lectures = createLectureService({ store, courseStudio, hostTurns,
+      media: (lectureMediaFactory || createLectureMedia)({ workspaceRoot: store.root }),
       ...(typeof sourceAdapter.readSelectedPdfAsset === 'function' ? { readPdfAsset: async (entry, physicalPage, { signal } = {}) => sourceAdapter.readSelectedPdfAsset(store.getSource(entry.source_id).descriptor, store.getSourceInventory(entry.inventory_id).inventory, entry.entry_id, { physicalPage, signal }) } : {}) });
     interviewStudio = createInterviewStudioService({ store, hostTurns, publicJobService });
     leetcodeRoutes = createLeetCodeRoutes({ store, clientFactory: leetcodeClientFactory, browserFactory: leetcodeBrowserFactory });
@@ -244,6 +260,7 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         { id: 'dynamic_tasks', label: 'Done list', state: 'available', detail: 'Selected saved course, calendar, update and project sources reconcile into deduplicated local tasks. Explicit source policy controls automatic creation and verified project completion. No live cloud polling or activity-based completion inference.' },
         { id: 'task_sessions', label: 'Task agent sessions', state: 'available', detail: 'Start a selected-task Codex conversation, inspect background tool progress, continue or stop it, and review the actual result before marking done. Local proposals only; external form actions require separate review.' },
         { id: 'course_studio', label: 'Course studio', state: 'available', detail: 'Exact selected PDF page rendering, pinned course/page questions, reviewed model quizzes, student attempts and bounded annotations. Optional browser speech; visual model access and mastery inference are unavailable.' },
+        { id: 'ai_lecture', label: 'AI lecture', state: 'available', detail: 'Reviewed mini-lectures from selected PDF text, actual audio-ended slide advancement, midway checks and exact-slide clarification. Native narration and MP4 export require supported macOS speech/video tools. No visual model access or mastery inference.' },
         { id: 'interview_studio', label: 'Interview studio', state: 'available', detail: 'Selected role and confirmed profile coaching, one model question at a time, actual saved answers and grounded feedback through the local Codex subscription. Optional browser speech support varies.' },
         { id: 'leetcode', label: 'LeetCode and coding practice', state: 'available', detail: 'Bundled read-only MCP for bounded public/private attempt history, selected submission code and contest results. Saved student coding checkpoints and reviewed local Codex interview coaching. Session credentials stay transient; no code execution, platform submission or inferred mastery.' },
         { id: 'notes', label: 'Notes', state: 'available', detail: 'Multiple text notes with immutable revisions and verified hashes.' },
@@ -358,6 +375,10 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
       if (route.startsWith('/dynamic-task-ai/')) {
         noQuery(url); const result = await handleDynamicTaskAIRoute({ route, method: request.method, privateBody, service: dynamicTaskAI, session, stillAuthorized, idempotencyKey: idempotency(request).idempotencyKey });
         if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/lectures/') || /^\/course-studio\/sessions\/[^/]+\/lectures$/.test(route)) {
+        noQuery(url); const result = await handleLectureRoute({ route, method: request.method, privateBody, service: lectures, session, stillAuthorized, sourceOperation, idempotencyKey: idempotency(request).idempotencyKey });
+        stillAuthorized(); if (result) return result.bytes ? binary(response, result) : json(response, result.status, result.data);
       }
       if (route.startsWith('/course-studio/')) {
         noQuery(url); const result = await handleCourseStudioRoute({ route, method: request.method, privateBody, service: courseStudio, session, stillAuthorized, sourceOperation, idempotencyKey: idempotency(request).idempotencyKey });
@@ -519,7 +540,7 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         await privateBody([], [], 4096);
         response.setHeader('Set-Cookie', policy.logout(request));
         cloudOnboardingRoutes.clear();
-        await Promise.allSettled([d2lRoutes.clear(), leetcodeRoutes.clear(), codexProfile.clear(), remoteRoutes.clear({ nonce: session.nonce })]);
+        await Promise.allSettled([lectures.clear(), d2lRoutes.clear(), leetcodeRoutes.clear(), codexProfile.clear(), remoteRoutes.clear({ nonce: session.nonce })]);
         return json(response, 200, { logged_out: true });
       }
       if (route === '/status') {
@@ -825,6 +846,7 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
     for (const operation of sourceOperations) operation.abort();
     closePromise = (async () => {
       try {
+        await lectures.close();
         await studentWorkspace.runner.drain();
         await hostTurns.drain();
         await applicationBrowser.drain();
