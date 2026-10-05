@@ -1,6 +1,7 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { LearnBridgeError } from '@learnbridge/core';
 import { executeCodexTurn } from './codex-exec.mjs';
+import { codexToolPolicy, learnBridgeToolNames } from './codex-tools.mjs';
 
 const FORMAT = 'learnbridge_codex_turn.v1';
 const sha = text => createHash('sha256').update(text).digest('hex');
@@ -18,6 +19,7 @@ export function createHostTurns({ store, execute = executeCodexTurn, enabled = f
   const records = () => store.listWorkspaceRecords({ kind: 'artifact' }).filter(item => item.data.format === FORMAT);
   const getRecord = id => { const item = store.getWorkspaceRecord(id); if (!item || item.data.format !== FORMAT) denied('INVALID_INPUT'); return item; };
   const validGrant = item => {
+    codexToolPolicy(item.data.tool_policy);
     const grant = store.assertAgentGrant({ destination: 'codex', grant_id: item.data.grant_id });
     if (grant.consent_fingerprint !== item.data.grant_fingerprint) denied('CONSENT_REQUIRED');
     return true;
@@ -42,20 +44,33 @@ export function createHostTurns({ store, execute = executeCodexTurn, enabled = f
       native_resume_available: false, proposals_require_review: true }),
     list: () => records().sort((a, b) => b.created_at.localeCompare(a.created_at)).map(view),
     get: id => view(getRecord(id)),
-    async start(input, { idempotencyKey, authorize }) {
+    async start(input, { idempotencyKey, authorize, toolPolicy = 'reviewed_proposals' }) {
       plain(input, ['grant_id', 'prompt', 'confirmed']);
+      const policy = codexToolPolicy(toolPolicy), tools = learnBridgeToolNames(policy);
       if (input.confirmed !== true || typeof input.prompt !== 'string' || !input.prompt.trim() || Buffer.byteLength(input.prompt) > 16000 || input.prompt.includes('\0') || typeof authorize !== 'function') denied('INVALID_INPUT');
       if (!isEnabled()) denied('UNSUPPORTED'); if (stopping) denied('OFFLINE');
+      // The deprecated CLI-exec transport cannot enforce a broker tool subset.
+      // Read-only studios require the current embedded profile executor.
+      if (policy === 'read_only' && execute === executeCodexTurn) denied('UNSUPPORTED');
       if (typeof idempotencyKey !== 'string' || !/^[A-Za-z0-9_-]{8,100}$/.test(idempotencyKey)) denied('INVALID_INPUT');
       if (authorize() !== true) denied('CONSENT_REQUIRED');
       const grant = store.assertAgentGrant({ destination: 'codex', grant_id: input.grant_id });
-      const request_hash = sha(JSON.stringify({ grant_id: grant.id, grant_fingerprint: grant.consent_fingerprint, prompt: input.prompt }));
+      const request_hash = sha(JSON.stringify({ grant_id: grant.id, grant_fingerprint: grant.consent_fingerprint, prompt: input.prompt, tool_policy: policy }));
       const prior = records().find(item => item.data.idempotency_key === idempotencyKey);
-      if (prior) { if (prior.data.request_hash !== request_hash) denied('REVISION_CONFLICT'); return view(prior); }
+      if (prior) {
+        const legacyHash = sha(JSON.stringify({ grant_id: grant.id, grant_fingerprint: grant.consent_fingerprint, prompt: input.prompt }));
+        const legacyMatch = prior.data.tool_policy === undefined && policy === 'reviewed_proposals' && prior.data.request_hash === legacyHash;
+        if (codexToolPolicy(prior.data.tool_policy) !== policy || (prior.data.request_hash !== request_hash && !legacyMatch)) denied('REVISION_CONFLICT');
+        return view(prior);
+      }
+      // A completed answer can be read before the promise's final cleanup
+      // microtask. Permit a follow-up only after execution has actually saved
+      // its terminal result; a cancelled but still settling request stays busy.
+      for (const [id] of active) if (['completed', 'failed', 'withheld', 'unknown_outcome'].includes(getRecord(id).data.state)) active.delete(id);
       if (active.size) denied('REVISION_CONFLICT');
       const item = store.createWorkspaceRecord({ kind: 'artifact', title: 'Codex workspace conversation', data: {
         format: FORMAT, host: 'codex', grant_id: grant.id, grant_revision: grant.revision,
-        grant_fingerprint: grant.consent_fingerprint, prompt: input.prompt,
+        grant_fingerprint: grant.consent_fingerprint, prompt: input.prompt, tool_policy: policy,
         request_hash, idempotency_key: idempotencyKey, state: 'queued', text: '', tool_receipts: [], progress: [],
         created_at: new Date().toISOString(), finished_at: null, native_resume_available: false,
         proposals_require_review: true, account_mode: 'official_chatgpt_managed', instance: randomUUID(),
@@ -64,16 +79,18 @@ export function createHostTurns({ store, execute = executeCodexTurn, enabled = f
       const authorized = () => { if (stopping || controller.signal.aborted || authorize() !== true) return false; validGrant(getRecord(item.id)); return true; };
       const operation = Promise.resolve().then(async () => {
         if (!authorized()) denied('CONSENT_REQUIRED'); save(item.id, { state: 'running' });
-        const result = await execute({ dataRoot: store.root, grantId: grant.id, prompt: input.prompt, authorize: authorized, signal: controller.signal,
+        const result = await execute({ dataRoot: store.root, grantId: grant.id, prompt: input.prompt, ...(execute === executeCodexTurn ? {} : { toolPolicy: policy }), authorize: authorized, signal: controller.signal,
           onProgress: progress => {
             if (!authorized()) denied('CONSENT_REQUIRED');
-            if (!progress || progress.phase !== 'tool' || !['learnbridge_status', 'learnbridge_context', 'learnbridge_propose_task', 'learnbridge_propose_document'].includes(progress.tool) || !['running', 'finished'].includes(progress.state)) denied('VERSION_MISMATCH');
+            if (!progress || progress.phase !== 'tool' || !['running', 'finished'].includes(progress.state)) denied('VERSION_MISMATCH');
+            if (!tools.includes(progress.tool)) denied('SCOPE_DENIED');
             const current = getRecord(item.id); if (current.data.progress.length < 50) save(item.id, { progress: [...current.data.progress, { tool: progress.tool, state: progress.state }] });
           } });
         let allowed = false; try { allowed = authorized(); } catch {}
         if (!allowed) { save(item.id, { state: controller.signal.aborted ? 'interrupted' : 'withheld', error_code: controller.signal.aborted ? 'CANCELLED' : 'CONSENT_REQUIRED', text: '', tool_receipts: [], finished_at: new Date().toISOString() }); return; }
         if (!result || !terminal.has(result.state) || typeof result.text !== 'string' || Buffer.byteLength(result.text) > 64000 || !Array.isArray(result.tool_receipts) || result.tool_receipts.length > 20 || result.output_sha256 !== sha(result.text) || result.complete !== (result.state === 'completed')) denied('VERSION_MISMATCH');
         const receipts = result.tool_receipts.map(receipt => {
+          if (receipt && !tools.includes(receipt.tool)) denied('SCOPE_DENIED');
           if (!receipt || Object.keys(receipt).some(key => !['tool', 'status', 'failed', 'result_hash', 'origin'].includes(key)) || !['learnbridge_status', 'learnbridge_context', 'learnbridge_propose_task', 'learnbridge_propose_document'].includes(receipt.tool) || (receipt.origin !== undefined && !['model','runtime'].includes(receipt.origin)) || typeof receipt.failed !== 'boolean' || !/^[a-f0-9]{64}$/.test(receipt.result_hash)) denied('VERSION_MISMATCH');
           return { tool: receipt.tool, status: ['completed', 'failed'].includes(receipt.status) ? receipt.status : 'unknown', failed: receipt.failed, result_hash: receipt.result_hash, ...(receipt.origin ? { origin: receipt.origin } : {}) };
         });

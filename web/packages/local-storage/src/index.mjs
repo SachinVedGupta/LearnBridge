@@ -750,6 +750,18 @@ export class LocalStore {
     return { grant_id: grant.id, destination: grant.destination, document_id: document.document.id,
       revision: document.document.revision, sha256: document.sha256, academic_policy: document.document.academic_policy };
   }
+  /** Trusted paired-human preflight only. Uses the exact current agent
+   * projections, including verified metadata-only task provenance, without
+   * granting access, returning private content or consuming any read budget.
+   * Never expose through HTTP, IPC or MCP. */
+  previewAgentSelection(input) {
+    checkedObject(input, ['task_ids', 'document_ids', 'source_entry_ids']);
+    const selections = { tasks: idList(input.task_ids), documents: idList(input.document_ids), source_entries: idList(input.source_entry_ids) };
+    return this.#transaction(() => {
+      const selected = Object.fromEntries(Object.entries(selections).map(([kind, ids]) => [kind, ids.map(id => this.#agentValue(kind, id).minimal)]));
+      return { serialized_selection_bytes: Buffer.byteLength(JSON.stringify(selected), 'utf8') };
+    });
+  }
   /** Trusted paired-human route only. A native agent surface must never expose this method. */
   createAgentGrant(input) {
     checkedObject(input, ['destination', 'task_ids', 'document_ids', 'source_entry_ids', 'max_bytes', 'expires_in_minutes']);

@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import { LocalStore } from '@learnbridge/local-storage';
 import { startRuntime } from '../apps/local-runtime/src/server.mjs';
 import { createCodexAdapter } from '../apps/local-runtime/src/codex-adapter.mjs';
+import { learnBridgeDynamicTools } from '../apps/local-runtime/src/codex-tools.mjs';
 
 // Native account/model responses are synthetic. MCP is the actual SDK stdio
 // bridge, its actual authenticated runtime IPC, and actual private SQLite.
@@ -36,7 +37,9 @@ const ask=async()=>{
   if(step>=calls.length){finish();return}
   let [tool,args]=calls[step];
   if(mode==='renamedCompletion'&&step===2){tool='learnbridge_status';args={};}
-  if(mode==='changedArgs'&&step===2){tool='learnbridge_context';args={grant_id:grant,max_bytes:5000};}
+  if(mode==='changedArgs'&&step===2){tool='learnbridge_context';args={grant_id:grant,max_bytes:32000};}
+  if(mode==='oversizedContext'&&step===1)args.max_bytes=128000;
+  if(mode==='missingContextLimit'&&step===1)delete args.max_bytes;
   if(mode==='wrongGrant'&&step===1)args.grant_id='00000000-0000-4000-8000-000000000000';
   if(mode==='arbitraryTool'&&step===1)tool='execute_shell';
   if(mode==='extraArgs'&&step===1)args.upload_all_files=true;
@@ -54,7 +57,7 @@ readline.createInterface({input:process.stdin}).on('line',async line=>{
    if(step===1)context=JSON.parse(m.result.contentItems[0].text);
    const item={...pendingItem,status:'completed',success:true,contentItems:m.result.contentItems};
    if(mode==='renamedCompletion'&&step===2){const grant=config.mcp_servers.learnbridge.args[config.mcp_servers.learnbridge.args.indexOf('--grant-id')+1];item.tool='learnbridge_propose_task';item.arguments={grant_id:grant,title:'Forged saved proposal',idempotency_key:'forged-proposal-completion'};}
-   if(mode==='changedArgs'&&step===2)item.arguments={...item.arguments,max_bytes:6000};
+   if(mode==='changedArgs'&&step===2)item.arguments={...item.arguments,document_ids:[]};
    pendingItem=null;items.push(item);note('item/completed',{item});step++;setTimeout(ask,5);return;
  }
  if(m.method==='initialize'){if(m.params.capabilities.experimentalApi!==true)process.exit(9);send({id:m.id,result:{userAgent:'codex/0.154.0',platformFamily:'unix',platformOs:'macos'}});return}
@@ -83,7 +86,7 @@ async function fixture(t, mode='normal') {
   writeFileSync(script,fixtureSource); const store=LocalStore.open({root});
   const selected=store.createDocument({title:'Selected synthetic recursion note',text:'Recursion requires a base case.',academic_policy:mode==='gradedRevision'?'graded_restricted':'learning_support'});
   const unselected=store.createDocument({title:'Private unselected note',text:'UNSELECTED_CONTENT_CANARY'});
-  const grant=store.createAgentGrant({destination:'codex',document_ids:[selected.document.id],max_bytes:64000,expires_in_minutes:5}); store.close();
+  const grant=store.createAgentGrant({destination:'codex',document_ids:[selected.document.id],max_bytes:['oversizedContext','largeGrant'].includes(mode)?128000:64000,expires_in_minutes:5}); store.close();
   const traffic=[], launched=[];
   const factory=(binary,args,options)=>{
     const inline=args.at(-1),mcp={command:'/usr/bin/env',args:JSON.parse(inline.match(/args = (\[.*?\])/)[1]),enabled_tools:['learnbridge_context','learnbridge_propose_document','learnbridge_propose_task','learnbridge_status'],startup_timeout_sec:15,tool_timeout_sec:20,required:true};
@@ -100,6 +103,13 @@ async function fixture(t, mode='normal') {
   const execute=async onQueued=>{const result=await call('/host-turns',{grant_id:grant.id,prompt:'Explain my selected recursion note and suggest a study task and conceptual outline for review.',confirmed:true},'model-turn-synthetic');let item=result.item;if(onQueued)await onQueued(item);for(let i=0;i<250&&['queued','running'].includes(item.data.state);i++){await new Promise(r=>setTimeout(r,10));item=(await call('/host-turns/'+item.id)).item}return item};
   return {runtime,call,execute,traffic,selected,unselected,grant,root};
 }
+test('CMT00 embedded context advertises a fixed per-read limit distinct from the cumulative grant budget',()=>{
+ const context=learnBridgeDynamicTools('00000000-0000-4000-8000-000000000000').find(tool=>tool.name==='learnbridge_context');
+ assert.deepEqual(context.inputSchema.properties.max_bytes,{type:'integer',const:32000});
+ assert(context.inputSchema.required.includes('max_bytes'));
+ assert.match(context.description,/exactly 32000/);assert.match(context.description,/separate cumulative/);assert.match(context.description,/never copy it/);
+ assert.match(context.description,/FIRST context call, send ONLY grant_id and max_bytes:32000/);assert.match(context.description,/Citation\/source IDs.*never guess/);assert.match(context.description,/returned by a successful context result/);
+});
 test('CMT01 model-requested tools traverse actual MCP/IPC and leave exact pending task and writing proposals',async t=>{
  const f=await fixture(t),item=await f.execute();assert.equal(item.data.state,'completed',item.data.error_code);assert.equal(item.data.tool_receipts.length,4);assert(item.data.tool_receipts.every(r=>r.origin==='model'&&!r.failed));assert.match(item.data.text,/have not been accepted/);
  const docs=(await f.call('/documents')).items;assert.equal(docs.length,2);assert.equal((await f.call('/documents/'+f.selected.document.id)).content,'Recursion requires a base case.');
@@ -141,4 +151,16 @@ test('CMT09 cancellation while a proposal RPC awaits execution revokes its permi
 });
 test('CMT10 grant revocation while a proposal RPC awaits execution denies its actual IPC write and withholds the answer',async t=>{
  const f=await fixture(t,'delayedProposal'),item=await f.execute(async()=>{await waitForPendingProposal(f);const grants=(await f.call('/agent-grants')).items;const grant=grants.find(value=>value.id===f.grant.id);await f.call('/agent-grants/'+f.grant.id+'/revoke',{expected_revision:grant.revision});});assert.equal(item.data.state,'withheld');assert.equal(item.data.visibility,'withheld_scope_changed');assert.equal(item.data.text,'');assert.equal((await f.call('/task-proposals')).items.length,0);assert.equal((await f.call('/writing/items')).items.length,0);
+});
+test('CMT11 a 128000-byte total grant supports an actual bounded 32000-byte model context read',async t=>{
+ const f=await fixture(t,'largeGrant'),item=await f.execute();assert.equal(item.data.state,'completed',item.data.error_code);
+ const context=f.traffic.filter(value=>value.method==='mcpServer/tool/call'&&value.params.tool==='learnbridge_context');assert.equal(context.length,1);assert.equal(context[0].params.arguments.max_bytes,32000);
+ const grant=(await f.call('/agent-grants')).items.find(value=>value.id===f.grant.id);assert.equal(grant.max_bytes,128000);assert(grant.used_bytes>0&&grant.used_bytes<32000);assert.equal(item.data.tool_receipts.length,4);
+});
+for(const mode of ['oversizedContext','missingContextLimit'])test('CMT12 '+mode+' is rejected before context IPC disclosure, grant charge or proposal',async t=>{
+ const f=await fixture(t,mode),item=await f.execute();assert.equal(item.data.state,'failed');assert.equal(item.data.error_code,'BUDGET_EXCEEDED');
+ assert.equal(f.traffic.filter(value=>value.method==='mcpServer/tool/call'&&value.params.tool==='learnbridge_context').length,0);
+ assert.equal((await f.call('/agent-grants')).items.find(value=>value.id===f.grant.id).used_bytes,0);
+ assert.equal(item.data.tool_receipts.length,1);assert.equal(item.data.tool_receipts[0].tool,'learnbridge_status');
+ assert.equal((await f.call('/task-proposals')).items.length,0);assert.equal((await f.call('/writing/items')).items.length,0);assert.equal(item.data.text,'');
 });
