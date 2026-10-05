@@ -1,0 +1,8 @@
+.leetcode-panel { min-width: 0; overflow-wrap: anywhere; }
+.leetcode-panel details { margin: 12px 0; }
+.leetcode-panel summary { cursor: pointer; color: var(--green); font-size: 13px; font-weight: 600; padding: 6px 0; }
+.leetcode-panel .button { margin: 4px 8px 4px 0; }
+.leetcode-panel .career-form { margin: 16px 0; }
+.leetcode-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; min-height: 260px; line-height: 1.6; tab-size: 4; }
+.leetcode-panel pre { max-width: 100%; }
+@media (max-width: 600px) { .leetcode-panel { padding: 16px; } .leetcode-panel .button { max-width: 100%; white-space: normal; } .leetcode-panel .source-text { font-size: 11px; } }

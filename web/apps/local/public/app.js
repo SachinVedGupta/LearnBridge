@@ -12,12 +12,12 @@ Object.assign(state, { profiles: [], snapshots: [], plans: [], runs: [], profile
 const extensionUIs = new Map();
 const overviewUI = mountOverviewUI({ root: $('today-activity'), request, element, navigate });
 async function loadExtension(page) {
-  if (!['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote', 'practice', 'reminders', 'academic-tasks', 'public-jobs', 'career-packets', 'calendar-export', 'focus', 'expense-import', 'calendar-import', 'student-admin', 'plan-tasks', 'task-agents', 'dynamic-tasks', 'course-studio', 'interview-studio', 'application-browser'].includes(page)) return;
+  if (!['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote', 'practice', 'reminders', 'academic-tasks', 'public-jobs', 'career-packets', 'calendar-export', 'focus', 'expense-import', 'calendar-import', 'student-admin', 'plan-tasks', 'task-agents', 'dynamic-tasks', 'course-studio', 'interview-studio', 'application-browser', 'leetcode'].includes(page)) return;
   const nonce = state.nonce;
   if (!extensionUIs.has(page)) {
     const module = await import(`/${page}.js`);
     if (!state.sessionReady || state.nonce !== nonce || state.page !== page) return;
-    const mount = { career: module.mountCareerUI, learning: module.mountLearningUI, life: module.mountLifeUI, writing: module.mountWritingUI, research: module.mountResearchUI, productivity: module.mountProductivityUI, onboarding: module.mountOnboardingUI, ai: module.mountAiUI, d2l: module.mountD2lUI, 'cloud-onboarding': module.mountCloudOnboardingUI, remote: module.mountRemoteUI, practice: module.mountPracticeUI, reminders: module.mountRemindersUI, 'academic-tasks': module.mountAcademicTasksUI, 'public-jobs': module.mountPublicJobsUI, 'career-packets': module.mountCareerPacketsUI, 'calendar-export': module.mountCalendarExportUI, focus: module.mountFocusUI, 'expense-import': module.mountExpenseImportUI, 'calendar-import': module.mountCalendarImportUI, 'student-admin': module.mountStudentAdminUI, 'plan-tasks': module.mountPlanTasksUI, 'task-agents': module.mountTaskAgentsUI, 'dynamic-tasks': module.mountDynamicTasksUI, 'course-studio': module.mountCourseStudioUI, 'interview-studio': module.mountInterviewStudioUI, 'application-browser': module.mountApplicationBrowserUI }[page];
+    const mount = { career: module.mountCareerUI, learning: module.mountLearningUI, life: module.mountLifeUI, writing: module.mountWritingUI, research: module.mountResearchUI, productivity: module.mountProductivityUI, onboarding: module.mountOnboardingUI, ai: module.mountAiUI, d2l: module.mountD2lUI, 'cloud-onboarding': module.mountCloudOnboardingUI, remote: module.mountRemoteUI, practice: module.mountPracticeUI, reminders: module.mountRemindersUI, 'academic-tasks': module.mountAcademicTasksUI, 'public-jobs': module.mountPublicJobsUI, 'career-packets': module.mountCareerPacketsUI, 'calendar-export': module.mountCalendarExportUI, focus: module.mountFocusUI, 'expense-import': module.mountExpenseImportUI, 'calendar-import': module.mountCalendarImportUI, 'student-admin': module.mountStudentAdminUI, 'plan-tasks': module.mountPlanTasksUI, 'task-agents': module.mountTaskAgentsUI, 'dynamic-tasks': module.mountDynamicTasksUI, 'course-studio': module.mountCourseStudioUI, 'interview-studio': module.mountInterviewStudioUI, 'application-browser': module.mountApplicationBrowserUI, leetcode: module.mountLeetCodeUI }[page];
     if (!extensionUIs.has(page)) extensionUIs.set(page, mount({ root: $(`${page}-workspace`), request, element, busy, confirmAction, message, navigate, onGetStarted: task => { state.selectedAgentTask = task.id; navigate('task-agents'); extensionUIs.get('task-agents')?.selectTask(task.id); }, onOpenSession: task => { state.selectedAgentTask = task.id; navigate('task-agents'); }, onPrepareApplication: session => { state.selectedApplicationTaskSession = session.id; navigate('application-browser'); } }));
   }
   await extensionUIs.get(page).refresh();
@@ -49,6 +49,7 @@ async function request(path, { method = 'GET', body, bootstrap = false, idempote
       NOT_FOUND: 'This item is no longer available. Refresh the list to see what is saved.',
       CONSENT_REQUIRED: 'This action needs fresh permission. Review the source or sharing selection, then try again.',
       CODEX_AUTH_REQUIRED: 'Complete ChatGPT sign-in in Local AI, then check its status.',
+      LEETCODE_AUTH_REQUIRED: 'Your LeetCode session expired or is missing. Finish sign-in in the LeetCode browser and check again; saved history remains local.',
       D2L_AUTH_REQUIRED: 'Complete school sign-in in the separate browser. If Avenue is already open, refresh its home page, then check your school account.',
       D2L_AUTH_EXPIRED: 'School API authorization expired. Refresh Avenue in the school browser, complete any sign-in or MFA, then check your school account.',
       AUTH_REQUIRED: 'Your local session ended. Pair this browser again to continue.',
@@ -203,7 +204,7 @@ async function openWorkspace(session) {
 
 function navigate(page) {
   if (state.page !== page) extensionUIs.get(state.page)?.pause?.();
-  if (!['today', 'notes', 'sources', 'agents', 'setup', 'courses', 'planning', 'profile', 'career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote', 'practice', 'reminders', 'academic-tasks', 'public-jobs', 'career-packets', 'calendar-export', 'focus', 'expense-import', 'calendar-import', 'student-admin', 'plan-tasks', 'task-agents', 'dynamic-tasks', 'course-studio', 'interview-studio', 'application-browser'].includes(page)) return;
+  if (!['today', 'notes', 'sources', 'agents', 'setup', 'courses', 'planning', 'profile', 'career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote', 'practice', 'reminders', 'academic-tasks', 'public-jobs', 'career-packets', 'calendar-export', 'focus', 'expense-import', 'calendar-import', 'student-admin', 'plan-tasks', 'task-agents', 'dynamic-tasks', 'course-studio', 'interview-studio', 'application-browser', 'leetcode'].includes(page)) return;
   const changed = state.page !== page;
   state.page = page;
   $('mobile-page-selector').value = page;
@@ -217,7 +218,7 @@ function navigate(page) {
   const refresh = { today: loadTasks, notes: loadDocuments, courses: loadCourses, planning: loadPlanning, profile: loadProfile,
     agents: async () => { await Promise.all([loadTasks(), loadDocuments(), loadSources(), loadAgentReview()]); renderGrantSelection(); } }[page];
   if (refresh) refresh().catch(error => message('global-message', error.message, true));
-  if (['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote', 'practice', 'reminders', 'academic-tasks', 'public-jobs', 'career-packets', 'calendar-export', 'focus', 'expense-import', 'calendar-import', 'student-admin', 'plan-tasks', 'task-agents', 'dynamic-tasks', 'course-studio', 'interview-studio', 'application-browser'].includes(page)) loadExtension(page).catch(error => message('global-message', error.message, true));
+  if (['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote', 'practice', 'reminders', 'academic-tasks', 'public-jobs', 'career-packets', 'calendar-export', 'focus', 'expense-import', 'calendar-import', 'student-admin', 'plan-tasks', 'task-agents', 'dynamic-tasks', 'course-studio', 'interview-studio', 'application-browser', 'leetcode'].includes(page)) loadExtension(page).catch(error => message('global-message', error.message, true));
 }
 
 async function loadTasks() {

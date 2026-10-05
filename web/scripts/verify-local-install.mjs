@@ -62,6 +62,8 @@ const ALLOWLIST = Object.freeze([
   'web/apps/local-runtime/src/dynamic-task-service.mjs', 'web/apps/local-runtime/src/dynamic-task-routes.mjs',
   'web/apps/local-runtime/src/dynamic-task-ai-service.mjs', 'web/apps/local-runtime/src/dynamic-task-ai-routes.mjs',
   'web/apps/local-runtime/src/course-studio-service.mjs', 'web/apps/local-runtime/src/course-studio-routes.mjs',
+  'web/apps/local-runtime/src/leetcode-browser.mjs', 'web/apps/local-runtime/src/leetcode-mcp.mjs', 'web/apps/local-runtime/src/leetcode-client.mjs', 'web/apps/local-runtime/src/leetcode-service.mjs', 'web/apps/local-runtime/src/leetcode-routes.mjs',
+  'web/apps/local-runtime/src/coding-practice-service.mjs', 'web/apps/local-runtime/src/coding-practice-routes.mjs',
   'web/apps/local-runtime/src/interview-studio-service.mjs', 'web/apps/local-runtime/src/interview-studio-routes.mjs',
   'web/apps/local-runtime/src/application-browser.mjs', 'web/apps/local-runtime/src/application-browser-service.mjs', 'web/apps/local-runtime/src/application-browser-routes.mjs',
   'web/packages/core/src/remote-companion.mjs',
@@ -85,6 +87,7 @@ const ALLOWLIST = Object.freeze([
   'web/apps/local/public/cloud-onboarding.js', 'web/apps/local/public/remote.js',
   'web/apps/local/public/task-agents.js', 'web/apps/local/public/dynamic-tasks.js',
   'web/apps/local/public/course-studio.js', 'web/apps/local/public/course-studio.css',
+  'web/apps/local/public/leetcode.js', 'web/apps/local/public/leetcode.css',
   'web/apps/local/public/interview-studio.js', 'web/apps/local/public/application-browser.js',
 ]);
 const PREFIX = 'learnbridge-clean-install-fixture-';
@@ -256,11 +259,11 @@ async function main() {
 
   await phase('FI03_BUILD_STATIC_DASHBOARD', async () => {
     await child(process.execPath, [join(copiedWeb, 'apps/local/build.mjs')], { cwd: checkout });
-    for (const name of ['index.html', 'app.js', 'overview.js', 'styles.css', 'career.js', 'learning.js', 'life.js', 'writing.js', 'research.js', 'productivity.js', 'onboarding.js', 'ai.js', 'd2l.js', 'cloud-onboarding.js', 'remote.js', 'practice.js', 'reminders.js', 'rich-writing.js', 'academic-tasks.js', 'public-jobs.js', 'career-packets.js', 'calendar-export.js', 'focus.js', 'expense-import.js', 'calendar-import.js', 'student-admin.js', 'plan-tasks.js', 'task-agents.js', 'dynamic-tasks.js', 'course-studio.js', 'course-studio.css', 'interview-studio.js', 'application-browser.js']) {
+    for (const name of ['index.html', 'app.js', 'overview.js', 'styles.css', 'career.js', 'learning.js', 'life.js', 'writing.js', 'research.js', 'productivity.js', 'onboarding.js', 'ai.js', 'd2l.js', 'cloud-onboarding.js', 'remote.js', 'practice.js', 'reminders.js', 'rich-writing.js', 'academic-tasks.js', 'public-jobs.js', 'career-packets.js', 'calendar-export.js', 'focus.js', 'expense-import.js', 'calendar-import.js', 'student-admin.js', 'plan-tasks.js', 'task-agents.js', 'dynamic-tasks.js', 'course-studio.js', 'course-studio.css', 'interview-studio.js', 'application-browser.js', 'leetcode.js', 'leetcode.css']) {
       assert.equal(digest(await readFile(join(copiedWeb, 'apps/local/dist', name))), digest(await readFile(join(copiedWeb, 'apps/local/public', name))));
     }
     const builtAssets = await inventory(join(copiedWeb, 'apps/local/dist'));
-    assert.deepEqual(builtAssets, ['academic-tasks.js', 'ai.js', 'app.js', 'calendar-export.js', 'calendar-import.js', 'career-packets.js', 'career.js', 'cloud-onboarding.js', 'd2l.js', 'expense-import.js', 'focus.js', 'index.html', 'learning.js', 'life.js', 'onboarding.js', 'overview.js', 'plan-tasks.js', 'practice.js', 'productivity.js', 'public-jobs.js', 'reminders.js', 'remote.js', 'research.js', 'rich-writing.js', 'student-admin.js', 'styles.css', 'writing.js', 'task-agents.js', 'dynamic-tasks.js', 'course-studio.js', 'course-studio.css', 'interview-studio.js', 'application-browser.js'].sort());
+    assert.deepEqual(builtAssets, ['academic-tasks.js', 'ai.js', 'app.js', 'calendar-export.js', 'calendar-import.js', 'career-packets.js', 'career.js', 'cloud-onboarding.js', 'd2l.js', 'expense-import.js', 'focus.js', 'index.html', 'learning.js', 'life.js', 'onboarding.js', 'overview.js', 'plan-tasks.js', 'practice.js', 'productivity.js', 'public-jobs.js', 'reminders.js', 'remote.js', 'research.js', 'rich-writing.js', 'student-admin.js', 'styles.css', 'writing.js', 'task-agents.js', 'dynamic-tasks.js', 'course-studio.js', 'course-studio.css', 'interview-studio.js', 'application-browser.js', 'leetcode.js', 'leetcode.css'].sort());
     verifiedStaticAssetCount = builtAssets.length;
   });
 

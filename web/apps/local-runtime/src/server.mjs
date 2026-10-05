@@ -53,6 +53,9 @@ import { createInterviewStudioService } from './interview-studio-service.mjs';
 import { handleInterviewStudioRoute } from './interview-studio-routes.mjs';
 import { createApplicationBrowserService } from './application-browser-service.mjs';
 import { handleApplicationBrowserRoute } from './application-browser-routes.mjs';
+import { createLeetCodeRoutes } from './leetcode-routes.mjs';
+import { createCodingPracticeService } from './coding-practice-service.mjs';
+import { handleCodingPracticeRoute } from './coding-practice-routes.mjs';
 import { createOnboardingRoutes } from './onboarding-routes.mjs';
 import { createCloudOnboardingRoutes } from './cloud-onboarding-routes.mjs';
 import { createD2lRoutes } from './d2l-routes.mjs';
@@ -76,6 +79,8 @@ const assets = new Map([
   ['/course-studio.js', ['course-studio.js', 'text/javascript; charset=utf-8']],
   ['/course-studio.css', ['course-studio.css', 'text/css; charset=utf-8']],
   ['/interview-studio.js', ['interview-studio.js', 'text/javascript; charset=utf-8']],
+  ['/leetcode.js', ['leetcode.js', 'text/javascript; charset=utf-8']],
+  ['/leetcode.css', ['leetcode.css', 'text/css; charset=utf-8']],
   ['/application-browser.js', ['application-browser.js', 'text/javascript; charset=utf-8']],
   ['/styles.css', ['styles.css', 'text/css; charset=utf-8']],
   ['/career.js', ['career.js', 'text/javascript; charset=utf-8']],
@@ -157,14 +162,14 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
   // The launcher/HTTP/MCP surfaces never accept an adapter or executable.
   publicJobFetch, sourceAdapter = { describeRoot, inventorySource, readSelectedEntry, readSelectedPdf, readSelectedPdfAsset, readSelectedOffice, probeSourceCapability, probePdfCapability, probeOfficeCapability },
   // Trusted fixture seam only; the CLI/HTTP/MCP never accepts execution configuration.
-  hostAdapter, codexProfileOptions = {}, d2lBrowserFactory,
+  hostAdapter, codexProfileOptions = {}, d2lBrowserFactory, leetcodeClientFactory, leetcodeBrowserFactory,
   remoteOptions = { enabled: process.env.LEARNBRIDGE_PHONE_ACCESS === 'true' } } = {}) {
   if (typeof dataRoot !== 'string' || !Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Invalid local runtime options.');
   const store = LocalStore.open({ root: dataRoot, repositoryRoot, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' });
   let studentWorkspace;
   let hostTurns;
   let taskSessions;
-  let dynamicTasks, dynamicTaskAI, courseStudio, interviewStudio, applicationBrowser;
+  let dynamicTasks, dynamicTaskAI, courseStudio, interviewStudio, applicationBrowser, leetcodeRoutes, codingPractice;
   let onboardingRoutes;
   let cloudOnboardingRoutes, d2lRoutes, codexProfile, remoteRoutes, reminders, academicTasks, publicJobService, calendarExports, careerPackets, focus, expenseImports, calendarImports, studentAdmin, planTasks;
   const embeddedLeases = new Map();
@@ -193,6 +198,8 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
     courseStudio = createCourseStudioService({ store, learningService: createLearningService({ store, getLibrary: studentWorkspace.library }), hostTurns,
       ...(typeof sourceAdapter.readSelectedPdfAsset === 'function' ? { readPdfAsset: async (entry, physicalPage, { signal } = {}) => sourceAdapter.readSelectedPdfAsset(store.getSource(entry.source_id).descriptor, store.getSourceInventory(entry.inventory_id).inventory, entry.entry_id, { physicalPage, signal }) } : {}) });
     interviewStudio = createInterviewStudioService({ store, hostTurns, publicJobService });
+    leetcodeRoutes = createLeetCodeRoutes({ store, clientFactory: leetcodeClientFactory, browserFactory: leetcodeBrowserFactory });
+    codingPractice = createCodingPracticeService({ store, hostTurns, leetcodeService: leetcodeRoutes.service });
     applicationBrowser = createApplicationBrowserService({ store, publicJobService, taskSessions });
     onboardingRoutes = createOnboardingRoutes({ store, studentWorkspace });
     cloudOnboardingRoutes = createCloudOnboardingRoutes({ store });
@@ -238,6 +245,7 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         { id: 'task_sessions', label: 'Task agent sessions', state: 'available', detail: 'Start a selected-task Codex conversation, inspect background tool progress, continue or stop it, and review the actual result before marking done. Local proposals only; external form actions require separate review.' },
         { id: 'course_studio', label: 'Course studio', state: 'available', detail: 'Exact selected PDF page rendering, pinned course/page questions, reviewed model quizzes, student attempts and bounded annotations. Optional browser speech; visual model access and mastery inference are unavailable.' },
         { id: 'interview_studio', label: 'Interview studio', state: 'available', detail: 'Selected role and confirmed profile coaching, one model question at a time, actual saved answers and grounded feedback through the local Codex subscription. Optional browser speech support varies.' },
+        { id: 'leetcode', label: 'LeetCode and coding practice', state: 'available', detail: 'Bundled read-only MCP for bounded public/private attempt history, selected submission code and contest results. Saved student coding checkpoints and reviewed local Codex interview coaching. Session credentials stay transient; no code execution, platform submission or inferred mastery.' },
         { id: 'notes', label: 'Notes', state: 'available', detail: 'Multiple text notes with immutable revisions and verified hashes.' },
         { id: 'planning', label: 'Study planning', state: 'available', detail: 'Deterministic local study-plan previews with capacity deficits, task revision checks and saved review. No external calendar writes.' },
         { id: 'profile', label: 'Reviewed profile', state: 'available', detail: 'Student-entered facts with exact review, conflicts, purpose filters and stale source checks. No automatic identity or mastery inference.' },
@@ -357,6 +365,14 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
       }
       if (route.startsWith('/interview-studio/')) {
         noQuery(url); const result = await handleInterviewStudioRoute({ route, method: request.method, privateBody, interviewStudioService: interviewStudio, session, stillAuthorized, idempotencyKey: idempotency(request).idempotencyKey });
+        if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/leetcode/')) {
+        noQuery(url); const result = await leetcodeRoutes.handle({ route, method: request.method, privateBody, session, stillAuthorized, sourceOperation, idempotencyKey: idempotency(request).idempotencyKey });
+        if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/coding-practice/')) {
+        noQuery(url); const result = await handleCodingPracticeRoute({ route, method: request.method, privateBody, session, codingPracticeService: codingPractice, stillAuthorized, idempotencyKey: idempotency(request).idempotencyKey });
         if (result) return json(response, result.status, result.data);
       }
       if (route.startsWith('/application-browser/')) {
@@ -503,7 +519,7 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         await privateBody([], [], 4096);
         response.setHeader('Set-Cookie', policy.logout(request));
         cloudOnboardingRoutes.clear();
-        await Promise.allSettled([d2lRoutes.clear(), codexProfile.clear(), remoteRoutes.clear({ nonce: session.nonce })]);
+        await Promise.allSettled([d2lRoutes.clear(), leetcodeRoutes.clear(), codexProfile.clear(), remoteRoutes.clear({ nonce: session.nonce })]);
         return json(response, 200, { logged_out: true });
       }
       if (route === '/status') {
@@ -812,7 +828,7 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         await studentWorkspace.runner.drain();
         await hostTurns.drain();
         await applicationBrowser.drain();
-        await codexProfile.stop(); await d2lRoutes.clear();
+        await codexProfile.stop(); await d2lRoutes.clear(); await leetcodeRoutes.close();
         await remoteRoutes.clear();
         if (server.listening) {
           const stopped = new Promise(done => server.close(done));
