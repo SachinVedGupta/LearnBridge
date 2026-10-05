@@ -58,11 +58,18 @@ const ALLOWLIST = Object.freeze([
   'web/apps/local-runtime/src/remote-companion.mjs',
   'web/apps/local-runtime/src/remote-results.mjs',
   'web/apps/local-runtime/src/remote-routes.mjs',
+  'web/apps/local-runtime/src/task-session-service.mjs', 'web/apps/local-runtime/src/task-session-routes.mjs',
+  'web/apps/local-runtime/src/dynamic-task-service.mjs', 'web/apps/local-runtime/src/dynamic-task-routes.mjs',
+  'web/apps/local-runtime/src/dynamic-task-ai-service.mjs', 'web/apps/local-runtime/src/dynamic-task-ai-routes.mjs',
+  'web/apps/local-runtime/src/course-studio-service.mjs', 'web/apps/local-runtime/src/course-studio-routes.mjs',
+  'web/apps/local-runtime/src/interview-studio-service.mjs', 'web/apps/local-runtime/src/interview-studio-routes.mjs',
+  'web/apps/local-runtime/src/application-browser.mjs', 'web/apps/local-runtime/src/application-browser-service.mjs', 'web/apps/local-runtime/src/application-browser-routes.mjs',
   'web/packages/core/src/remote-companion.mjs',
   'web/packages/core/src/remote-results.mjs',
   'web/apps/local-runtime/src/onboarding.mjs', 'web/apps/local-runtime/src/onboarding-routes.mjs',
   'web/packages/local-sources/src/index.mjs',
   'web/packages/local-sources/src/pdf-native.mjs', 'web/packages/local-sources/src/pdf-text.swift',
+  'web/packages/local-sources/src/pdf-page.swift',
   'web/packages/local-sources/src/office-native.mjs', 'web/packages/local-sources/src/office-text.py',
   'web/packages/local-academic/src/index.mjs',
   'web/packages/local-academic/src/library.mjs', 'web/packages/local-academic/src/refresh.mjs', 'web/packages/local-academic/src/planning.mjs',
@@ -76,6 +83,9 @@ const ALLOWLIST = Object.freeze([
   'web/apps/local/public/ai.js', 'web/apps/local/public/d2l.js',
   'web/apps/local/public/practice.js', 'web/apps/local/public/reminders.js', 'web/apps/local/public/rich-writing.js', 'web/apps/local/public/academic-tasks.js', 'web/apps/local/public/public-jobs.js', 'web/apps/local/public/career-packets.js', 'web/apps/local/public/calendar-export.js', 'web/apps/local/public/focus.js', 'web/apps/local/public/expense-import.js', 'web/apps/local/public/calendar-import.js', 'web/apps/local/public/student-admin.js', 'web/apps/local/public/plan-tasks.js',
   'web/apps/local/public/cloud-onboarding.js', 'web/apps/local/public/remote.js',
+  'web/apps/local/public/task-agents.js', 'web/apps/local/public/dynamic-tasks.js',
+  'web/apps/local/public/course-studio.js', 'web/apps/local/public/course-studio.css',
+  'web/apps/local/public/interview-studio.js', 'web/apps/local/public/application-browser.js',
 ]);
 const PREFIX = 'learnbridge-clean-install-fixture-';
 const SOURCE_ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -246,11 +256,11 @@ async function main() {
 
   await phase('FI03_BUILD_STATIC_DASHBOARD', async () => {
     await child(process.execPath, [join(copiedWeb, 'apps/local/build.mjs')], { cwd: checkout });
-    for (const name of ['index.html', 'app.js', 'overview.js', 'styles.css', 'career.js', 'learning.js', 'life.js', 'writing.js', 'research.js', 'productivity.js', 'onboarding.js', 'ai.js', 'd2l.js', 'cloud-onboarding.js', 'remote.js', 'practice.js', 'reminders.js', 'rich-writing.js', 'academic-tasks.js', 'public-jobs.js', 'career-packets.js', 'calendar-export.js', 'focus.js', 'expense-import.js', 'calendar-import.js', 'student-admin.js', 'plan-tasks.js']) {
+    for (const name of ['index.html', 'app.js', 'overview.js', 'styles.css', 'career.js', 'learning.js', 'life.js', 'writing.js', 'research.js', 'productivity.js', 'onboarding.js', 'ai.js', 'd2l.js', 'cloud-onboarding.js', 'remote.js', 'practice.js', 'reminders.js', 'rich-writing.js', 'academic-tasks.js', 'public-jobs.js', 'career-packets.js', 'calendar-export.js', 'focus.js', 'expense-import.js', 'calendar-import.js', 'student-admin.js', 'plan-tasks.js', 'task-agents.js', 'dynamic-tasks.js', 'course-studio.js', 'course-studio.css', 'interview-studio.js', 'application-browser.js']) {
       assert.equal(digest(await readFile(join(copiedWeb, 'apps/local/dist', name))), digest(await readFile(join(copiedWeb, 'apps/local/public', name))));
     }
     const builtAssets = await inventory(join(copiedWeb, 'apps/local/dist'));
-    assert.deepEqual(builtAssets, ['academic-tasks.js', 'ai.js', 'app.js', 'calendar-export.js', 'calendar-import.js', 'career-packets.js', 'career.js', 'cloud-onboarding.js', 'd2l.js', 'expense-import.js', 'focus.js', 'index.html', 'learning.js', 'life.js', 'onboarding.js', 'overview.js', 'plan-tasks.js', 'practice.js', 'productivity.js', 'public-jobs.js', 'reminders.js', 'remote.js', 'research.js', 'rich-writing.js', 'student-admin.js', 'styles.css', 'writing.js']);
+    assert.deepEqual(builtAssets, ['academic-tasks.js', 'ai.js', 'app.js', 'calendar-export.js', 'calendar-import.js', 'career-packets.js', 'career.js', 'cloud-onboarding.js', 'd2l.js', 'expense-import.js', 'focus.js', 'index.html', 'learning.js', 'life.js', 'onboarding.js', 'overview.js', 'plan-tasks.js', 'practice.js', 'productivity.js', 'public-jobs.js', 'reminders.js', 'remote.js', 'research.js', 'rich-writing.js', 'student-admin.js', 'styles.css', 'writing.js', 'task-agents.js', 'dynamic-tasks.js', 'course-studio.js', 'course-studio.css', 'interview-studio.js', 'application-browser.js'].sort());
     verifiedStaticAssetCount = builtAssets.length;
   });
 

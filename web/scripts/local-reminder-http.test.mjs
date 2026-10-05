@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import Database from 'better-sqlite3';
 import { startRuntime } from '../apps/local-runtime/src/server.mjs';
 
 async function fixture(t) {
@@ -52,22 +53,56 @@ test('REMHTTP02: origin/session/nonce/query/unknown-field guards prevent unappro
   assert.equal((await call(runtime, session, '/logout', { method: 'POST', body: {} })).status, 200); assert.equal((await call(runtime, session, '/reminders/inbox')).status, 401);
 });
 
-test('REMHTTP03: actual 30-second runtime interval publishes without manual check and is explicitly cleared on shutdown', { timeout: 50000 }, async t => {
+test('REMHTTP03: actual reminder, focus and dynamic 30-second callbacks persist their own effects and all stop on shutdown', { timeout: 50000 }, async t => {
   const originalSetInterval = globalThis.setInterval, originalClearInterval = globalThis.clearInterval, observed = [], cleared = [];
-  globalThis.setInterval = (...args) => { const timer = originalSetInterval(...args); if (args[1] === 30000) observed.push(timer); return timer; };
+  globalThis.setInterval = (callback, ms, ...args) => {
+    if (ms !== 30000) return originalSetInterval(callback, ms, ...args);
+    const item = { callback, ticks: 0, timer: null };
+    item.timer = originalSetInterval(() => { item.ticks++; callback(...args); }, ms);
+    observed.push(item); return item.timer;
+  };
   globalThis.clearInterval = timer => { cleared.push(timer); return originalClearInterval(timer); };
+  const storedState = root => {
+    const db = new Database(join(root, 'learnbridge.sqlite'), { readonly: true });
+    try { return { records: db.prepare('SELECT json FROM records ORDER BY id').all(), workspace: db.prepare('SELECT json FROM workspace_records ORDER BY id').all(), revisions: db.prepare('SELECT count(*) n FROM workspace_revisions').get().n }; }
+    finally { db.close(); }
+  };
   try {
-    const f = await fixture(t), runtime = f.runtime, session = await pair(runtime); assert.equal(observed.length, 2, 'actual bounded reminder and focus runtime timers created');
-    assert(observed.every(timer => !timer.hasRef()), 'owned timers do not keep a closed application alive'); const { schedule } = await setup(runtime, session);
+    const f = await fixture(t), runtime = f.runtime, session = await pair(runtime); assert.equal(observed.length, 3, 'actual bounded reminder, dynamic and focus runtime timers created');
+    assert(observed.every(item => !item.timer.hasRef()), 'owned timers do not keep a closed application alive'); const { schedule } = await setup(runtime, session);
     await call(runtime, session, `/reminders/schedules/${schedule.id}/state`, { method: 'POST', body: { expected_revision: schedule.revision, state: 'active', confirmed: true } });
     assert.equal((await call(runtime, session, '/reminders/inbox')).data.items.length, 0);
-    const deadline = Date.now() + 36000; let inbox;
-    do { await new Promise(resolve => setTimeout(resolve, 500)); inbox = await call(runtime, session, '/reminders/inbox'); } while (!inbox.data.items.length && Date.now() < deadline);
+    const focus = await call(runtime, session, '/focus/sessions', { method: 'POST', body: { title: 'Synthetic interval focus', planned_minutes: 1, timezone: 'America/Toronto', confirmed: true }, headers: { 'Idempotency-Key': 'reminder-http-focus-interval' } });
+    assert.equal(focus.status, 201); assert.equal(focus.data.item.data.interval_count, 0);
+    const imported = await call(runtime, session, '/productivity/updates', { method: 'POST', body: { provider: 'gmail', account: 'selected-interval@example.test', source_id: 'interval-update', subject: 'Selected interval action', body: 'TODO: Review interval timetable', section: 'communications', observed_at: new Date(Date.now() - 60000).toISOString() }, headers: { 'Idempotency-Key': 'reminder-http-update-interval' } });
+    assert.equal(imported.status, 201);
+    const selected = await call(runtime, session, '/dynamic-tasks/config', { method: 'POST', body: { expected_revision: 0, selections: [{ kind: 'update', id: imported.data.item.id, course_ids: [] }], enabled: true, auto_create: true, auto_complete: false, confirmed: true } });
+    assert.equal(selected.status, 200); assert.equal((await call(runtime, session, '/dynamic-tasks/list')).data.observations.length, 0);
+    const deadline = Date.now() + 36000; let inbox, sampled, dynamic;
+    do {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      [inbox, sampled, dynamic] = await Promise.all([
+        call(runtime, session, '/reminders/inbox'), call(runtime, session, `/focus/sessions/${focus.data.item.id}`), call(runtime, session, '/dynamic-tasks/list'),
+      ]);
+    } while ((!inbox.data.items.length || !sampled.data.item.data.interval_count || !dynamic.data.observations.length || observed.some(item => item.ticks === 0)) && Date.now() < deadline);
     assert.equal(inbox.data.items.length, 1, 'real running-laptop interval delivered to local inbox without manual /check');
     assert.equal(inbox.data.items[0].stage, 'overdue'); const status = await call(runtime, session, '/reminders/status'); assert.equal(status.data.last_check.notifications, 1);
-    await runtime.close(); assert(observed.slice(0, 2).every(timer => cleared.includes(timer)), 'both owned intervals cleared before runtime closes');
+    assert.equal(sampled.data.item.data.interval_count, 1, 'actual focus callback saved exactly one observed interval');
+    assert.equal(sampled.data.item.data.state, 'running'); assert(sampled.data.item.data.observed_active_ms >= 25000 && sampled.data.item.data.observed_active_ms < 45000);
+    assert.equal(dynamic.data.observations.length, 1, 'actual selected-source callback reconciled without manual /refresh');
+    assert.equal(dynamic.data.observations[0].data.state, 'active'); assert.equal(dynamic.data.observations[0].data.acceptance.kind, 'selected_source_auto_create_policy');
+    assert.equal(dynamic.data.tasks.find(row => row.task.title === 'Review interval timetable').task.status, 'pending');
+    assert(observed.every(item => item.ticks === 1), 'each actual registered callback fired exactly once');
+    assert.equal((await call(runtime, session, '/agent-grants')).data.items.length, 0, 'deterministic source refresh never invokes the model');
+    await runtime.close(); assert(observed.slice(0, 3).every(item => cleared.includes(item.timer)), 'all three owned intervals cleared before runtime closes');
+    const closedState = storedState(f.root); for (const item of observed.slice(0, 3)) item.callback();
+    assert.deepEqual(storedState(f.root), closedState, 'late captured reminder, focus and dynamic callbacks cannot write after close');
     const restarted = await f.start(), restartedSession = await pair(restarted); assert.equal((await call(restarted, restartedSession, '/reminders/inbox')).data.items.length, 1);
     assert.equal((await call(restarted, restartedSession, '/reminders/check', { method: 'POST', body: { confirmed: true } })).data.notifications, 0);
-    await restarted.close(); assert.equal(observed.length, 4); assert(observed.slice(2).every(timer => cleared.includes(timer)), 'restarted owned intervals cleared');
+    assert.equal((await call(restarted, restartedSession, '/dynamic-tasks/list')).data.observations.length, 1);
+    assert.equal((await call(restarted, restartedSession, `/focus/sessions/${focus.data.item.id}`)).data.item.data.state, 'interrupted');
+    await restarted.close(); assert.equal(observed.length, 6); assert(observed.slice(3).every(item => cleared.includes(item.timer)), 'all restarted owned intervals cleared');
+    const restartedState = storedState(f.root); for (const item of observed.slice(3)) item.callback();
+    assert.deepEqual(storedState(f.root), restartedState, 'all restarted callbacks also remain quiet after close');
   } finally { globalThis.setInterval = originalSetInterval; globalThis.clearInterval = originalClearInterval; }
 });

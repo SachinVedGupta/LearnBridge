@@ -10,6 +10,7 @@ export const PDF_LIMITS = Object.freeze({ maxPdfBytes: 4_000_000, maxPages: 200,
   maxMetadataBytes: 96_000, maxResultBytes: 128_000, maxDurationMs: 30_000 });
 export const PDF_PARSER_VERSION = 'macos_pdfkit.v1';
 const HELPER = fileURLToPath(new URL('./pdf-text.swift', import.meta.url));
+const PAGE_HELPER = fileURLToPath(new URL('./pdf-page.swift', import.meta.url));
 const error = code => new LearnBridgeError(code);
 
 /** Startup checks prerequisites only; no compiler or document is launched. */
@@ -24,7 +25,14 @@ export async function nativePdfPrerequisites() {
 }
 
 /** Fixed native invocation. Its options are trusted package code, never HTTP input. */
-export async function runNativePdf(bytes, { signal, maxTextBytes = 48_000, timeoutMs = PDF_LIMITS.maxDurationMs, onSpawn } = {}) {
+export async function runNativePdf(bytes, options = {}) { return runPdfProcess(bytes, options); }
+
+/** Render one physical page from anchored immutable bytes, never a supplied path. */
+export async function runNativePdfPage(bytes, { signal, physicalPage, timeoutMs = PDF_LIMITS.maxDurationMs, onSpawn } = {}) {
+  if (!Number.isSafeInteger(physicalPage) || physicalPage < 1 || physicalPage > PDF_LIMITS.maxPages) throw error('INVALID_INPUT');
+  return runPdfProcess(bytes, { signal, timeoutMs, onSpawn }, physicalPage);
+}
+async function runPdfProcess(bytes, { signal, maxTextBytes = 48_000, timeoutMs = PDF_LIMITS.maxDurationMs, onSpawn } = {}, physicalPage = null) {
   if (process.platform !== 'darwin') throw error('UNSUPPORTED');
   if ((bytes !== null && (!Buffer.isBuffer(bytes) || bytes.length > PDF_LIMITS.maxPdfBytes))
     || !Number.isSafeInteger(maxTextBytes) || maxTextBytes < 1 || maxTextBytes > PDF_LIMITS.maxTextBytes
@@ -36,7 +44,7 @@ export async function runNativePdf(bytes, { signal, maxTextBytes = 48_000, timeo
     await chmod(directory, 0o700);
     if (signal?.aborted) throw error('CANCELLED');
     return await new Promise((resolve, reject) => {
-      const child = spawn('/usr/bin/swift', ['-module-cache-path', join(directory, 'modules'), HELPER], {
+      const child = spawn('/usr/bin/swift', ['-module-cache-path', join(directory, 'modules'), physicalPage === null ? HELPER : PAGE_HELPER], {
         shell: false, detached: true, stdio: ['pipe', 'pipe', 'pipe'],
         env: { PATH: '/usr/bin:/bin', HOME: directory, TMPDIR: directory, LANG: 'en_US.UTF-8' },
       });
@@ -84,7 +92,7 @@ export async function runNativePdf(bytes, { signal, maxTextBytes = 48_000, timeo
         finish(failureValue, value);
       };
       child.stdin.on('error', () => {});
-      child.stdout.on('data', chunk => { outputBytes += chunk.length; if (outputBytes > PDF_LIMITS.maxResultBytes) stop('BUDGET_EXCEEDED'); else output.push(chunk); });
+      child.stdout.on('data', chunk => { outputBytes += chunk.length; if (outputBytes > (physicalPage === null ? PDF_LIMITS.maxResultBytes : 3_000_000)) stop('BUDGET_EXCEEDED'); else output.push(chunk); });
       // Compiler/native diagnostics may contain source excerpts or paths. They
       // are never printed, persisted or returned, including on malformed PDFs.
       child.stderr.on('data', chunk => { stderrBytes += chunk.length; if (stderrBytes > 16_384) stop('UNSUPPORTED'); });
@@ -103,7 +111,7 @@ export async function runNativePdf(bytes, { signal, maxTextBytes = 48_000, timeo
         if (signal?.aborted) return stop('CANCELLED');
         if (onSpawn) Promise.resolve().then(() => onSpawn({ phase: 'pdf_process_started', pid: child.pid })).catch(() => stop('PROVIDER_FAILURE'));
       });
-      const header = Buffer.from(JSON.stringify(bytes === null ? { operation: 'probe' } : { operation: 'extract', max_text_bytes: maxTextBytes }) + '\n');
+      const header = Buffer.from(JSON.stringify(physicalPage === null ? (bytes === null ? { operation: 'probe' } : { operation: 'extract', max_text_bytes: maxTextBytes }) : { operation: 'render', physical_page: physicalPage }) + '\n');
       child.stdin.end(bytes === null ? header : Buffer.concat([header, bytes]));
     });
   } finally { await rm(directory, { recursive: true, force: true }); }

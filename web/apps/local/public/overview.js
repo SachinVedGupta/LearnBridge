@@ -2,6 +2,7 @@
 export function mountOverviewUI({ root, request, element, navigate }) {
   let generation = 0, refreshId = 0;
   const destinations = [
+    { path: '/task-sessions', title: 'Task agents', page: 'task-agents', describe: data => `${data.items.filter(row => row.data.state === 'working').length} working · ${data.items.filter(row => row.data.state === 'ready_for_review').length} ready for your review` },
     { path: '/focus/context', title: 'Focus', page: 'focus', describe: data => data.open_session ? `${data.open_session.data.title} · ${data.open_session.data.state}` : 'No open timer. Choose a next step when you are ready.' },
     { path: '/reminders/inbox', title: 'Reminders', page: 'reminders', describe: data => `${data.items.filter(row => row.acknowledged_at === null).length} unread local reminders` },
     { path: '/practice/due', title: 'Practice', page: 'practice', describe: data => `${data.total_due} cards due for your own review${data.unavailable?.length ? ' · some selected sources need review' : ''}` },

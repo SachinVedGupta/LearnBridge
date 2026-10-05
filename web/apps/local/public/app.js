@@ -12,15 +12,17 @@ Object.assign(state, { profiles: [], snapshots: [], plans: [], runs: [], profile
 const extensionUIs = new Map();
 const overviewUI = mountOverviewUI({ root: $('today-activity'), request, element, navigate });
 async function loadExtension(page) {
-  if (!['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote', 'practice', 'reminders', 'academic-tasks', 'public-jobs', 'career-packets', 'calendar-export', 'focus', 'expense-import', 'calendar-import', 'student-admin', 'plan-tasks'].includes(page)) return;
+  if (!['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote', 'practice', 'reminders', 'academic-tasks', 'public-jobs', 'career-packets', 'calendar-export', 'focus', 'expense-import', 'calendar-import', 'student-admin', 'plan-tasks', 'task-agents', 'dynamic-tasks', 'course-studio', 'interview-studio', 'application-browser'].includes(page)) return;
   const nonce = state.nonce;
   if (!extensionUIs.has(page)) {
     const module = await import(`/${page}.js`);
     if (!state.sessionReady || state.nonce !== nonce || state.page !== page) return;
-    const mount = { career: module.mountCareerUI, learning: module.mountLearningUI, life: module.mountLifeUI, writing: module.mountWritingUI, research: module.mountResearchUI, productivity: module.mountProductivityUI, onboarding: module.mountOnboardingUI, ai: module.mountAiUI, d2l: module.mountD2lUI, 'cloud-onboarding': module.mountCloudOnboardingUI, remote: module.mountRemoteUI, practice: module.mountPracticeUI, reminders: module.mountRemindersUI, 'academic-tasks': module.mountAcademicTasksUI, 'public-jobs': module.mountPublicJobsUI, 'career-packets': module.mountCareerPacketsUI, 'calendar-export': module.mountCalendarExportUI, focus: module.mountFocusUI, 'expense-import': module.mountExpenseImportUI, 'calendar-import': module.mountCalendarImportUI, 'student-admin': module.mountStudentAdminUI, 'plan-tasks': module.mountPlanTasksUI }[page];
-    if (!extensionUIs.has(page)) extensionUIs.set(page, mount({ root: $(`${page}-workspace`), request, element, busy, confirmAction, message, navigate }));
+    const mount = { career: module.mountCareerUI, learning: module.mountLearningUI, life: module.mountLifeUI, writing: module.mountWritingUI, research: module.mountResearchUI, productivity: module.mountProductivityUI, onboarding: module.mountOnboardingUI, ai: module.mountAiUI, d2l: module.mountD2lUI, 'cloud-onboarding': module.mountCloudOnboardingUI, remote: module.mountRemoteUI, practice: module.mountPracticeUI, reminders: module.mountRemindersUI, 'academic-tasks': module.mountAcademicTasksUI, 'public-jobs': module.mountPublicJobsUI, 'career-packets': module.mountCareerPacketsUI, 'calendar-export': module.mountCalendarExportUI, focus: module.mountFocusUI, 'expense-import': module.mountExpenseImportUI, 'calendar-import': module.mountCalendarImportUI, 'student-admin': module.mountStudentAdminUI, 'plan-tasks': module.mountPlanTasksUI, 'task-agents': module.mountTaskAgentsUI, 'dynamic-tasks': module.mountDynamicTasksUI, 'course-studio': module.mountCourseStudioUI, 'interview-studio': module.mountInterviewStudioUI, 'application-browser': module.mountApplicationBrowserUI }[page];
+    if (!extensionUIs.has(page)) extensionUIs.set(page, mount({ root: $(`${page}-workspace`), request, element, busy, confirmAction, message, navigate, onGetStarted: task => { state.selectedAgentTask = task.id; navigate('task-agents'); extensionUIs.get('task-agents')?.selectTask(task.id); }, onOpenSession: task => { state.selectedAgentTask = task.id; navigate('task-agents'); }, onPrepareApplication: session => { state.selectedApplicationTaskSession = session.id; navigate('application-browser'); } }));
   }
   await extensionUIs.get(page).refresh();
+  if (page === 'task-agents' && state.selectedAgentTask) extensionUIs.get(page).selectTask(state.selectedAgentTask);
+  if (page === 'application-browser' && state.selectedApplicationTaskSession) extensionUIs.get(page).attachTaskSession(state.selectedApplicationTaskSession);
 }
 
 class ApiError extends Error {
@@ -145,6 +147,7 @@ function showPair() {
   state.sessionReady = false;
   clearTimeout(hostPoll); state.hostRequest = null; $('host-turn-form').reset(); $('host-turn-list').replaceChildren(); $('host-turn-grant').replaceChildren(); $('host-capability').textContent = ''; message('host-turn-message', '');
   state.tasks = []; state.today = null;
+  state.selectedAgentTask = null; state.selectedApplicationTaskSession = null;
   state.documents = [];
   state.sources = []; state.sourceEntries = []; state.inventory = null; state.academicPreview = null; state.grants = []; state.proposals = [];
   state.profiles = []; state.snapshots = []; state.plans = []; state.runs = []; state.profileContextPreview = null; $('profile-export').hidden = true;
@@ -199,8 +202,8 @@ async function openWorkspace(session) {
 }
 
 function navigate(page) {
-  if (state.page === 'remote' && page !== 'remote') extensionUIs.get('remote')?.pause?.();
-  if (!['today', 'notes', 'sources', 'agents', 'setup', 'courses', 'planning', 'profile', 'career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote', 'practice', 'reminders', 'academic-tasks', 'public-jobs', 'career-packets', 'calendar-export', 'focus', 'expense-import', 'calendar-import', 'student-admin', 'plan-tasks'].includes(page)) return;
+  if (state.page !== page) extensionUIs.get(state.page)?.pause?.();
+  if (!['today', 'notes', 'sources', 'agents', 'setup', 'courses', 'planning', 'profile', 'career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote', 'practice', 'reminders', 'academic-tasks', 'public-jobs', 'career-packets', 'calendar-export', 'focus', 'expense-import', 'calendar-import', 'student-admin', 'plan-tasks', 'task-agents', 'dynamic-tasks', 'course-studio', 'interview-studio', 'application-browser'].includes(page)) return;
   const changed = state.page !== page;
   state.page = page;
   $('mobile-page-selector').value = page;
@@ -214,7 +217,7 @@ function navigate(page) {
   const refresh = { today: loadTasks, notes: loadDocuments, courses: loadCourses, planning: loadPlanning, profile: loadProfile,
     agents: async () => { await Promise.all([loadTasks(), loadDocuments(), loadSources(), loadAgentReview()]); renderGrantSelection(); } }[page];
   if (refresh) refresh().catch(error => message('global-message', error.message, true));
-  if (['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote', 'practice', 'reminders', 'academic-tasks', 'public-jobs', 'career-packets', 'calendar-export', 'focus', 'expense-import', 'calendar-import', 'student-admin', 'plan-tasks'].includes(page)) loadExtension(page).catch(error => message('global-message', error.message, true));
+  if (['career', 'learning', 'life', 'writing', 'research', 'productivity', 'onboarding', 'ai', 'd2l', 'cloud-onboarding', 'remote', 'practice', 'reminders', 'academic-tasks', 'public-jobs', 'career-packets', 'calendar-export', 'focus', 'expense-import', 'calendar-import', 'student-admin', 'plan-tasks', 'task-agents', 'dynamic-tasks', 'course-studio', 'interview-studio', 'application-browser'].includes(page)) loadExtension(page).catch(error => message('global-message', error.message, true));
 }
 
 async function loadTasks() {
@@ -273,6 +276,11 @@ function renderTasks() {
     const reasons = { overdue: 'Due date has passed', manually_pinned: 'You pinned this task', due_today: 'Due today', dated: 'Upcoming dated work', deadline_needs_review: 'Confirm the source deadline', intentionally_undated: 'You left this without a due date' };
     if (rank?.revision === task.revision) copy.append(element('p', 'field-help', `${reasons[rank.ranking_reason]} · ${rank.estimate_status === 'needs_effort' ? 'Add a time estimate for planning' : `${task.effort_minutes} minutes estimated`}`));
     const actions = element('div', 'task-row-actions');
+    if (!['completed', 'cancelled'].includes(task.status)) actions.append(taskAction(task, 'Get started', async () => {
+      state.selectedAgentTask = task.id;
+      navigate('task-agents');
+      extensionUIs.get('task-agents')?.selectTask(task.id);
+    }, 'button primary compact'));
     actions.append(taskAction(task, 'Edit', async () => {
       if (state.taskDrafts.has(task.id)) return;
       state.taskDrafts.set(task.id, { title: task.title, date: task.deadline?.precision === 'date' ? task.deadline.date : '', effort: task.effort_minutes ?? '', dirty: false, base: task });

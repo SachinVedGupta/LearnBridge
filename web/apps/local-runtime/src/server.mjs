@@ -5,7 +5,7 @@ import { LocalStore } from '@learnbridge/local-storage';
 import { LearnBridgeError } from '@learnbridge/core';
 import { assertLocalRequest, createSessionPolicy, HttpError, plainBody, readJson } from './policy.mjs';
 import { startControl } from './ipc.mjs';
-import { describeRoot, inventorySource, readSelectedEntry, readSelectedPdf, readSelectedOffice, probeSourceCapability, probePdfCapability, probeOfficeCapability } from '../../../packages/local-sources/src/index.mjs';
+import { describeRoot, inventorySource, readSelectedEntry, readSelectedPdf, readSelectedPdfAsset, readSelectedOffice, probeSourceCapability, probePdfCapability, probeOfficeCapability } from '../../../packages/local-sources/src/index.mjs';
 import { AcademicError } from '../../../packages/local-academic/src/index.mjs';
 import { randomUUID, createHash } from 'node:crypto';
 import { createStudentWorkspace } from './student-workspace.mjs';
@@ -40,6 +40,19 @@ import { handleWritingRoute } from './writing-routes.mjs';
 import { handleResearchRoute } from './research-routes.mjs';
 import { handleProductivityRoute } from './productivity-routes.mjs';
 import { createHostTurns } from './host-turns.mjs';
+import { createTaskSessionService } from './task-session-service.mjs';
+import { handleTaskSessionRoute } from './task-session-routes.mjs';
+import { createDynamicTaskService, DYNAMIC_TASK_LIMITS } from './dynamic-task-service.mjs';
+import { handleDynamicTaskRoute } from './dynamic-task-routes.mjs';
+import { createDynamicTaskAIService } from './dynamic-task-ai-service.mjs';
+import { handleDynamicTaskAIRoute } from './dynamic-task-ai-routes.mjs';
+import { createCourseStudioService } from './course-studio-service.mjs';
+import { handleCourseStudioRoute } from './course-studio-routes.mjs';
+import { createLearningService } from './learning-service.mjs';
+import { createInterviewStudioService } from './interview-studio-service.mjs';
+import { handleInterviewStudioRoute } from './interview-studio-routes.mjs';
+import { createApplicationBrowserService } from './application-browser-service.mjs';
+import { handleApplicationBrowserRoute } from './application-browser-routes.mjs';
 import { createOnboardingRoutes } from './onboarding-routes.mjs';
 import { createCloudOnboardingRoutes } from './cloud-onboarding-routes.mjs';
 import { createD2lRoutes } from './d2l-routes.mjs';
@@ -49,7 +62,7 @@ import { openRemoteInstance } from './remote-companion.mjs';
 import { join, dirname, basename } from 'node:path';
 import { TutoringError } from '../../../packages/local-academic/src/tutoring.mjs';
 
-export const LOCAL_VERSION = '0.3.0';
+export const LOCAL_VERSION = '0.4.0';
 const repositoryRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 const publicRoot = new URL('../../local/public/', import.meta.url);
 const builtRoot = new URL('../../local/dist/', import.meta.url);
@@ -58,6 +71,12 @@ const assets = new Map([
   ['/index.html', ['index.html', 'text/html; charset=utf-8']],
   ['/overview.js', ['overview.js', 'text/javascript; charset=utf-8']],
   ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
+  ['/task-agents.js', ['task-agents.js', 'text/javascript; charset=utf-8']],
+  ['/dynamic-tasks.js', ['dynamic-tasks.js', 'text/javascript; charset=utf-8']],
+  ['/course-studio.js', ['course-studio.js', 'text/javascript; charset=utf-8']],
+  ['/course-studio.css', ['course-studio.css', 'text/css; charset=utf-8']],
+  ['/interview-studio.js', ['interview-studio.js', 'text/javascript; charset=utf-8']],
+  ['/application-browser.js', ['application-browser.js', 'text/javascript; charset=utf-8']],
   ['/styles.css', ['styles.css', 'text/css; charset=utf-8']],
   ['/career.js', ['career.js', 'text/javascript; charset=utf-8']],
   ['/learning.js', ['learning.js', 'text/javascript; charset=utf-8']],
@@ -105,7 +124,7 @@ function setHeaders(response) {
   response.setHeader('X-Content-Type-Options', 'nosniff');
   response.setHeader('Referrer-Policy', 'no-referrer');
   response.setHeader('X-Frame-Options', 'DENY');
-  response.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  response.setHeader('Permissions-Policy', 'camera=(), microphone=(self), geolocation=()');
   response.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; object-src 'none'");
 }
 function json(response, status, value) {
@@ -136,7 +155,7 @@ function failure(response, error) {
 export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairingTtlMs,
   // Trusted programmatic dependency injection for native acquisition barriers.
   // The launcher/HTTP/MCP surfaces never accept an adapter or executable.
-  publicJobFetch, sourceAdapter = { describeRoot, inventorySource, readSelectedEntry, readSelectedPdf, readSelectedOffice, probeSourceCapability, probePdfCapability, probeOfficeCapability },
+  publicJobFetch, sourceAdapter = { describeRoot, inventorySource, readSelectedEntry, readSelectedPdf, readSelectedPdfAsset, readSelectedOffice, probeSourceCapability, probePdfCapability, probeOfficeCapability },
   // Trusted fixture seam only; the CLI/HTTP/MCP never accepts execution configuration.
   hostAdapter, codexProfileOptions = {}, d2lBrowserFactory,
   remoteOptions = { enabled: process.env.LEARNBRIDGE_PHONE_ACCESS === 'true' } } = {}) {
@@ -144,6 +163,8 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
   const store = LocalStore.open({ root: dataRoot, repositoryRoot, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' });
   let studentWorkspace;
   let hostTurns;
+  let taskSessions;
+  let dynamicTasks, dynamicTaskAI, courseStudio, interviewStudio, applicationBrowser;
   let onboardingRoutes;
   let cloudOnboardingRoutes, d2lRoutes, codexProfile, remoteRoutes, reminders, academicTasks, publicJobService, calendarExports, careerPackets, focus, expenseImports, calendarImports, studentAdmin, planTasks;
   const embeddedLeases = new Map();
@@ -166,6 +187,13 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
       } };
     } });
     hostTurns = createHostTurns({ store, ...(hostAdapter || { enabled: true, execute: codexProfile.execute, capability: codexProfile.status }) });
+    dynamicTasks = createDynamicTaskService({ store, studentWorkspace });
+    dynamicTaskAI = createDynamicTaskAIService({ store, dynamicTasks, hostTurns });
+    taskSessions = createTaskSessionService({ store, hostTurns, provenance: taskId => ({ plan: planTasks.taskProvenance(taskId), dynamic: dynamicTasks.taskProvenance(taskId) }), applicationProgress: sessionId => applicationBrowser?.progressForTaskSession(sessionId) ?? [] });
+    courseStudio = createCourseStudioService({ store, learningService: createLearningService({ store, getLibrary: studentWorkspace.library }), hostTurns,
+      ...(typeof sourceAdapter.readSelectedPdfAsset === 'function' ? { readPdfAsset: async (entry, physicalPage, { signal } = {}) => sourceAdapter.readSelectedPdfAsset(store.getSource(entry.source_id).descriptor, store.getSourceInventory(entry.inventory_id).inventory, entry.entry_id, { physicalPage, signal }) } : {}) });
+    interviewStudio = createInterviewStudioService({ store, hostTurns, publicJobService });
+    applicationBrowser = createApplicationBrowserService({ store, publicJobService, taskSessions });
     onboardingRoutes = createOnboardingRoutes({ store, studentWorkspace });
     cloudOnboardingRoutes = createCloudOnboardingRoutes({ store });
     d2lRoutes = createD2lRoutes({ studentWorkspace, browserFactory: d2lBrowserFactory });
@@ -206,6 +234,10 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
       capabilities: [
         hostTurns.capability(),
         { id: 'tasks', label: 'Tasks', state: 'available', detail: 'Manual tasks with revision checks and private local saves.' },
+        { id: 'dynamic_tasks', label: 'Done list', state: 'available', detail: 'Selected saved course, calendar, update and project sources reconcile into deduplicated local tasks. Explicit source policy controls automatic creation and verified project completion. No live cloud polling or activity-based completion inference.' },
+        { id: 'task_sessions', label: 'Task agent sessions', state: 'available', detail: 'Start a selected-task Codex conversation, inspect background tool progress, continue or stop it, and review the actual result before marking done. Local proposals only; external form actions require separate review.' },
+        { id: 'course_studio', label: 'Course studio', state: 'available', detail: 'Exact selected PDF page rendering, pinned course/page questions, reviewed model quizzes, student attempts and bounded annotations. Optional browser speech; visual model access and mastery inference are unavailable.' },
+        { id: 'interview_studio', label: 'Interview studio', state: 'available', detail: 'Selected role and confirmed profile coaching, one model question at a time, actual saved answers and grounded feedback through the local Codex subscription. Optional browser speech support varies.' },
         { id: 'notes', label: 'Notes', state: 'available', detail: 'Multiple text notes with immutable revisions and verified hashes.' },
         { id: 'planning', label: 'Study planning', state: 'available', detail: 'Deterministic local study-plan previews with capacity deficits, task revision checks and saved review. No external calendar writes.' },
         { id: 'profile', label: 'Reviewed profile', state: 'available', detail: 'Student-entered facts with exact review, conflicts, purpose filters and stale source checks. No automatic identity or mastery inference.' },
@@ -224,6 +256,7 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         { id: 'calendar_export', label: 'Reviewed calendar files', state: 'available', detail: 'Download selected task deadlines or exact accepted study blocks as reviewed ICS with source pins. No calendar account is changed; external import remains your choice.' },
         { id: 'public_jobs', label: 'Official job discovery', state: 'available', detail: 'Choose a supported Greenhouse or Lever employer board, search bounded public metadata, and read selected current postings. Source presence does not establish suitability or eligibility.' },
         { id: 'career_packets', label: 'Application preparation packets', state: 'available', detail: 'Review one current official posting, selected confirmed career facts and accepted Writing drafts. Missing fields stay visible. Private text downloads do not fill, upload or submit an application.' },
+        { id: 'application_browser', label: 'Application preparation browser', ...applicationBrowser.capability(), detail: 'Owned temporary Chrome for a selected current Greenhouse or Lever application. Exact supported text fields require review; network freezes before filling. No uploads, protected disclosures or submission. Real employer compatibility requires its own check.' },
         { id: 'writing', label: 'Writing review', state: 'available', detail: 'Source-pinned drafts, private alternatives and exact revisions with preserved originals. Reviewed Markdown and Word text downloads preserve source hashes. Formatted Word and escaped LaTeX source support a bounded Markdown subset. PDF rendering and general Office conversion remain separate.' },
         { id: 'research', label: 'Evidence research', state: 'available', detail: 'Selected local passages or student-pasted excerpts, exact quotes, conflicts and reviewed cited reports. No website freshness or factual accuracy is inferred.' },
         { id: 'career', label: 'Career preparation', state: 'available', detail: 'Selected postings, factual application drafts, interview attempts and local follow-up tasks. Live role availability and application submission are separate.' },
@@ -242,6 +275,8 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
     };
   };
   const reminderTimer = setInterval(() => { if (!closing) { try { reminders.drain(); } catch { /* Retry on the next bounded tick; no private diagnostics. */ } } }, REMINDER_LIMITS.tick_interval_ms);
+  const dynamicTaskTimer = setInterval(() => { if (!closing) { try { dynamicTasks.refresh(); dynamicTaskAI.refresh(); } catch { /* Selected scopes stay explicit; unavailable sources need review. */ } } }, DYNAMIC_TASK_LIMITS.tick_interval_ms);
+  dynamicTaskTimer.unref();
   reminderTimer.unref?.();
   const focusTimer = setInterval(() => { if (!closing) { try { focus.observe(); } catch { /* Retry later without exposing private diagnostics. */ } } }, FOCUS_LIMITS.tick_interval_ms);
   focusTimer.unref?.();
@@ -307,6 +342,26 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
       if (route.startsWith('/remote/')) {
         noQuery(url); const result = await remoteRoutes.handle({ route, method: request.method, privateBody, session, stillAuthorized });
         stillAuthorized(); if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/dynamic-tasks/')) {
+        noQuery(url); const result = await handleDynamicTaskRoute({ route, method: request.method, privateBody, service: dynamicTasks, session, stillAuthorized });
+        if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/dynamic-task-ai/')) {
+        noQuery(url); const result = await handleDynamicTaskAIRoute({ route, method: request.method, privateBody, service: dynamicTaskAI, session, stillAuthorized, idempotencyKey: idempotency(request).idempotencyKey });
+        if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/course-studio/')) {
+        noQuery(url); const result = await handleCourseStudioRoute({ route, method: request.method, privateBody, service: courseStudio, session, stillAuthorized, sourceOperation, idempotencyKey: idempotency(request).idempotencyKey });
+        if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/interview-studio/')) {
+        noQuery(url); const result = await handleInterviewStudioRoute({ route, method: request.method, privateBody, interviewStudioService: interviewStudio, session, stillAuthorized, idempotencyKey: idempotency(request).idempotencyKey });
+        if (result) return json(response, result.status, result.data);
+      }
+      if (route.startsWith('/application-browser/')) {
+        noQuery(url); const result = await handleApplicationBrowserRoute({ route, method: request.method, privateBody, applicationBrowserService: applicationBrowser, session, stillAuthorized, idempotencyKey: idempotency(request).idempotencyKey });
+        if (result) return json(response, result.status, result.data);
       }
       if (route.startsWith('/ai/')) {
         noQuery(url);
@@ -423,6 +478,11 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
         const item = await hostTurns.start(body, { idempotencyKey: idempotency(request).idempotencyKey,
           authorize: () => { stillAuthorized(); return true; } });
         return json(response, 202, { item });
+      }
+      if (route === '/task-sessions' || route.startsWith('/task-sessions/')) {
+        noQuery(url);
+        const result = await handleTaskSessionRoute({ route, method: request.method, privateBody, service: taskSessions, stillAuthorized, idempotencyKey: idempotency(request).idempotencyKey });
+        if (result) return json(response, result.status, result.data);
       }
       const hostTurnRoute = /^\/host-turns\/([^/]+)(?:\/(cancel))?$/.exec(route);
       if (hostTurnRoute) {
@@ -741,7 +801,7 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
   const close = () => {
     if (closePromise) return closePromise;
     closing = true;
-    clearInterval(reminderTimer); clearInterval(focusTimer); reminders.dispose(); focus.dispose(); publicJobService.close();
+    clearInterval(reminderTimer); clearInterval(focusTimer); clearInterval(dynamicTaskTimer); reminders.dispose(); focus.dispose(); publicJobService.close();
     policy?.clear();
     academicPreviews.clear();
     onboardingRoutes.clear();
@@ -751,6 +811,7 @@ export async function startRuntime({ dataRoot, port = 3210, sessionTtlMs, pairin
       try {
         await studentWorkspace.runner.drain();
         await hostTurns.drain();
+        await applicationBrowser.drain();
         await codexProfile.stop(); await d2lRoutes.clear();
         await remoteRoutes.clear();
         if (server.listening) {

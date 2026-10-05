@@ -6,7 +6,7 @@ import { basename, isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { StringDecoder } from 'node:string_decoder';
 import { LearnBridgeError, invalidInput } from '@learnbridge/core';
-import { PDF_LIMITS, PDF_PARSER_VERSION, nativePdfPrerequisites, runNativePdf } from './pdf-native.mjs';
+import { PDF_LIMITS, PDF_PARSER_VERSION, nativePdfPrerequisites, runNativePdf, runNativePdfPage } from './pdf-native.mjs';
 import { OFFICE_LIMITS, OFFICE_PARSER_VERSION, officePrerequisites, runOfficeParser } from './office-native.mjs';
 
 export { PDF_LIMITS, PDF_PARSER_VERSION } from './pdf-native.mjs';
@@ -634,6 +634,39 @@ function createAdapter(hooks = {}) {
       if (checked.value.version !== selected.snapshot.version || signal?.aborted) fail(signal?.aborted ? 'CANCELLED' : 'VERSION_MISMATCH', 'refresh');
       return freeze(nativePdfResult(parsed, original, selected, maxBytes));
     },
+    async readSelectedPdfAsset(value, suppliedInventory, entryId, options = {}) {
+      object(options, ['physicalPage', 'signal'], ['physicalPage']);
+      if (process.platform !== 'darwin') fail('UNSUPPORTED');
+      const source = { ...descriptor(value), version: value.version };
+      if (await approvedRootPath(source.root) !== source.root) fail('VERSION_MISMATCH', 'refresh');
+      const inventory = validateInventory(suppliedInventory, source);
+      if (['cancelled', 'blocked'].includes(inventory.coverage.state)) fail('CONSENT_REQUIRED');
+      const selected = inventory.entries.find(item => item.id === uuid(entryId));
+      if (!selected || selected.kind !== 'pdf') fail('SCOPE_DENIED');
+      const physicalPage = integer(options.physicalPage, PDF_LIMITS.maxPages, 1), signal = signalOption(options.signal);
+      const acquired = await runWorker({ operation: 'read_pdf', descriptor: source, entry: selected, maxBytes: PDF_LIMITS.maxPdfBytes }, { signal, hooks });
+      if (acquired.interrupted) fail(acquired.interrupted === 'cancelled' ? 'CANCELLED' : 'BUDGET_EXCEEDED');
+      object(acquired.value, ['base64', 'source_sha256', 'source_bytes', 'version', 'title']);
+      const original = acquired.value;
+      if (typeof original.base64 !== 'string' || original.base64.length > Math.ceil(PDF_LIMITS.maxPdfBytes / 3) * 4 || original.source_bytes !== selected.snapshot.size || original.version !== selected.snapshot.version || original.title !== selected.title) fail('VERSION_MISMATCH');
+      const bytes = Buffer.from(original.base64, 'base64');
+      if (bytes.length !== original.source_bytes || bytes.toString('base64') !== original.base64 || sha(original.source_sha256) !== createHash('sha256').update(bytes).digest('hex')) fail('VERSION_MISMATCH');
+      const rendered = await runNativePdfPage(bytes, { physicalPage, signal, ...(hooks.pdfTimeoutMs === undefined ? {} : { timeoutMs: hooks.pdfTimeoutMs }), onSpawn: hooks.onPhase });
+      object(rendered, ['status', 'renderer_version', 'physical_page', 'page_count', 'width', 'height', 'png_base64', 'text_regions', 'text_coordinates_available']);
+      if (rendered.status !== 'available' || rendered.renderer_version !== 'macos_pdfkit_page.v1' || rendered.physical_page !== physicalPage || integer(rendered.page_count, PDF_LIMITS.maxPages, 1) < physicalPage || integer(rendered.width, 1600, 1) < 1 || integer(rendered.height, 1600, 1) < 1 || typeof rendered.png_base64 !== 'string' || rendered.png_base64.length > 2_800_000) fail('VERSION_MISMATCH');
+      const png = Buffer.from(rendered.png_base64, 'base64');
+      if (png.toString('base64') !== rendered.png_base64 || png.length < 24 || !png.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) || png.readUInt32BE(16) !== rendered.width || png.readUInt32BE(20) !== rendered.height) fail('VERSION_MISMATCH');
+      if (typeof rendered.text_coordinates_available !== 'boolean') fail('VERSION_MISMATCH');
+      array(rendered.text_regions, 150).forEach(region => {
+        object(region, ['text', 'x', 'y', 'width', 'height']);
+        if (typeof region.text !== 'string' || region.text.length > 512 || region.text.includes('\0') || ['x', 'y', 'width', 'height'].some(key => typeof region[key] !== 'number' || !Number.isFinite(region[key]) || region[key] < 0 || region[key] > 1) || region.width <= 0 || region.height <= 0 || region.x + region.width > 1.000001 || region.y + region.height > 1.000001) fail('VERSION_MISMATCH');
+      });
+      if (!rendered.text_coordinates_available && rendered.text_regions.length) fail('VERSION_MISMATCH');
+      const checked = await runWorker({ operation: 'verify', descriptor: source, entry: selected }, { signal });
+      if (checked.interrupted) fail(checked.interrupted === 'cancelled' ? 'CANCELLED' : 'BUDGET_EXCEEDED');
+      if (checked.value.version !== selected.snapshot.version || signal?.aborted) fail(signal?.aborted ? 'CANCELLED' : 'VERSION_MISMATCH');
+      return freeze({ ...rendered, source_sha256: original.source_sha256, source_version: original.version, png_sha256: createHash('sha256').update(png).digest('hex') });
+    },
     async readSelectedOffice(value, suppliedInventory, entryId, options = {}) {
       object(options, ['maxBytes', 'signal'], []);
       if (!['darwin', 'linux'].includes(process.platform)) fail('UNSUPPORTED', 'office_text_runtime_unavailable');
@@ -677,6 +710,7 @@ export const describeRoot = (...args) => adapter.describeRoot(...args);
 export const inventorySource = (...args) => adapter.inventorySource(...args);
 export const readSelectedEntry = (...args) => adapter.readSelectedEntry(...args);
 export const readSelectedPdf = (...args) => adapter.readSelectedPdf(...args);
+export const readSelectedPdfAsset = (...args) => adapter.readSelectedPdfAsset(...args);
 export const readSelectedOffice = (...args) => adapter.readSelectedOffice(...args);
 
 /** Test construction only. Runtime API inputs cannot install callbacks, change
