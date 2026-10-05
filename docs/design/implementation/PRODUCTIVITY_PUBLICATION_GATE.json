@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "receipt_kind": "productivity_website_publication_gate",
+  "checked_at": "2026-10-05T03:31:38.120Z",
+  "status": "DEPLOYMENT_NOT_PUBLISHED",
+  "code_commit": "63e5e09fd12f384dee51efc73a78b184fc66e772",
+  "repository_push": {
+    "branch": "main",
+    "commit": "6d8b4d2e0f8aa627c72cfbe9806972ff2faa2fde",
+    "remote": "https://github.com/SachinVedGupta/LearnBridge",
+    "verified_by": "git ls-remote origin refs/heads/main"
+  },
+  "deployment_attempt": {
+    "cli": "62.2.0",
+    "existing_project": "thelearnbridge",
+    "target": "production",
+    "scope": "sachin-guptas-projects-154b22b9",
+    "result": "Not authorized",
+    "new_deployment_ready": false,
+    "new_email_route_published": false,
+    "normal_cli_device_login": "requires_student_action",
+    "credentials_copied": false,
+    "new_token_value_recorded": false
+  },
+  "prospective_source_upload": {
+    "inspected_only": true,
+    "file_count": 366,
+    "bytes": 4358867,
+    "dry_manifest_sha256": "7547cbdd5a92494567e469dd618d3f219f1950a7734563d5c8d0cca9b40c816c",
+    "only_web_files": true,
+    "environment_credentials_or_private_profile_included": false,
+    "source_upload_completed": false
+  },
+  "existing_site": {
+    "checked_at": "2026-10-05T03:31:38.120Z",
+    "origin": "https://thelearnbridge.vercel.app",
+    "checks": [
+      {
+        "path": "/setup",
+        "status": 200,
+        "location": null,
+        "cache_control": "private, no-cache, no-store, max-age=0, must-revalidate"
+      },
+      {
+        "path": "/login",
+        "status": 200,
+        "location": null,
+        "cache_control": "public, max-age=0, must-revalidate"
+      },
+      {
+        "path": "/api/health",
+        "status": 404,
+        "location": null,
+        "cache_control": "public, max-age=0, must-revalidate"
+      },
+      {
+        "path": "/onboarding/cloud",
+        "status": 307,
+        "location": "/login",
+        "cache_control": "private, no-store"
+      },
+      {
+        "path": "/api/cloud-onboarding/accounts",
+        "status": 401,
+        "location": null,
+        "cache_control": "no-store"
+      },
+      {
+        "path": "/api/email-onboarding/accounts",
+        "status": 404,
+        "location": null,
+        "cache_control": "public, max-age=0, must-revalidate"
+      },
+      {
+        "path": "/api/healthz",
+        "status": 200,
+        "location": null,
+        "cache_control": "public, max-age=0, must-revalidate"
+      }
+    ],
+    "new_website_code_published": false,
+    "production_configuration_changed": false
+  },
+  "release_flags": {
+    "adoption": false,
+    "phone": false
+  },
+  "limits": [
+    "The current CLI session could read the team/project but could not deploy. Its normal device login needs the student to finish. No alternate token or OIDC deployment workaround was attempted.",
+    "The existing public setup/login/health routes and private-page/API authentication gates remain reachable. HTTP 404 on /api/email-onboarding/accounts confirms the new route is not published.",
+    "Public checks use anonymous fixed HTTPS requests with no cookies or credentials; they do not certify model/provider operations.",
+    "No new provider configuration, OAuth scope, production database migration or release flag changed."
+  ]
+}

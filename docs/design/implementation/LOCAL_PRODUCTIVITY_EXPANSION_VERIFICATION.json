@@ -419,7 +419,48 @@
     "provider_configuration_changed": false,
     "production_migrations_applied": false,
     "adoption_release_flag_enabled": false,
-    "phone_release_flag_enabled": false
+    "phone_release_flag_enabled": false,
+    "repository_pushed_commit": "6d8b4d2e0f8aa627c72cfbe9806972ff2faa2fde",
+    "repository_push_verified": true,
+    "existing_site_checks": [
+      {
+        "path": "/setup",
+        "status": 200,
+        "location": null,
+        "cache_control": "private, no-cache, no-store, max-age=0, must-revalidate"
+      },
+      {
+        "path": "/login",
+        "status": 200,
+        "location": null,
+        "cache_control": "public, max-age=0, must-revalidate"
+      },
+      {
+        "path": "/onboarding/cloud",
+        "status": 307,
+        "location": "/login",
+        "cache_control": "private, no-store"
+      },
+      {
+        "path": "/api/cloud-onboarding/accounts",
+        "status": 401,
+        "location": null,
+        "cache_control": "no-store"
+      },
+      {
+        "path": "/api/email-onboarding/accounts",
+        "status": 404,
+        "location": null,
+        "cache_control": "public, max-age=0, must-revalidate"
+      },
+      {
+        "path": "/api/healthz",
+        "status": 200,
+        "location": null,
+        "cache_control": "public, max-age=0, must-revalidate"
+      }
+    ],
+    "gate_receipt": "PRODUCTIVITY_PUBLICATION_GATE.json"
   },
   "source_hashes": {
     "web/apps/local-runtime/src/academic-task-routes.mjs": "4ce618fb2649c19aad3f80457333ed1cf75a03f480fa76ea31012fb67eac41d4",
