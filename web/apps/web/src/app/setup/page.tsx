@@ -43,7 +43,7 @@ export default function SetupPage() {
 
       <section aria-labelledby="connected-setup-heading" className="mt-10 rounded-2xl border border-slate-800 p-6">
         <h2 id="connected-setup-heading" className="text-2xl font-semibold text-white">Bring your workflows together</h2>
-        <p className="mt-3 leading-7 text-slate-300">After signing in online, <a href="/onboarding/cloud" className={linkStyle}>choose exact Google Docs or Notion pages</a>, review their text and export a bounded bundle. In the local dashboard, open Cloud sources to review and import it. Account linking, importing and sharing with your AI are separate choices.</p>
+        <p className="mt-3 leading-7 text-slate-300">After signing in online, <a href="/onboarding/cloud" className={linkStyle}>choose exact Google Docs or Notion pages</a> or <a href="/onboarding/email" className={linkStyle}>selected Gmail messages</a>, review their text and export a bounded bundle. In the local dashboard, open Cloud sources to review and import it. Account linking, importing and sharing with your AI are separate choices.</p>
         <p className="mt-3 leading-7 text-slate-300">The <a href="/remote" className={linkStyle}>phone companion</a> has an implementation for pairing, selected local tutor requests and separately reviewed text results. Public phone access stays disabled until its database, live account and device checks pass. Your computer must be awake and you must approve each result locally before it can be sent to the phone.</p>
       </section>
 

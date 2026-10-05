@@ -1,0 +1,103 @@
+{
+  "format": "learnbridge-selected-email-verification",
+  "schema_version": 1,
+  "checked_at": "2026-10-05T02:28:05.142802Z",
+  "increment": "Explicit selected Gmail metadata and plaintext transfer, additive Gmail v2 local import",
+  "provider_schema_probe": {
+    "mode": "official_existing_composio_sdk_schema_only",
+    "toolkit": "gmail",
+    "version": "20260915_00",
+    "tools": [
+      {
+        "slug": "GMAIL_FETCH_EMAILS",
+        "state": "compatible",
+        "input_fields": [
+          "query",
+          "user_id",
+          "verbose",
+          "ids_only",
+          "label_ids",
+          "page_token",
+          "max_results",
+          "include_payload",
+          "include_spam_trash"
+        ],
+        "audited_canonical_input_sha256": "04ad84358d1c6328f96e743303d10536c21ae88ef19b3e4521316f404bcf54de",
+        "audited_canonical_output_sha256": "7d0275c2153524aa8ba776bb65f0ddaa9f5ba198d92ae20b749575684247455a"
+      },
+      {
+        "slug": "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID",
+        "state": "compatible",
+        "input_fields": [
+          "format",
+          "user_id",
+          "message_id"
+        ],
+        "audited_canonical_input_sha256": "d344c2ddea820c8dddbf9c5a0b8c85b4db839f42f120ba7dfb960ec763729050",
+        "audited_canonical_output_sha256": "62ddc3dd1e68d75b398a7b9c8d077163b03f4acbc95850694ce569225df8e9fe"
+      }
+    ],
+    "tool_schema_requests": 2,
+    "connected_account_requests": 0,
+    "personal_message_requests": 0,
+    "write_or_attachment_requests": 0,
+    "runtime_schema_gate": "exact slug/version and required input-field names; audited full-schema hashes are evidence, not extra runtime authority",
+    "provider_configuration_changed": false,
+    "new_oauth_scopes": false,
+    "live_content_or_account_permission_verified": false
+  },
+  "synthetic_verification": {
+    "tests": [
+      {
+        "path": "web/scripts/email-onboarding-hosted.test.mjs",
+        "passed": 11,
+        "provider_data": "synthetic"
+      },
+      {
+        "path": "web/scripts/email-onboarding-local.test.mjs",
+        "passed": 3,
+        "transport": "actual paired HTTP, actual SQLite, synthetic hosted acquisition"
+      },
+      {
+        "path": "web/scripts/email-onboarding-ui.test.mjs",
+        "passed": 6,
+        "ui": "actual shipped TSX/DOM event closures, browser APIs mocked"
+      }
+    ],
+    "new_tests_passed": 20,
+    "existing_cloud_tests_passed": 81,
+    "combined_tests_passed": 101,
+    "failed": 0,
+    "skipped": 0,
+    "typescript_check": "passed",
+    "checked_behaviors": [
+      "empty explicit account/folder/date/subject/message choices",
+      "fixed subject/date/label query and first-page cap",
+      "body-free returned metadata and unexpected serialized content-byte disclosure",
+      "exact checked message IDs only; same account/scope HMAC seals",
+      "source metadata and folder drift rejection",
+      "literal malicious plaintext; no HTML execution or attachment/thread/link/model operation",
+      "bounded canonical base64url UTF-8/ASCII MIME extraction",
+      "explicit reviewed export; complete bundle/text hash verification",
+      "late export/hash/unmount/revocation cancellation",
+      "actual compact Blob to shipped local preview/import",
+      "separate local ownership confirmation and graded-policy tightening",
+      "private note/receipt readback; no tasks/profile facts/sharing grants",
+      "retained retry and stale note pin refusal",
+      "restart and fresh backup restore",
+      "unchanged Docs/Notion version-one compatibility"
+    ]
+  },
+  "release_gates": {
+    "live_student_selected_gmail_read": "not_performed_without_exact_student_account_and_source_selection",
+    "second_student_account_isolation": "pending_live_account_test",
+    "real_browser_saved_download": "not_proven_by_event_fixtures",
+    "deployment": "not_performed_by_this_increment",
+    "mailbox_coverage": "always_partial_snapshot; no complete mailbox claim"
+  },
+  "notes": [
+    "No credential values, raw connected-account state or private message contents appear in this receipt.",
+    "Portable transfer identity is bundle-reported and separately student-confirmed; local hashes do not authenticate the cloud account.",
+    "Provider messageTimestamp is preserved with unverified semantics; sent time derives only from Date header; received and modified times remain null."
+  ]
+}
